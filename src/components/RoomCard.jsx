@@ -62,6 +62,7 @@ export default function RoomCard({
 
   const isAssigned = roomAssignments.some(a => a.user_id === currentProfile?.id)
   const isAdmin = currentProfile?.is_admin
+  const canManage = currentProfile?.is_admin || currentProfile?.grade === 'chef_clinique'
 
   function gradeLabel(grade) {
     if (grade === 'cadre') return 'Cadre'
@@ -109,7 +110,7 @@ export default function RoomCard({
                           </span>
                         )}
                       </span>
-                      {(a.user_id === currentProfile?.id || isAdmin) && (
+                      {(a.user_id === currentProfile?.id || canManage) && (
                         <button
                           onClick={() => onLeave(roomId, a.user_id)}
                           className="ml-1 p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
@@ -138,7 +139,7 @@ export default function RoomCard({
                       <span className="text-sm text-gray-800 truncate flex-1">
                         {a.profiles?.full_name}
                       </span>
-                      {(a.user_id === currentProfile?.id || isAdmin) && (
+                      {(a.user_id === currentProfile?.id || canManage) && (
                         <button
                           onClick={() => onLeave(roomId, a.user_id)}
                           className="ml-1 p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
@@ -176,7 +177,7 @@ export default function RoomCard({
                 Me retirer
               </button>
             )}
-            {isAdmin && (
+            {canManage && (
               <button
                 onClick={() => onAssign(roomId)}
                 className="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium py-2 rounded-xl transition-colors"

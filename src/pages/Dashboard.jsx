@@ -110,7 +110,8 @@ export default function Dashboard() {
   }
 
   async function handleAssign(userId) {
-    if (!profile?.is_admin || !assignModalRoom) return
+    const canManage = profile?.is_admin || profile?.grade === 'chef_clinique'
+    if (!canManage || !assignModalRoom) return
     await supabase.from('assignments').upsert({
       user_id: userId,
       room_id: assignModalRoom,
