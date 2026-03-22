@@ -13,32 +13,40 @@ function getRoomStatus(roomId, closures, assignments) {
 
 const STATUS_CONFIG = {
   closed: {
-    bg: 'bg-gray-100 border-gray-300',
-    header: 'bg-gray-300',
-    badge: 'bg-gray-500 text-white',
+    bg: 'bg-gray-900 border-gray-700',
+    header: 'bg-gray-700',
+    badge: 'bg-gray-600 text-gray-300',
     label: 'Fermée',
     dot: 'bg-gray-500',
+    text: 'text-white',
+    subtext: 'text-gray-400',
   },
   complete: {
-    bg: 'bg-green-50 border-green-300',
-    header: 'bg-green-500',
+    bg: 'bg-gray-800 border-green-700',
+    header: 'bg-green-700',
     badge: 'bg-green-600 text-white',
     label: 'Au complet',
     dot: 'bg-green-500',
+    text: 'text-white',
+    subtext: 'text-gray-400',
   },
   understaffed: {
-    bg: 'bg-orange-50 border-orange-300',
-    header: 'bg-orange-400',
+    bg: 'bg-gray-800 border-orange-600',
+    header: 'bg-orange-600',
     badge: 'bg-orange-500 text-white',
     label: 'Incomplet',
     dot: 'bg-orange-400',
+    text: 'text-white',
+    subtext: 'text-gray-400',
   },
   available: {
-    bg: 'bg-white border-blue-200',
-    header: 'bg-blue-600',
-    badge: 'bg-blue-100 text-blue-700',
+    bg: 'bg-gray-800 border-gray-600',
+    header: 'bg-blue-700',
+    badge: 'bg-blue-900 text-blue-300',
     label: 'Disponible',
     dot: 'bg-blue-400',
+    text: 'text-white',
+    subtext: 'text-gray-400',
   },
 }
 
@@ -112,7 +120,7 @@ export default function RoomCard({
       {/* Content */}
       <div className="flex-1 px-3 pt-3 pb-2 space-y-3">
         {isClosed ? (
-          <div className="text-center text-gray-400 py-4">
+          <div className="text-center text-gray-500 py-4">
             <Lock size={24} className="mx-auto mb-1" />
             <p className="text-sm">Salle fermée</p>
           </div>
@@ -122,10 +130,10 @@ export default function RoomCard({
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">MA</span>
-                <span className="text-xs text-gray-400">({medecins.length})</span>
+                <span className="text-xs text-gray-600">({medecins.length})</span>
               </div>
               {medecins.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Aucun médecin</p>
+                <p className="text-xs text-gray-600 italic">Aucun médecin</p>
               ) : (
                 <ul className="space-y-1">
                   {medecins.map(a => (
@@ -134,11 +142,11 @@ export default function RoomCard({
                         onClick={() => onProfileClick(a.profiles)}
                         onMouseEnter={(e) => handleMouseEnter(a.profiles, e)}
                         onMouseLeave={handleMouseLeave}
-                        className="text-sm text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors"
+                        className="text-sm text-gray-200 truncate flex-1 text-left hover:text-blue-400 transition-colors"
                       >
                         {a.profiles?.full_name}
                         {a.profiles?.grade && (
-                          <span className="text-xs text-gray-400 ml-1">
+                          <span className="text-xs text-gray-500 ml-1">
                             {gradeLabel(a.profiles.grade)}
                           </span>
                         )}
@@ -146,7 +154,7 @@ export default function RoomCard({
                       {(a.user_id === currentProfile?.id || canManage) && (
                         <button
                           onClick={() => onLeave(roomId, a.user_id)}
-                          className="ml-1 p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                          className="ml-1 p-1 rounded-full text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors flex-shrink-0"
                         >
                           <X size={14} />
                         </button>
@@ -161,10 +169,10 @@ export default function RoomCard({
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">IADE</span>
-                <span className="text-xs text-gray-400">({infirmiers.length})</span>
+                <span className="text-xs text-gray-600">({infirmiers.length})</span>
               </div>
               {infirmiers.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Aucun infirmier</p>
+                <p className="text-xs text-gray-600 italic">Aucun infirmier</p>
               ) : (
                 <ul className="space-y-1">
                   {infirmiers.map(a => (
@@ -173,14 +181,14 @@ export default function RoomCard({
                         onClick={() => onProfileClick(a.profiles)}
                         onMouseEnter={(e) => handleMouseEnter(a.profiles, e)}
                         onMouseLeave={handleMouseLeave}
-                        className="text-sm text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors"
+                        className="text-sm text-gray-200 truncate flex-1 text-left hover:text-blue-400 transition-colors"
                       >
                         {a.profiles?.full_name}
                       </button>
                       {(a.user_id === currentProfile?.id || canManage) && (
                         <button
                           onClick={() => onLeave(roomId, a.user_id)}
-                          className="ml-1 p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                          className="ml-1 p-1 rounded-full text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors flex-shrink-0"
                         >
                           <X size={14} />
                         </button>
@@ -201,7 +209,7 @@ export default function RoomCard({
             {!isAssigned ? (
               <button
                 onClick={() => onJoin(roomId)}
-                className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium py-2 rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-medium py-2 rounded-xl transition-colors"
               >
                 <UserPlus size={15} />
                 Me rejoindre
@@ -209,7 +217,7 @@ export default function RoomCard({
             ) : (
               <button
                 onClick={() => onLeave(roomId, currentProfile.id)}
-                className="w-full flex items-center justify-center gap-1.5 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-700 text-sm font-medium py-2 rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-gray-300 text-sm font-medium py-2 rounded-xl transition-colors"
               >
                 <X size={15} />
                 Me retirer
@@ -218,7 +226,7 @@ export default function RoomCard({
             {canManage && (
               <button
                 onClick={() => onAssign(roomId)}
-                className="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium py-2 rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 bg-gray-700 border border-gray-600 hover:bg-gray-600 text-gray-200 text-sm font-medium py-2 rounded-xl transition-colors"
               >
                 <Users size={15} />
                 Affecter
@@ -232,8 +240,8 @@ export default function RoomCard({
             onClick={() => (isClosed ? onOpen(roomId) : onClose(roomId))}
             className={`w-full flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-xl transition-colors ${
               isClosed
-                ? 'bg-green-100 hover:bg-green-200 text-green-700 border border-green-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300'
+                ? 'bg-green-900/40 hover:bg-green-900/60 text-green-400 border border-green-700'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-400 border border-gray-600'
             }`}
           >
             {isClosed ? (

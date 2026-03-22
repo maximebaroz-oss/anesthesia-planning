@@ -3,7 +3,7 @@ import { X, Search } from 'lucide-react'
 
 const GRADE_LABELS = {
   cadre: 'Cadre',
-  chef_clinique: 'CCA',
+  chef_clinique: 'CDC',
   interne: 'Interne',
   iade: 'IADE',
 }
@@ -28,17 +28,17 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
   const infirmiers = filtered.filter(p => p.profession === 'infirmier')
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-gray-800 border border-gray-700 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div className="px-4 pt-4 pb-3 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="font-bold text-gray-900">Affecter à la Salle {roomId}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Sélectionnez un membre du personnel</p>
+            <h2 className="font-bold text-white">Affecter à la Salle {roomId}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Sélectionnez un membre du personnel</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-400"
+            className="p-2 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
           >
             <X size={20} />
           </button>
@@ -47,13 +47,13 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
         {/* Search + filter */}
         <div className="px-4 py-3 space-y-2 flex-shrink-0">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher..."
-              className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-900 border border-gray-600 rounded-xl pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex gap-2">
@@ -68,7 +68,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                 className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filter === opt.value
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
                 {opt.label}
@@ -80,12 +80,12 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
         {/* List */}
         <div className="overflow-y-auto flex-1 px-4 pb-4">
           {filtered.length === 0 ? (
-            <p className="text-center text-gray-400 text-sm py-8">Aucun personnel disponible</p>
+            <p className="text-center text-gray-500 text-sm py-8">Aucun personnel disponible</p>
           ) : (
             <div className="space-y-4">
               {medecins.length > 0 && (filter === 'all' || filter === 'medecin') && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                     Médecins (MA)
                   </p>
                   <div className="space-y-1">
@@ -93,14 +93,14 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                       <button
                         key={p.id}
                         onClick={() => onAssign(p.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-colors text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
                           {p.full_name.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{p.full_name}</p>
-                          <p className="text-xs text-gray-500">{GRADE_LABELS[p.grade] ?? p.grade}</p>
+                          <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
+                          <p className="text-xs text-gray-400">{GRADE_LABELS[p.grade] ?? p.grade}</p>
                         </div>
                       </button>
                     ))}
@@ -110,7 +110,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
 
               {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                     Infirmiers (IADE)
                   </p>
                   <div className="space-y-1">
@@ -118,14 +118,14 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                       <button
                         key={p.id}
                         onClick={() => onAssign(p.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-green-50 active:bg-green-100 transition-colors text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-green-900 flex items-center justify-center text-green-300 font-bold text-sm flex-shrink-0">
                           {p.full_name.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{p.full_name}</p>
-                          <p className="text-xs text-gray-500">IADE</p>
+                          <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
+                          <p className="text-xs text-gray-400">IADE</p>
                         </div>
                       </button>
                     ))}

@@ -145,18 +145,18 @@ export default function Dashboard() {
   const totalAssigned = new Set(assignments.map(a => a.user_id)).size
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-950 flex flex-col">
       <Header />
 
       {/* Stats bar */}
-      <div className="bg-white border-b border-gray-100 px-4 py-2">
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-500">
+      <div className="bg-gray-900 border-b border-gray-700 px-4 py-2">
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-400">
           <span>
-            <span className="font-semibold text-gray-800">{totalAssigned}</span> personnel affecté
+            <span className="font-semibold text-white">{totalAssigned}</span> personnel affecté
           </span>
           <button
             onClick={fetchData}
-            className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors"
+            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors"
           >
             <RefreshCw size={14} />
             Actualiser
@@ -168,7 +168,7 @@ export default function Dashboard() {
       <main className="flex-1 px-3 py-4 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center text-gray-400">
+            <div className="text-center text-gray-500">
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin" />
               <p className="text-sm">Chargement des salles...</p>
             </div>

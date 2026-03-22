@@ -18,27 +18,27 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-6xl mb-3">🏥</div>
           <h1 className="text-white text-2xl font-bold tracking-tight">Planning Bloc</h1>
-          <p className="text-blue-200 text-sm mt-1">Unité d'Anesthésie</p>
+          <p className="text-gray-400 text-sm mt-1">Unité d'Anesthésie</p>
         </div>
 
         {/* Form card */}
-        <div className="bg-white rounded-2xl shadow-xl p-6">
-          <h2 className="text-gray-800 font-semibold text-lg mb-5">Connexion</h2>
+        <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl p-6">
+          <h2 className="text-white font-semibold text-lg mb-5">Connexion</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="prenom.nom@hopital.fr"
                 required
                 autoComplete="email"
@@ -46,12 +46,12 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Mot de passe</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Mot de passe</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
@@ -59,7 +59,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">
+              <div className="bg-red-900/40 border border-red-700 text-red-400 text-sm rounded-lg px-4 py-2">
                 {error}
               </div>
             )}
@@ -67,14 +67,14 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-700 hover:bg-blue-800 active:bg-blue-900 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
+              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-blue-200 text-xs mt-6">
+        <p className="text-center text-gray-500 text-xs mt-6">
           Contactez un cadre pour obtenir vos accès
         </p>
       </div>
