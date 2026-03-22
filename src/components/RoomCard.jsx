@@ -84,7 +84,7 @@ export default function RoomCard({
 
   function gradeLabel(grade) {
     if (grade === 'cadre') return 'Cadre'
-    if (grade === 'chef_clinique') return 'CCA'
+    if (grade === 'chef_clinique') return 'CDC'
     if (grade === 'interne') return 'Int.'
     return ''
   }
