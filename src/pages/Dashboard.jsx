@@ -7,7 +7,19 @@ import RoomCard from '../components/RoomCard'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 
-const ROOMS = [1, 2, 3, 4, 5, 6, 7, 8]
+const ROOMS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+const ROOM_NAMES = {
+  1: 'Gastro 4',
+  2: 'Gastro 5',
+  3: 'Broncho 7',
+  4: 'Radio 11',
+  5: 'Radio 12',
+  6: 'Radio 13',
+  7: 'Cardio 17',
+  8: 'ETO/Cardioversion/VVC',
+  9: 'IRM/Scanner',
+}
 
 function getToday() {
   return new Date().toISOString().split('T')[0]
@@ -179,6 +191,7 @@ export default function Dashboard() {
               <RoomCard
                 key={roomId}
                 roomId={roomId}
+                roomName={ROOM_NAMES[roomId]}
                 assignments={assignments}
                 closures={closures}
                 currentProfile={profile}

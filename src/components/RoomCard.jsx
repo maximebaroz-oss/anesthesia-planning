@@ -52,6 +52,7 @@ const STATUS_CONFIG = {
 
 export default function RoomCard({
   roomId,
+  roomName,
   assignments,
   closures,
   currentProfile,
@@ -111,7 +112,7 @@ export default function RoomCard({
     <div className={`rounded-2xl border-2 shadow-sm overflow-hidden flex flex-col ${config.bg}`}>
       {/* Header bar */}
       <div className={`${config.header} px-3 py-2 flex items-center justify-between`}>
-        <span className="text-white font-bold text-base">Salle {roomId}</span>
+        <span className="text-white font-bold text-base">{roomName || `Salle ${roomId}`}</span>
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${config.badge}`}>
           {config.label}
         </span>
