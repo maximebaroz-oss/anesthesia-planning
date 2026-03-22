@@ -1,4 +1,5 @@
-import { UserPlus, X, Lock, Unlock, Users } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { UserPlus, X, Lock, Unlock, Users, Phone } from 'lucide-react'
 
 function getRoomStatus(roomId, closures, assignments) {
   if (closures.some(c => c.room_id === roomId)) return 'closed'
@@ -65,6 +66,22 @@ export default function RoomCard({
   const isAdmin = currentProfile?.is_admin
   const canManage = currentProfile?.is_admin || currentProfile?.grade === 'chef_clinique'
 
+  const [tooltip, setTooltip] = useState(null)
+  const timerRef = useRef(null)
+
+  function handleMouseEnter(profile, e) {
+    if (!profile?.phone) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    timerRef.current = setTimeout(() => {
+      setTooltip({ phone: profile.phone, top: rect.bottom + 6, left: rect.left })
+    }, 1000)
+  }
+
+  function handleMouseLeave() {
+    clearTimeout(timerRef.current)
+    setTooltip(null)
+  }
+
   function gradeLabel(grade) {
     if (grade === 'cadre') return 'Cadre'
     if (grade === 'chef_clinique') return 'CCA'
@@ -73,6 +90,16 @@ export default function RoomCard({
   }
 
   return (
+    <>
+    {tooltip && (
+      <div
+        className="fixed z-50 bg-gray-900 text-white text-xs rounded-lg px-3 py-1.5 shadow-lg pointer-events-none flex items-center gap-1.5"
+        style={{ top: tooltip.top, left: tooltip.left }}
+      >
+        <Phone size={11} />
+        {tooltip.phone}
+      </div>
+    )}
     <div className={`rounded-2xl border-2 shadow-sm overflow-hidden flex flex-col ${config.bg}`}>
       {/* Header bar */}
       <div className={`${config.header} px-3 py-2 flex items-center justify-between`}>
@@ -105,6 +132,8 @@ export default function RoomCard({
                     <li key={a.id} className="flex items-center justify-between">
                       <button
                         onClick={() => onProfileClick(a.profiles)}
+                        onMouseEnter={(e) => handleMouseEnter(a.profiles, e)}
+                        onMouseLeave={handleMouseLeave}
                         className="text-sm text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors"
                       >
                         {a.profiles?.full_name}
@@ -142,6 +171,8 @@ export default function RoomCard({
                     <li key={a.id} className="flex items-center justify-between">
                       <button
                         onClick={() => onProfileClick(a.profiles)}
+                        onMouseEnter={(e) => handleMouseEnter(a.profiles, e)}
+                        onMouseLeave={handleMouseLeave}
                         className="text-sm text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors"
                       >
                         {a.profiles?.full_name}
@@ -218,5 +249,6 @@ export default function RoomCard({
         )}
       </div>
     </div>
+    </>
   )
 }
