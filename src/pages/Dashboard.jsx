@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
@@ -21,8 +21,35 @@ const ROOM_NAMES = {
   9: 'IRM/Scanner',
 }
 
-function getToday() {
-  return new Date().toISOString().split('T')[0]
+const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+function getMonday(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  d.setDate(diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function getISOWeek(date) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
+  const week1 = new Date(d.getFullYear(), 0, 4)
+  return 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7)
+}
+
+function getWeekDays(monday) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+}
+
+function formatDateKey(date) {
+  return date.toISOString().split('T')[0]
 }
 
 export default function Dashboard() {
@@ -34,101 +61,94 @@ export default function Dashboard() {
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const today = getToday()
+  const todayStr = formatDateKey(new Date())
+
+  const [windowStart, setWindowStart] = useState(() => getMonday(new Date()))
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0)
+  const [selectedDate, setSelectedDate] = useState(todayStr)
+
+  const weeks = useMemo(() => {
+    return [0, 1, 2].map(i => {
+      const monday = new Date(windowStart)
+      monday.setDate(windowStart.getDate() + i * 7)
+      return monday
+    })
+  }, [windowStart])
+
+  const selectedWeekDays = useMemo(() => {
+    return getWeekDays(weeks[selectedWeekIndex])
+  }, [weeks, selectedWeekIndex])
+
+  function handleWeekSelect(index) {
+    setSelectedWeekIndex(index)
+    const days = getWeekDays(weeks[index])
+    const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
+    setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
+  }
+
+  function shiftWindow(direction) {
+    const newStart = new Date(windowStart)
+    newStart.setDate(windowStart.getDate() + direction * 7)
+    setWindowStart(newStart)
+    setSelectedWeekIndex(0)
+    const days = getWeekDays(newStart)
+    const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
+    setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
+  }
 
   const fetchData = useCallback(async () => {
+    setLoading(true)
     const [{ data: asgn }, { data: cls }, { data: profs }] = await Promise.all([
-      supabase
-        .from('assignments')
-        .select('*, profiles!assignments_user_id_fkey(*)')
-        .eq('date', today),
-      supabase
-        .from('room_closures')
-        .select('*')
-        .eq('date', today),
-      supabase
-        .from('profiles')
-        .select('*')
-        .order('full_name'),
+      supabase.from('assignments').select('*, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
+      supabase.from('room_closures').select('*').eq('date', selectedDate),
+      supabase.from('profiles').select('*').order('full_name'),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
     setAllProfiles(profs ?? [])
     setLoading(false)
-  }, [today])
+  }, [selectedDate])
 
   useEffect(() => {
     fetchData()
-
     const channel = supabase
       .channel('dashboard-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'assignments' },
-        () => fetchData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'room_closures' },
-        () => fetchData()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_closures' }, () => fetchData())
       .subscribe()
-
     return () => supabase.removeChannel(channel)
   }, [fetchData])
 
   async function handleJoin(roomId) {
     if (!profile) return
     const { data: existing } = await supabase
-      .from('assignments')
-      .select('id')
-      .eq('user_id', profile.id)
-      .eq('room_id', roomId)
-      .eq('date', today)
+      .from('assignments').select('id')
+      .eq('user_id', profile.id).eq('room_id', roomId).eq('date', selectedDate)
       .maybeSingle()
     if (!existing) {
       await supabase.from('assignments').insert({
-        user_id: profile.id,
-        room_id: roomId,
-        date: today,
-        assigned_by: profile.id,
+        user_id: profile.id, room_id: roomId, date: selectedDate, assigned_by: profile.id,
       })
     }
     await fetchData()
   }
 
   async function handleLeave(roomId, userId) {
-    await supabase
-      .from('assignments')
-      .delete()
-      .eq('user_id', userId)
-      .eq('room_id', roomId)
-      .eq('date', today)
+    await supabase.from('assignments').delete()
+      .eq('user_id', userId).eq('room_id', roomId).eq('date', selectedDate)
     await fetchData()
   }
 
   async function handleClose(roomId) {
     if (!profile?.is_admin) return
-    await supabase
-      .from('assignments')
-      .delete()
-      .eq('room_id', roomId)
-      .eq('date', today)
-    await supabase.from('room_closures').upsert({
-      room_id: roomId,
-      date: today,
-      closed_by: profile.id,
-    })
+    await supabase.from('assignments').delete().eq('room_id', roomId).eq('date', selectedDate)
+    await supabase.from('room_closures').insert({ room_id: roomId, date: selectedDate, closed_by: profile.id })
     await fetchData()
   }
 
   async function handleOpen(roomId) {
     if (!profile?.is_admin) return
-    await supabase
-      .from('room_closures')
-      .delete()
-      .eq('room_id', roomId)
-      .eq('date', today)
+    await supabase.from('room_closures').delete().eq('room_id', roomId).eq('date', selectedDate)
     await fetchData()
   }
 
@@ -136,18 +156,12 @@ export default function Dashboard() {
     const canManage = profile?.is_admin || profile?.grade === 'chef_clinique'
     if (!canManage || !assignModalRoom) return
     const { data: existing } = await supabase
-      .from('assignments')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('room_id', assignModalRoom)
-      .eq('date', today)
+      .from('assignments').select('id')
+      .eq('user_id', userId).eq('room_id', assignModalRoom).eq('date', selectedDate)
       .maybeSingle()
     if (!existing) {
       await supabase.from('assignments').insert({
-        user_id: userId,
-        room_id: assignModalRoom,
-        date: today,
-        assigned_by: profile.id,
+        user_id: userId, room_id: assignModalRoom, date: selectedDate, assigned_by: profile.id,
       })
     }
     setAssignModalRoom(null)
@@ -156,33 +170,108 @@ export default function Dashboard() {
 
   const totalAssigned = new Set(assignments.map(a => a.user_id)).size
 
+  const selectedDayLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  })
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
       <Header />
 
-      {/* Stats bar */}
+      {/* Sélecteur de semaine et jour */}
+      <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
+        <div className="max-w-4xl mx-auto space-y-3">
+
+          {/* Navigation semaines */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => shiftWindow(-1)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <div className="flex flex-1 gap-2">
+              {weeks.map((monday, i) => {
+                const weekNum = getISOWeek(monday)
+                const isSelected = i === selectedWeekIndex
+                const containsToday = getWeekDays(monday).some(d => formatDateKey(d) === todayStr)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleWeekSelect(i)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600 text-white'
+                        : containsToday
+                        ? 'bg-gray-800 text-blue-400 border border-blue-700'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    S{weekNum}
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => shiftWindow(1)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          {/* Jours de la semaine sélectionnée */}
+          <div className="flex gap-1">
+            {selectedWeekDays.map((day, i) => {
+              const dateStr = formatDateKey(day)
+              const isSelected = dateStr === selectedDate
+              const isToday = dateStr === todayStr
+              const isPast = dateStr < todayStr
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelectedDate(dateStr)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors flex flex-col items-center gap-0.5 ${
+                    isSelected
+                      ? 'bg-blue-600 text-white'
+                      : isToday
+                      ? 'bg-blue-900/50 text-blue-300 border border-blue-700'
+                      : isPast
+                      ? 'text-gray-600 hover:bg-gray-800 hover:text-gray-400'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  <span>{DAY_NAMES[i]}</span>
+                  <span className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-blue-300' : ''}`}>
+                    {day.getDate()}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Barre info */}
       <div className="bg-gray-900 border-b border-gray-700 px-4 py-2">
         <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-400">
-          <span>
-            <span className="font-semibold text-white">{totalAssigned}</span> personnel affecté
-          </span>
-          <button
-            onClick={fetchData}
-            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors"
-          >
+          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold text-white">{totalAssigned}</span> affecté(s)</span>
+          <button onClick={fetchData} className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors">
             <RefreshCw size={14} />
             Actualiser
           </button>
         </div>
       </div>
 
-      {/* Room grid */}
+      {/* Grille des salles */}
       <main className="flex-1 px-3 py-4 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center text-gray-500">
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin" />
-              <p className="text-sm">Chargement des salles...</p>
+              <p className="text-sm">Chargement...</p>
             </div>
           </div>
         ) : (
@@ -207,12 +296,8 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Assign modal */}
       {selectedProfile && (
-        <ProfileModal
-          profile={selectedProfile}
-          onClose={() => setSelectedProfile(null)}
-        />
+        <ProfileModal profile={selectedProfile} onClose={() => setSelectedProfile(null)} />
       )}
 
       {assignModalRoom && (
@@ -220,7 +305,7 @@ export default function Dashboard() {
           roomId={assignModalRoom}
           profiles={allProfiles}
           assignments={assignments}
-          today={today}
+          today={selectedDate}
           onAssign={handleAssign}
           onClose={() => setAssignModalRoom(null)}
         />
