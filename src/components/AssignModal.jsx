@@ -59,7 +59,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
           <div className="flex gap-2">
             {[
               { value: 'all', label: 'Tous' },
-              { value: 'medecin', label: 'MAR' },
+              { value: 'medecin', label: 'MA' },
               { value: 'infirmier', label: 'IADE' },
             ].map(opt => (
               <button
@@ -86,7 +86,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
               {medecins.length > 0 && (filter === 'all' || filter === 'medecin') && (
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                    Médecins (MAR)
+                    Médecins (MA)
                   </p>
                   <div className="space-y-1">
                     {medecins.map(p => (
