@@ -23,7 +23,7 @@ export default function Dashboard() {
   const today = getToday()
 
   const fetchData = useCallback(async () => {
-    const [{ data: asgn }, { data: cls }, { data: profs }] = await Promise.all([
+    const [{ data: asgn, error: asgnErr }, { data: cls, error: clsErr }, { data: profs, error: profsErr }] = await Promise.all([
       supabase
         .from('assignments')
         .select('*, profiles(*)')
@@ -37,6 +37,11 @@ export default function Dashboard() {
         .select('*')
         .order('full_name'),
     ])
+    console.log('=== DEBUG ===')
+    console.log('Date utilisée:', today)
+    console.log('Affectations:', asgn, '| Erreur:', asgnErr)
+    console.log('Profils:', profs, '| Erreur:', profsErr)
+    console.log('Fermetures:', cls, '| Erreur:', clsErr)
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
     setAllProfiles(profs ?? [])
