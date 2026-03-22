@@ -70,7 +70,7 @@ export default function Dashboard() {
       room_id: roomId,
       date: today,
       assigned_by: profile.id,
-    })
+    }, { onConflict: 'user_id,room_id,date', ignoreDuplicates: true })
     await fetchData()
   }
 
@@ -117,7 +117,7 @@ export default function Dashboard() {
       room_id: assignModalRoom,
       date: today,
       assigned_by: profile.id,
-    })
+    }, { onConflict: 'user_id,room_id,date', ignoreDuplicates: true })
     setAssignModalRoom(null)
     await fetchData()
   }
