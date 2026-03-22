@@ -26,7 +26,7 @@ export default function Dashboard() {
     const [{ data: asgn, error: asgnErr }, { data: cls, error: clsErr }, { data: profs, error: profsErr }] = await Promise.all([
       supabase
         .from('assignments')
-        .select('*, profiles(*)')
+        .select('*, profiles!assignments_user_id_fkey(*)')
         .eq('date', today),
       supabase
         .from('room_closures')
