@@ -65,12 +65,21 @@ export default function Dashboard() {
 
   async function handleJoin(roomId) {
     if (!profile) return
-    await supabase.from('assignments').upsert({
-      user_id: profile.id,
-      room_id: roomId,
-      date: today,
-      assigned_by: profile.id,
-    }, { onConflict: 'user_id,room_id,date', ignoreDuplicates: true })
+    const { data: existing } = await supabase
+      .from('assignments')
+      .select('id')
+      .eq('user_id', profile.id)
+      .eq('room_id', roomId)
+      .eq('date', today)
+      .maybeSingle()
+    if (!existing) {
+      await supabase.from('assignments').insert({
+        user_id: profile.id,
+        room_id: roomId,
+        date: today,
+        assigned_by: profile.id,
+      })
+    }
     await fetchData()
   }
 
@@ -112,12 +121,21 @@ export default function Dashboard() {
   async function handleAssign(userId) {
     const canManage = profile?.is_admin || profile?.grade === 'chef_clinique'
     if (!canManage || !assignModalRoom) return
-    await supabase.from('assignments').upsert({
-      user_id: userId,
-      room_id: assignModalRoom,
-      date: today,
-      assigned_by: profile.id,
-    }, { onConflict: 'user_id,room_id,date', ignoreDuplicates: true })
+    const { data: existing } = await supabase
+      .from('assignments')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('room_id', assignModalRoom)
+      .eq('date', today)
+      .maybeSingle()
+    if (!existing) {
+      await supabase.from('assignments').insert({
+        user_id: userId,
+        room_id: assignModalRoom,
+        date: today,
+        assigned_by: profile.id,
+      })
+    }
     setAssignModalRoom(null)
     await fetchData()
   }
