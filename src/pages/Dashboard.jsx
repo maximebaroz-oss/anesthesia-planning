@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
 import AssignModal from '../components/AssignModal'
+import ProfileModal from '../components/ProfileModal'
 
 const ROOMS = [1, 2, 3, 4, 5, 6, 7, 8]
 
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const [closures, setClosures] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
   const [assignModalRoom, setAssignModalRoom] = useState(null)
+  const [selectedProfile, setSelectedProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const today = getToday()
@@ -185,6 +187,7 @@ export default function Dashboard() {
                 onClose={handleClose}
                 onOpen={handleOpen}
                 onAssign={(id) => setAssignModalRoom(id)}
+                onProfileClick={(p) => setSelectedProfile(p)}
               />
             ))}
           </div>
@@ -192,6 +195,13 @@ export default function Dashboard() {
       </main>
 
       {/* Assign modal */}
+      {selectedProfile && (
+        <ProfileModal
+          profile={selectedProfile}
+          onClose={() => setSelectedProfile(null)}
+        />
+      )}
+
       {assignModalRoom && (
         <AssignModal
           roomId={assignModalRoom}

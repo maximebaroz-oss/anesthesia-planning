@@ -51,6 +51,7 @@ export default function RoomCard({
   onClose,
   onOpen,
   onAssign,
+  onProfileClick,
 }) {
   const status = getRoomStatus(roomId, closures, assignments)
   const config = STATUS_CONFIG[status]
@@ -102,14 +103,17 @@ export default function RoomCard({
                 <ul className="space-y-1">
                   {medecins.map(a => (
                     <li key={a.id} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-800 truncate flex-1">
+                      <button
+                        onClick={() => onProfileClick(a.profiles)}
+                        className="text-sm text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors"
+                      >
                         {a.profiles?.full_name}
                         {a.profiles?.grade && (
                           <span className="text-xs text-gray-400 ml-1">
                             {gradeLabel(a.profiles.grade)}
                           </span>
                         )}
-                      </span>
+                      </button>
                       {(a.user_id === currentProfile?.id || canManage) && (
                         <button
                           onClick={() => onLeave(roomId, a.user_id)}
@@ -136,9 +140,12 @@ export default function RoomCard({
                 <ul className="space-y-1">
                   {infirmiers.map(a => (
                     <li key={a.id} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-800 truncate flex-1">
+                      <button
+                        onClick={() => onProfileClick(a.profiles)}
+                        className="text-sm text-gray-800 truncate flex-1 text-left hover:text-blue-600 transition-colors"
+                      >
                         {a.profiles?.full_name}
-                      </span>
+                      </button>
                       {(a.user_id === currentProfile?.id || canManage) && (
                         <button
                           onClick={() => onLeave(roomId, a.user_id)}
