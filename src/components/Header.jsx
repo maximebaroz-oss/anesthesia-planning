@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react'
+import { LogOut, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const GRADE_LABELS = {
@@ -8,7 +8,7 @@ const GRADE_LABELS = {
   iade: 'IADE',
 }
 
-export default function Header() {
+export default function Header({ sector, unit, onBack }) {
   const { profile, signOut } = useAuth()
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -21,9 +21,22 @@ export default function Header() {
     <header className="bg-gray-900 border-b border-gray-700 text-white px-4 py-3 shadow-md sticky top-0 z-10">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors mr-1"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
           <span className="text-2xl">🏥</span>
           <div>
-            <div className="font-bold text-sm leading-tight text-white">Planning Bloc</div>
+            <div className="flex items-center gap-1.5">
+              {sector && <span className="text-xs font-bold text-gray-400">{sector.name}</span>}
+              {sector && unit && <span className="text-gray-600 text-xs">/</span>}
+              {unit && <span className="font-bold text-sm text-white">{unit.name}</span>}
+              {!sector && <span className="font-bold text-sm text-white">Planning Bloc</span>}
+            </div>
             <div className="text-gray-400 text-xs capitalize">{today}</div>
           </div>
         </div>

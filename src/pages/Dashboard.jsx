@@ -52,7 +52,7 @@ function formatDateKey(date) {
   return date.toISOString().split('T')[0]
 }
 
-export default function Dashboard() {
+export default function Dashboard({ sector, unit, onBack }) {
   const { profile } = useAuth()
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
@@ -176,7 +176,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      <Header />
+      <Header sector={sector} unit={unit} onBack={onBack} />
 
       {/* Sélecteur de semaine et jour */}
       <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
