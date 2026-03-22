@@ -166,10 +166,10 @@ export default function RoomCard({
               )}
             </div>
 
-            {/* Infirmiers (IADE) */}
+            {/* Infirmiers (ISA) */}
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">IADE</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ISA</span>
                 <span className="text-xs text-gray-600">({infirmiers.length})</span>
               </div>
               {infirmiers.length === 0 ? (

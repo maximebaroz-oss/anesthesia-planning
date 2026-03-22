@@ -1,14 +1,14 @@
-import { LogOut, ArrowLeft } from 'lucide-react'
+import { LogOut, ArrowLeft, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const GRADE_LABELS = {
   cadre: 'Cadre',
   chef_clinique: 'Chef de clinique',
   interne: 'Interne',
-  iade: 'IADE',
+  iade: 'ISA',
 }
 
-export default function Header({ sector, unit, onBack }) {
+export default function Header({ sector, unit, onBack, onMenuOpen }) {
   const { profile, signOut } = useAuth()
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -21,6 +21,14 @@ export default function Header({ sector, unit, onBack }) {
     <header className="bg-gray-900 border-b border-gray-700 text-white px-4 py-3 shadow-md sticky top-0 z-10">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {onMenuOpen && (
+            <button
+              onClick={onMenuOpen}
+              className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+          )}
           {onBack && (
             <button
               onClick={onBack}

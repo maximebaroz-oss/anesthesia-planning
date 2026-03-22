@@ -5,7 +5,7 @@ const GRADE_LABELS = {
   cadre: 'Cadre',
   chef_clinique: 'CDC',
   interne: 'Interne',
-  iade: 'IADE',
+  iade: 'ISA',
 }
 
 export default function AssignModal({ roomId, profiles, assignments, today, onAssign, onClose }) {
@@ -60,7 +60,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
             {[
               { value: 'all', label: 'Tous' },
               { value: 'medecin', label: 'MA' },
-              { value: 'infirmier', label: 'IADE' },
+              { value: 'infirmier', label: 'ISA' },
             ].map(opt => (
               <button
                 key={opt.value}
@@ -111,7 +111,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
               {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Infirmiers (IADE)
+                    Infirmiers (ISA)
                   </p>
                   <div className="space-y-1">
                     {infirmiers.map(p => (
@@ -125,7 +125,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
-                          <p className="text-xs text-gray-400">IADE</p>
+                          <p className="text-xs text-gray-400">ISA</p>
                         </div>
                       </button>
                     ))}

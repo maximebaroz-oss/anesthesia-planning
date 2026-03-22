@@ -6,6 +6,7 @@ import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
+import Sidebar from '../components/Sidebar'
 
 const ROOMS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -59,6 +60,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const [allProfiles, setAllProfiles] = useState([])
   const [assignModalRoom, setAssignModalRoom] = useState(null)
   const [selectedProfile, setSelectedProfile] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const todayStr = formatDateKey(new Date())
@@ -176,7 +178,8 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      <Header sector={sector} unit={unit} onBack={onBack} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
 
       {/* Sélecteur de semaine et jour */}
       <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
