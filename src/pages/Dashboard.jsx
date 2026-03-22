@@ -15,7 +15,7 @@ const ROOM_NAMES = {
   3: 'Broncho 7',
   4: 'Radio 11',
   5: 'Radio 12',
-  6: 'Radio 13',
+  6: 'Neuro-radio 13',
   7: 'Cardio 17',
   8: 'ETO/Cardioversion/VVC',
   9: 'IRM/Scanner',
