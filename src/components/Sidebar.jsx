@@ -244,13 +244,6 @@ const MED_SECTIONS = [
   { label: 'Internes', grade: 'interne' },
 ]
 
-const ISA_SECTIONS = [
-  { label: 'ISA 1', grade: 'isa1' },
-  { label: 'ISA 2', grade: 'isa2' },
-  { label: 'ISA 3', grade: 'isa3' },
-  { label: 'ISA 4', grade: 'isa4' },
-  { label: 'ISA 5', grade: 'isa5' },
-]
 
 function StaffList({ profession }) {
   const { profile: currentProfile } = useAuth()
