@@ -30,6 +30,7 @@ function PresenceHistory() {
       .eq('user_id', currentProfile.id)
       .order('date', { ascending: false })
       .limit(60)
+      .not('start_time', 'is', null)
       .then(({ data }) => { setHistory(data ?? []); setLoading(false) })
   }, [currentProfile?.id])
 
