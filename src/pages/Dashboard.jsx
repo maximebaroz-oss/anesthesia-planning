@@ -107,7 +107,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }] = await Promise.all([
-      supabase.from('assignments').select('*, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
+      supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
       supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
