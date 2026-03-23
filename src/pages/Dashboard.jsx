@@ -53,10 +53,16 @@ function formatDateKey(date) {
   return date.toISOString().split('T')[0]
 }
 
+function getCurrentTime() {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
 export default function Dashboard({ sector, unit, onBack }) {
   const { profile } = useAuth()
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
+  const [roomSchedules, setRoomSchedules] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
   const [assignModalRoom, setAssignModalRoom] = useState(null)
   const [selectedProfile, setSelectedProfile] = useState(null)
@@ -100,14 +106,16 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [{ data: asgn }, { data: cls }, { data: profs }] = await Promise.all([
+    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }] = await Promise.all([
       supabase.from('assignments').select('*, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
       supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
+      supabase.from('room_schedules').select('*').eq('date', selectedDate),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
     setAllProfiles(profs ?? [])
+    setRoomSchedules(scheds ?? [])
     setLoading(false)
   }, [selectedDate])
 
@@ -117,6 +125,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       .channel('dashboard-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'room_closures' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_schedules' }, () => fetchData())
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [fetchData])
@@ -129,7 +138,11 @@ export default function Dashboard({ sector, unit, onBack }) {
       .maybeSingle()
     if (!existing) {
       await supabase.from('assignments').insert({
-        user_id: profile.id, room_id: roomId, date: selectedDate, assigned_by: profile.id,
+        user_id: profile.id,
+        room_id: roomId,
+        date: selectedDate,
+        assigned_by: profile.id,
+        start_time: getCurrentTime(),
       })
     }
     await fetchData()
@@ -163,10 +176,28 @@ export default function Dashboard({ sector, unit, onBack }) {
       .maybeSingle()
     if (!existing) {
       await supabase.from('assignments').insert({
-        user_id: userId, room_id: assignModalRoom, date: selectedDate, assigned_by: profile.id,
+        user_id: userId,
+        room_id: assignModalRoom,
+        date: selectedDate,
+        assigned_by: profile.id,
+        start_time: getCurrentTime(),
       })
     }
     setAssignModalRoom(null)
+    await fetchData()
+  }
+
+  async function handleUpdateAssignmentTime(assignmentId, field, value) {
+    await supabase.from('assignments').update({ [field]: value }).eq('id', assignmentId)
+    await fetchData()
+  }
+
+  async function handleUpdateRoomSchedule(roomId, field, value) {
+    await supabase.from('room_schedules').upsert({
+      room_id: roomId,
+      date: selectedDate,
+      [field]: value,
+    }, { onConflict: 'room_id,date' })
     await fetchData()
   }
 
@@ -181,51 +212,35 @@ export default function Dashboard({ sector, unit, onBack }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
 
-      {/* Sélecteur de semaine et jour */}
+      {/* Sélecteur semaine/jour */}
       <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
         <div className="max-w-4xl mx-auto space-y-3">
-
-          {/* Navigation semaines */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => shiftWindow(-1)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0"
-            >
+            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0">
               <ChevronLeft size={18} />
             </button>
-
             <div className="flex flex-1 gap-2">
               {weeks.map((monday, i) => {
                 const weekNum = getISOWeek(monday)
                 const isSelected = i === selectedWeekIndex
                 const containsToday = getWeekDays(monday).some(d => formatDateKey(d) === todayStr)
                 return (
-                  <button
-                    key={i}
-                    onClick={() => handleWeekSelect(i)}
+                  <button key={i} onClick={() => handleWeekSelect(i)}
                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
-                      isSelected
-                        ? 'bg-blue-600 text-white'
-                        : containsToday
-                        ? 'bg-gray-800 text-blue-400 border border-blue-700'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-                    }`}
-                  >
+                      isSelected ? 'bg-blue-600 text-white'
+                      : containsToday ? 'bg-gray-800 text-blue-400 border border-blue-700'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                    }`}>
                     S{weekNum}
                   </button>
                 )
               })}
             </div>
-
-            <button
-              onClick={() => shiftWindow(1)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0"
-            >
+            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0">
               <ChevronRight size={18} />
             </button>
           </div>
 
-          {/* Jours de la semaine sélectionnée */}
           <div className="flex gap-1">
             {selectedWeekDays.map((day, i) => {
               const dateStr = formatDateKey(day)
@@ -233,23 +248,15 @@ export default function Dashboard({ sector, unit, onBack }) {
               const isToday = dateStr === todayStr
               const isPast = dateStr < todayStr
               return (
-                <button
-                  key={i}
-                  onClick={() => setSelectedDate(dateStr)}
+                <button key={i} onClick={() => setSelectedDate(dateStr)}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors flex flex-col items-center gap-0.5 ${
-                    isSelected
-                      ? 'bg-blue-600 text-white'
-                      : isToday
-                      ? 'bg-blue-900/50 text-blue-300 border border-blue-700'
-                      : isPast
-                      ? 'text-gray-600 hover:bg-gray-800 hover:text-gray-400'
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
+                    isSelected ? 'bg-blue-600 text-white'
+                    : isToday ? 'bg-blue-900/50 text-blue-300 border border-blue-700'
+                    : isPast ? 'text-gray-600 hover:bg-gray-800 hover:text-gray-400'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  }`}>
                   <span>{DAY_NAMES[i]}</span>
-                  <span className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-blue-300' : ''}`}>
-                    {day.getDate()}
-                  </span>
+                  <span className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-blue-300' : ''}`}>{day.getDate()}</span>
                 </button>
               )
             })}
@@ -268,7 +275,7 @@ export default function Dashboard({ sector, unit, onBack }) {
         </div>
       </div>
 
-      {/* Grille des salles */}
+      {/* Grille */}
       <main className="flex-1 px-3 py-4 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -286,13 +293,17 @@ export default function Dashboard({ sector, unit, onBack }) {
                 roomName={ROOM_NAMES[roomId]}
                 assignments={assignments}
                 closures={closures}
+                roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? null}
                 currentProfile={profile}
+                isToday={selectedDate === todayStr}
                 onJoin={handleJoin}
                 onLeave={handleLeave}
                 onClose={handleClose}
                 onOpen={handleOpen}
                 onAssign={(id) => setAssignModalRoom(id)}
                 onProfileClick={(p) => setSelectedProfile(p)}
+                onUpdateTime={handleUpdateAssignmentTime}
+                onUpdateRoomSchedule={handleUpdateRoomSchedule}
               />
             ))}
           </div>
