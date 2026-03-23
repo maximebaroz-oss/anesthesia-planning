@@ -188,7 +188,8 @@ export default function Dashboard({ sector, unit, onBack }) {
   }
 
   async function handleUpdateAssignmentTime(assignmentId, field, value) {
-    await supabase.from('assignments').update({ [field]: value }).eq('id', assignmentId)
+    const { error } = await supabase.from('assignments').update({ [field]: value }).eq('id', assignmentId)
+    console.log('Update time:', { assignmentId, field, value, error })
     await fetchData()
   }
 
