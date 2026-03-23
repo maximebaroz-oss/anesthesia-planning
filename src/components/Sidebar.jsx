@@ -65,19 +65,15 @@ function ProfilePanel({ onClose }) {
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-3 bg-gray-700 rounded-xl">
-            <div className="flex items-center gap-2">
-              <Phone size={15} className="text-gray-500" />
-              {phone ? (
-                <a href={`tel:${phone}`} className="text-sm text-blue-400 hover:underline">{phone}</a>
-              ) : (
-                <span className="text-sm text-gray-500 italic">Non renseigné</span>
-              )}
-            </div>
-            <button onClick={() => setEditingPhone(true)} className="text-gray-500 hover:text-blue-400 p-1 transition-colors">
-              <Edit2 size={14} />
-            </button>
-          </div>
+          <button onClick={() => setEditingPhone(true)} className="w-full flex items-center gap-2 p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition-colors text-left">
+            <Phone size={15} className="text-gray-500 flex-shrink-0" />
+            {phone ? (
+              <span className="text-sm text-blue-400">{phone}</span>
+            ) : (
+              <span className="text-sm text-gray-500 italic">Cliquer pour ajouter</span>
+            )}
+            <Edit2 size={12} className="text-gray-600 ml-auto flex-shrink-0" />
+          </button>
         )}
       </div>
     </div>
