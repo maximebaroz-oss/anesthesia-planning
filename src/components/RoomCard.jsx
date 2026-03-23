@@ -311,7 +311,7 @@ export default function RoomCard({
             <>
               <div>
                 <div className="flex items-center gap-1 mb-1">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">MA</span>
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Med</span>
                   <span className="text-xs text-gray-600">({medecins.length})</span>
                 </div>
                 {medecins.length === 0 ? (

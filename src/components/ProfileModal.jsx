@@ -11,7 +11,7 @@ const GRADE_LABELS = {
 }
 
 const PROFESSION_LABELS = {
-  medecin: 'Médecin Anesthésiste (MA)',
+  medecin: 'Médecin Anesthésiste (Med)',
   infirmier: 'Infirmier Anesthésiste (ISA)',
 }
 

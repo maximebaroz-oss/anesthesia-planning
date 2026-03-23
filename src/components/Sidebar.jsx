@@ -34,7 +34,7 @@ function ProfilePanel({ onClose }) {
         <div>
           <p className="text-white font-bold">{currentProfile.full_name}</p>
           <p className="text-gray-400 text-xs">{GRADE_LABELS[currentProfile.grade] ?? currentProfile.grade}</p>
-          <p className="text-gray-500 text-xs">{currentProfile.profession === 'medecin' ? 'Médecin (MA)' : 'Infirmier (ISA)'}</p>
+          <p className="text-gray-500 text-xs">{currentProfile.profession === 'medecin' ? 'Médecin (Med)' : 'Infirmier (ISA)'}</p>
         </div>
       </div>
 
@@ -80,7 +80,82 @@ function ProfilePanel({ onClose }) {
   )
 }
 
+function StaffRow({ p, profession, canEdit }) {
+  const [showPhone, setShowPhone] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [phone, setPhone] = useState(p.phone ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function savePhone() {
+    setSaving(true)
+    await supabase.from('profiles').update({ phone }).eq('id', p.id)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  return (
+    <div className="bg-gray-700 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between p-3">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+            profession === 'medecin' ? 'bg-blue-900 text-blue-300' : 'bg-emerald-900 text-emerald-300'
+          }`}>
+            {p.full_name.charAt(0)}
+          </div>
+          <div>
+            <p className="text-white text-sm font-medium">{p.full_name}</p>
+            <p className="text-gray-500 text-xs">{GRADE_LABELS[p.grade] ?? p.grade}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => { setShowPhone(v => !v); setEditing(false) }}
+          className={`p-1.5 rounded-lg transition-colors ${phone ? 'text-blue-400 hover:text-blue-300' : 'text-gray-600 hover:text-gray-400'}`}
+        >
+          <Phone size={15} />
+        </button>
+      </div>
+
+      {showPhone && (
+        <div className="px-3 pb-3">
+          {editing ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="06 12 34 56 78"
+                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+              <button onClick={savePhone} disabled={saving} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg p-1.5 transition-colors">
+                <Check size={14} />
+              </button>
+              <button onClick={() => setEditing(false)} className="text-gray-500 hover:text-white rounded-lg p-1.5 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+              {phone ? (
+                <span className="text-sm text-blue-300">{phone}</span>
+              ) : (
+                <span className="text-sm text-gray-600 italic">Non renseigné</span>
+              )}
+              {canEdit && (
+                <button onClick={() => setEditing(true)} className="text-gray-600 hover:text-blue-400 transition-colors ml-2">
+                  <Edit2 size={13} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StaffList({ profession }) {
+  const { profile: currentProfile } = useAuth()
   const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -94,24 +169,10 @@ function StaffList({ profession }) {
   return (
     <div className="space-y-2">
       {staff.map(p => (
-        <div key={p.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-              profession === 'medecin' ? 'bg-blue-900 text-blue-300' : 'bg-emerald-900 text-emerald-300'
-            }`}>
-              {p.full_name.charAt(0)}
-            </div>
-            <div>
-              <p className="text-white text-sm font-medium">{p.full_name}</p>
-              <p className="text-gray-500 text-xs">{GRADE_LABELS[p.grade] ?? p.grade}</p>
-            </div>
-          </div>
-          {p.phone && (
-            <a href={`tel:${p.phone}`} className="text-gray-500 hover:text-blue-400 transition-colors p-1">
-              <Phone size={15} />
-            </a>
-          )}
-        </div>
+        <StaffRow
+          key={p.id} p={p} profession={profession}
+          canEdit={currentProfile?.is_admin || currentProfile?.id === p.id}
+        />
       ))}
     </div>
   )
@@ -119,7 +180,7 @@ function StaffList({ profession }) {
 
 const MENU_ITEMS = [
   { id: 'profil',   label: 'Mon profil',       icon: User },
-  { id: 'medecins', label: 'Liste des MA',      icon: Stethoscope },
+  { id: 'medecins', label: 'Liste des Med',      icon: Stethoscope },
   { id: 'isa',      label: 'Liste des ISA',     icon: Users },
 ]
 
