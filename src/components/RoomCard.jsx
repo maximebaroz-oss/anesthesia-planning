@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { UserPlus, X, Lock, Unlock, Users, Phone, Clock } from 'lucide-react'
+import { UserPlus, X, Lock, Unlock, Users, Phone, Clock, LogOut } from 'lucide-react'
 
 function isLate(timeStr) {
   if (!timeStr) return false
@@ -8,6 +8,11 @@ function isLate(timeStr) {
   const target = new Date()
   target.setHours(h, m, 0, 0)
   return now > target
+}
+
+function getCurrentTime() {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
 function getRoomStatus(roomId, closures, assignments) {
@@ -66,7 +71,49 @@ function gradeLabel(grade) {
   return ''
 }
 
-function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime, onLeave, onProfileClick, onMouseEnter, onMouseLeave }) {
+function LeaveConfirmModal({ name, onConfirm, onCancel }) {
+  const [endTime, setEndTime] = useState(getCurrentTime())
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl w-full max-w-xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-700">
+          <h3 className="text-white font-bold text-sm">Quitter la salle ?</h3>
+          {name && <p className="text-gray-400 text-xs mt-0.5">{name}</p>}
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+              Heure de fin
+            </label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={e => setEndTime(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="px-5 pb-4 flex gap-2">
+          <button
+            onClick={onCancel}
+            className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 rounded-xl transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={() => onConfirm(endTime)}
+            className="flex-1 bg-red-700 hover:bg-red-600 text-white text-sm font-medium py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+          >
+            <LogOut size={14} /> Quitter
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime, onLeave, onProfileClick, onMouseEnter, onMouseLeave, onRequestLeave }) {
   const endTime = a.end_time?.slice(0, 5) ?? null
   const startTime = a.start_time?.slice(0, 5) ?? null
   const personIsLate = isToday && endTime && isLate(endTime)
@@ -107,7 +154,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime
 
       {(a.user_id === currentProfile?.id || canManage) && (
         <button
-          onClick={() => onLeave(roomId, a.user_id)}
+          onClick={() => onRequestLeave(a)}
           className="ml-0.5 p-1 rounded-full text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors flex-shrink-0"
         >
           <X size={12} />
@@ -139,6 +186,7 @@ export default function RoomCard({
 
   const [tooltip, setTooltip] = useState(null)
   const timerRef = useRef(null)
+  const [leaveTarget, setLeaveTarget] = useState(null)
 
   function handleMouseEnter(profile, e) {
     if (!profile?.phone) return
@@ -152,6 +200,19 @@ export default function RoomCard({
     clearTimeout(timerRef.current)
     setTooltip(null)
   }
+
+  function handleRequestLeave(a) {
+    setLeaveTarget({ userId: a.user_id, assignmentId: a.id, name: a.profiles?.full_name })
+  }
+
+  async function handleConfirmLeave(endTime) {
+    if (!leaveTarget) return
+    if (endTime) await onUpdateTime(leaveTarget.assignmentId, 'end_time', endTime)
+    await onLeave(roomId, leaveTarget.userId)
+    setLeaveTarget(null)
+  }
+
+  const myAssignment = roomAssignments.find(a => a.user_id === currentProfile?.id)
 
   const config = STATUS_CONFIG[status]
   const headerBg = roomIsLate ? 'bg-red-700' : config.header
@@ -168,6 +229,14 @@ export default function RoomCard({
         </div>
       )}
 
+      {leaveTarget && (
+        <LeaveConfirmModal
+          name={leaveTarget.name}
+          onConfirm={handleConfirmLeave}
+          onCancel={() => setLeaveTarget(null)}
+        />
+      )}
+
       <div className={`rounded-2xl border-2 shadow-sm overflow-hidden flex flex-col ${config.bg} ${roomIsLate ? 'border-red-700' : ''}`}>
         {/* Header */}
         <div className={`${headerBg} px-3 py-2`}>
@@ -177,7 +246,6 @@ export default function RoomCard({
               {config.label}
             </span>
           </div>
-          {/* Horaires salle */}
           {!isClosed && (
             <div className="flex items-center gap-1 mt-1">
               <Clock size={10} className="text-white/60" />
@@ -223,6 +291,7 @@ export default function RoomCard({
                         isToday={isToday} currentProfile={currentProfile} canManage={canManage}
                         roomId={roomId} onUpdateTime={onUpdateTime} onLeave={onLeave}
                         onProfileClick={onProfileClick} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                        onRequestLeave={handleRequestLeave}
                       />
                     ))}
                   </ul>
@@ -244,6 +313,7 @@ export default function RoomCard({
                         isToday={isToday} currentProfile={currentProfile} canManage={canManage}
                         roomId={roomId} onUpdateTime={onUpdateTime} onLeave={onLeave}
                         onProfileClick={onProfileClick} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                        onRequestLeave={handleRequestLeave}
                       />
                     ))}
                   </ul>
@@ -263,7 +333,7 @@ export default function RoomCard({
                   <UserPlus size={15} /> Me rejoindre
                 </button>
               ) : (
-                <button onClick={() => onLeave(roomId, currentProfile.id)}
+                <button onClick={() => myAssignment && handleRequestLeave(myAssignment)}
                   className="w-full flex items-center justify-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 rounded-xl transition-colors">
                   <X size={15} /> Me retirer
                 </button>
