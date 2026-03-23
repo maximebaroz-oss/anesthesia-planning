@@ -118,37 +118,28 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                 </>
               )}
 
-              {(filter === 'all' || filter === 'infirmier') && (() => {
-                const ISA_SECTIONS = ['isa1','isa2','isa3','isa4','isa5']
-                const ISA_LABELS   = { isa1:'ISA 1', isa2:'ISA 2', isa3:'ISA 3', isa4:'ISA 4', isa5:'ISA 5' }
-                const autres = infirmiers.filter(p => !ISA_SECTIONS.includes(p.grade))
-                const sections = [
-                  ...ISA_SECTIONS.map(g => ({ label: ISA_LABELS[g], list: infirmiers.filter(p => p.grade === g) })),
-                  ...(autres.length > 0 ? [{ label: 'ISA', list: autres }] : []),
-                ].filter(s => s.list.length > 0)
-                return sections.map(section => (
-                  <div key={section.label}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{section.label}</p>
-                    <div className="space-y-1">
-                      {section.list.map(p => (
-                        <button
-                          key={p.id}
-                          onClick={() => onAssign(p.id)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
-                            {p.full_name.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
-                            <p className="text-xs text-gray-400">{ISA_LABELS[p.grade] ?? 'ISA'}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+              {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">ISA</p>
+                  <div className="space-y-1">
+                    {infirmiers.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => onAssign(p.id)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
+                          {p.full_name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
+                          <p className="text-xs text-gray-400">ISA</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                ))
-              })()}
+                </div>
+              )}
             </div>
           )}
         </div>
