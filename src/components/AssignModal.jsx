@@ -24,7 +24,10 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
     return true
   })
 
-  const medecins = filtered.filter(p => p.profession === 'medecin')
+  const cadres   = filtered.filter(p => p.profession === 'medecin' && p.grade === 'cadre')
+  const cdcs     = filtered.filter(p => p.profession === 'medecin' && p.grade === 'chef_clinique')
+  const internes = filtered.filter(p => p.profession === 'medecin' && p.grade === 'interne')
+  const autresMed = filtered.filter(p => p.profession === 'medecin' && !['cadre','chef_clinique','interne'].includes(p.grade))
   const infirmiers = filtered.filter(p => p.profession === 'infirmier')
 
   return (
@@ -83,29 +86,36 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
             <p className="text-center text-gray-500 text-sm py-8">Aucun personnel disponible</p>
           ) : (
             <div className="space-y-4">
-              {medecins.length > 0 && (filter === 'all' || filter === 'medecin') && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Médecins (Med)
-                  </p>
-                  <div className="space-y-1">
-                    {medecins.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => onAssign(p.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-red-900 flex items-center justify-center text-red-300 font-bold text-sm flex-shrink-0">
-                          {p.full_name.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
-                          <p className="text-xs text-gray-400">{GRADE_LABELS[p.grade] ?? p.grade}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {(filter === 'all' || filter === 'medecin') && (
+                <>
+                  {[
+                    { label: 'Cadres',  list: cadres },
+                    { label: 'CDC',     list: cdcs },
+                    { label: 'Internes',list: internes },
+                    { label: 'Médecins',list: autresMed },
+                  ].filter(s => s.list.length > 0).map(section => (
+                    <div key={section.label}>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{section.label}</p>
+                      <div className="space-y-1">
+                        {section.list.map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => onAssign(p.id)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-red-900 flex items-center justify-center text-red-300 font-bold text-sm flex-shrink-0">
+                              {p.full_name.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">Dr. {p.full_name}</p>
+                              <p className="text-xs text-gray-400">{GRADE_LABELS[p.grade] ?? p.grade}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </>
               )}
 
               {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (

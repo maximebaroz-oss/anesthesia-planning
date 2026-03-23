@@ -238,6 +238,12 @@ function StaffRow({ p, profession, canEdit }) {
   )
 }
 
+const MED_SECTIONS = [
+  { label: 'Cadres',   grade: 'cadre' },
+  { label: 'CDC',      grade: 'chef_clinique' },
+  { label: 'Internes', grade: 'interne' },
+]
+
 function StaffList({ profession }) {
   const { profile: currentProfile } = useAuth()
   const [staff, setStaff] = useState([])
@@ -250,13 +256,36 @@ function StaffList({ profession }) {
 
   if (loading) return <p className="text-gray-500 text-sm text-center py-4">Chargement...</p>
 
+  if (profession === 'medecin') {
+    const knownGrades = MED_SECTIONS.map(s => s.grade)
+    const autres = staff.filter(p => !knownGrades.includes(p.grade))
+    const sections = [
+      ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
+      ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
+    ].filter(s => s.list.length > 0)
+
+    return (
+      <div className="space-y-4">
+        {sections.map(section => (
+          <div key={section.label}>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{section.label}</p>
+            <div className="space-y-2">
+              {section.list.map(p => (
+                <StaffRow key={p.id} p={p} profession={profession}
+                  canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-2">
       {staff.map(p => (
-        <StaffRow
-          key={p.id} p={p} profession={profession}
-          canEdit={currentProfile?.is_admin || currentProfile?.id === p.id}
-        />
+        <StaffRow key={p.id} p={p} profession={profession}
+          canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
       ))}
     </div>
   )
