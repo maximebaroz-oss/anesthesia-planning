@@ -26,10 +26,10 @@ function getRoomStatus(roomId, closures, assignments) {
 }
 
 const STATUS_CONFIG = {
-  closed:       { dot: 'bg-slate-500',  text: 'text-slate-400',  label: 'Inactive'   },
-  complete:     { dot: 'bg-green-400',  text: 'text-green-400',  label: 'Available'  },
-  understaffed: { dot: 'bg-amber-400',  text: 'text-amber-400',  label: 'Delayed'    },
-  available:    { dot: 'bg-green-400',  text: 'text-green-400',  label: 'Available'  },
+  closed:       { dot: 'bg-slate-500',  text: 'text-slate-400',  label: 'Fermée'     },
+  complete:     { dot: 'bg-green-400',  text: 'text-green-400',  label: 'Complet'    },
+  understaffed: { dot: 'bg-amber-400',  text: 'text-amber-400',  label: 'Incomplet'  },
+  available:    { dot: 'bg-blue-400',   text: 'text-blue-400',   label: 'Disponible' },
 }
 
 function TimeInput({ value, onSave, placeholder = '--:--', editable = true, large = false }) {
@@ -253,11 +253,14 @@ export default function RoomCard({
       }`}>
 
         {/* ── En-tête ── */}
-        <div className="px-3 pt-3 pb-2 flex items-center justify-between gap-2">
-          <span className={`font-bold text-sm ${isClosed ? 'text-gray-500' : 'text-white'}`}>
-            {roomName || `Salle ${roomId}`}
-          </span>
-          <div className="flex items-center gap-2">
+        <div className="bg-[#1B2E4B] px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b border-[#243D60]">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-0.5 h-4 rounded-full bg-blue-500 flex-shrink-0" />
+            <span className={`font-bold text-sm truncate ${isClosed ? 'text-gray-500' : 'text-white'}`}>
+              {roomName || `Salle ${roomId}`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span className={`text-xs font-semibold flex items-center gap-1 ${config.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
               {config.label}
@@ -269,7 +272,7 @@ export default function RoomCard({
         {/* ── SHIFT SLOT ── */}
         {!isClosed && (
           <div className="px-3 pb-3">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-1">Shift Slot</p>
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-1">Horaire</p>
             <div className={`flex items-center gap-1.5 ${roomIsLate ? 'text-red-400' : ''}`}>
               <TimeInput
                 value={openingTime} placeholder="--:--" editable={canManage} large
@@ -345,7 +348,7 @@ export default function RoomCard({
               {!isAssigned ? (
                 <button onClick={() => setShowJoinConfirm(true)}
                   className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors tracking-wide">
-                  <UserPlus size={15} /> JOIN ROOM
+                  <UserPlus size={15} /> Rejoindre
                 </button>
               ) : (
                 <button onClick={() => myAssignment && handleRequestLeave(myAssignment)}
@@ -357,12 +360,12 @@ export default function RoomCard({
                 <div className="flex gap-2">
                   <button onClick={() => onAssign(roomId)}
                     className="flex-1 flex items-center justify-center gap-1 bg-[#1A2540] hover:bg-[#243050] text-gray-300 text-xs font-medium py-2 rounded-xl transition-colors border border-[#1A3050]">
-                    <Users size={13} /> Assign Staff
+                    <Users size={13} /> Affecter
                   </button>
                   {isAdmin && (
                     <button onClick={() => onClose(roomId)}
                       className="flex-1 flex items-center justify-center gap-1 bg-[#1A2540] hover:bg-[#243050] text-gray-400 text-xs font-medium py-2 rounded-xl transition-colors border border-[#1A3050]">
-                      <Lock size={13} /> Close Room
+                      <Lock size={13} /> Fermer
                     </button>
                   )}
                 </div>
@@ -372,7 +375,7 @@ export default function RoomCard({
             isAdmin && (
               <button onClick={() => onOpen(roomId)}
                 className="w-full flex items-center justify-center gap-1.5 bg-[#1A2540] hover:bg-[#243050] text-green-400 text-sm font-medium py-2.5 rounded-xl transition-colors border border-green-700/30">
-                <Unlock size={14} /> Open Room Now
+                <Unlock size={14} /> Ouvrir la salle
               </button>
             )
           )}
