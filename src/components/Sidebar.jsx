@@ -257,11 +257,21 @@ function StaffList({ profession }) {
 
   if (loading) return <p className="text-gray-500 text-sm text-center py-4">Chargement...</p>
 
-  const sectionDefs = profession === 'medecin' ? MED_SECTIONS : ISA_SECTIONS
-  const knownGrades = sectionDefs.map(s => s.grade)
+  if (profession === 'infirmier') {
+    return (
+      <div className="space-y-2">
+        {staff.map(p => (
+          <StaffRow key={p.id} p={p} profession={profession}
+            canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
+        ))}
+      </div>
+    )
+  }
+
+  const knownGrades = MED_SECTIONS.map(s => s.grade)
   const autres = staff.filter(p => !knownGrades.includes(p.grade))
   const sections = [
-    ...sectionDefs.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
+    ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
     ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
   ].filter(s => s.list.length > 0)
 
