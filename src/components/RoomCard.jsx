@@ -158,7 +158,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
           onMouseLeave={onMouseLeave}
           className="flex-1 min-w-0 text-left"
         >
-          <p className={`text-xs font-semibold truncate ${personIsLate ? 'text-red-300' : 'text-white hover:text-blue-300 transition-colors'}`}>
+          <p className={`text-xs font-semibold ${personIsLate ? 'text-red-300' : 'text-white hover:text-blue-300 transition-colors'}`}>
             {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
           </p>
           {a.profiles?.grade && (
@@ -263,7 +263,7 @@ export default function RoomCard({
         <div className="bg-[#1B2E4B] px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b border-[#243D60]">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-0.5 h-4 rounded-full bg-blue-500 flex-shrink-0" />
-            <span className={`font-bold text-sm truncate ${isClosed ? 'text-gray-500' : 'text-white'}`}>
+            <span className={`font-bold text-sm ${isClosed ? 'text-gray-500' : 'text-white'}`}>
               {roomName || `Salle ${roomId}`}
             </span>
           </div>
