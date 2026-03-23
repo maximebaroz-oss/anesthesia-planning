@@ -59,6 +59,64 @@ function TimeInput({ value, onSave, placeholder = '--:--', editable = true }) {
   )
 }
 
+function gradeLabel(grade) {
+  if (grade === 'cadre') return 'Cadre'
+  if (grade === 'chef_clinique') return 'CDC'
+  if (grade === 'interne') return 'Int.'
+  return ''
+}
+
+function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime, onLeave, onProfileClick, onMouseEnter, onMouseLeave }) {
+  const endTime = a.end_time?.slice(0, 5) ?? null
+  const startTime = a.start_time?.slice(0, 5) ?? null
+  const personIsLate = isToday && endTime && isLate(endTime)
+  const isMine = a.user_id === currentProfile?.id
+
+  return (
+    <li className="flex items-center justify-between gap-1">
+      <button
+        onClick={() => onProfileClick(a.profiles)}
+        onMouseEnter={(e) => onMouseEnter(a.profiles, e)}
+        onMouseLeave={onMouseLeave}
+        className={`text-sm truncate flex-1 text-left transition-colors ${
+          personIsLate ? 'text-red-400 hover:text-red-300' : 'text-gray-200 hover:text-blue-400'
+        }`}
+      >
+        {a.profiles?.full_name}
+        {a.profiles?.grade && (
+          <span className="text-xs text-gray-500 ml-1">{gradeLabel(a.profiles.grade)}</span>
+        )}
+      </button>
+
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <Clock size={10} className="text-gray-600" />
+        <TimeInput
+          value={startTime}
+          placeholder="début"
+          editable={isMine || canManage}
+          onSave={v => onUpdateTime(a.id, 'start_time', v)}
+        />
+        <span className="text-gray-600 text-xs">→</span>
+        <TimeInput
+          value={endTime}
+          placeholder="fin"
+          editable={isMine || canManage}
+          onSave={v => onUpdateTime(a.id, 'end_time', v)}
+        />
+      </div>
+
+      {(a.user_id === currentProfile?.id || canManage) && (
+        <button
+          onClick={() => onLeave(roomId, a.user_id)}
+          className="ml-0.5 p-1 rounded-full text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors flex-shrink-0"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </li>
+  )
+}
+
 export default function RoomCard({
   roomId, roomName, assignments, closures, roomSchedule,
   currentProfile, isToday,
@@ -95,66 +153,8 @@ export default function RoomCard({
     setTooltip(null)
   }
 
-  function gradeLabel(grade) {
-    if (grade === 'cadre') return 'Cadre'
-    if (grade === 'chef_clinique') return 'CDC'
-    if (grade === 'interne') return 'Int.'
-    return ''
-  }
-
   const config = STATUS_CONFIG[status]
   const headerBg = roomIsLate ? 'bg-red-700' : config.header
-
-  function PersonRow({ a }) {
-    const endTime = a.end_time?.slice(0, 5) ?? null
-    const startTime = a.start_time?.slice(0, 5) ?? null
-    const personIsLate = isToday && endTime && isLate(endTime)
-    const isMine = a.user_id === currentProfile?.id
-
-    return (
-      <li className="flex items-center justify-between gap-1">
-        <button
-          onClick={() => onProfileClick(a.profiles)}
-          onMouseEnter={(e) => handleMouseEnter(a.profiles, e)}
-          onMouseLeave={handleMouseLeave}
-          className={`text-sm truncate flex-1 text-left transition-colors ${
-            personIsLate ? 'text-red-400 hover:text-red-300' : 'text-gray-200 hover:text-blue-400'
-          }`}
-        >
-          {a.profiles?.full_name}
-          {a.profiles?.grade && (
-            <span className="text-xs text-gray-500 ml-1">{gradeLabel(a.profiles.grade)}</span>
-          )}
-        </button>
-
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <Clock size={10} className="text-gray-600" />
-          <TimeInput
-            value={startTime}
-            placeholder="début"
-            editable={isMine || canManage}
-            onSave={v => onUpdateTime(a.id, 'start_time', v)}
-          />
-          <span className="text-gray-600 text-xs">→</span>
-          <TimeInput
-            value={endTime}
-            placeholder="fin"
-            editable={isMine || canManage}
-            onSave={v => onUpdateTime(a.id, 'end_time', v)}
-          />
-        </div>
-
-        {(a.user_id === currentProfile?.id || canManage) && (
-          <button
-            onClick={() => onLeave(roomId, a.user_id)}
-            className="ml-0.5 p-1 rounded-full text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors flex-shrink-0"
-          >
-            <X size={12} />
-          </button>
-        )}
-      </li>
-    )
-  }
 
   return (
     <>
@@ -217,7 +217,14 @@ export default function RoomCard({
                   <p className="text-xs text-gray-600 italic">Aucun médecin</p>
                 ) : (
                   <ul className="space-y-1.5">
-                    {medecins.map(a => <PersonRow key={a.id} a={a} />)}
+                    {medecins.map(a => (
+                      <PersonRow
+                        key={a.id} a={a}
+                        isToday={isToday} currentProfile={currentProfile} canManage={canManage}
+                        roomId={roomId} onUpdateTime={onUpdateTime} onLeave={onLeave}
+                        onProfileClick={onProfileClick} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                      />
+                    ))}
                   </ul>
                 )}
               </div>
@@ -231,7 +238,14 @@ export default function RoomCard({
                   <p className="text-xs text-gray-600 italic">Aucun infirmier</p>
                 ) : (
                   <ul className="space-y-1.5">
-                    {infirmiers.map(a => <PersonRow key={a.id} a={a} />)}
+                    {infirmiers.map(a => (
+                      <PersonRow
+                        key={a.id} a={a}
+                        isToday={isToday} currentProfile={currentProfile} canManage={canManage}
+                        roomId={roomId} onUpdateTime={onUpdateTime} onLeave={onLeave}
+                        onProfileClick={onProfileClick} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                      />
+                    ))}
                   </ul>
                 )}
               </div>
