@@ -115,7 +115,7 @@ function ProfilePanel() {
           {currentProfile.full_name.charAt(0)}
         </div>
         <div>
-          <p className={`font-bold ${currentProfile.profession === 'medecin' ? 'text-red-300' : 'text-blue-300'}`}>
+          <p className="font-bold text-white">
             {currentProfile.full_name}
           </p>
           <p className="text-gray-400 text-xs">{GRADE_LABELS[currentProfile.grade] ?? currentProfile.grade}</p>
@@ -187,7 +187,7 @@ function StaffRow({ p, profession, canEdit }) {
             {p.full_name.charAt(0)}
           </div>
           <div>
-            <p className={`text-sm font-medium ${nameColor}`}>{p.full_name}</p>
+            <p className="text-sm font-medium text-gray-200">{p.full_name}</p>
             <p className="text-gray-500 text-xs">{GRADE_LABELS[p.grade] ?? p.grade}</p>
           </div>
         </div>
