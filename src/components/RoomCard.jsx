@@ -143,6 +143,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime
   const startTime = a.start_time?.slice(0, 5) ?? null
   const personIsLate = isToday && endTime && isLate(endTime)
   const isMine = a.user_id === currentProfile?.id
+  const isMedecin = a.profiles?.profession === 'medecin'
 
   return (
     <li className="flex items-center justify-between gap-1">
@@ -150,10 +151,11 @@ function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime
         onClick={() => onProfileClick(a.profiles)}
         onMouseEnter={(e) => onMouseEnter(a.profiles, e)}
         onMouseLeave={onMouseLeave}
-        className={`text-sm truncate flex-1 text-left transition-colors ${
+        className={`text-sm truncate flex-1 text-left transition-colors flex items-center gap-1.5 ${
           personIsLate ? 'text-red-400 hover:text-red-300' : 'text-gray-200 hover:text-blue-400'
         }`}
       >
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isMedecin ? 'bg-red-500' : 'bg-blue-400'}`} />
         {a.profiles?.full_name}
         {a.profiles?.grade && (
           <span className="text-xs text-gray-500 ml-1">{gradeLabel(a.profiles.grade)}</span>
