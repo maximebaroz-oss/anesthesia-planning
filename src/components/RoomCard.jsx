@@ -152,7 +152,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime
         onMouseEnter={(e) => onMouseEnter(a.profiles, e)}
         onMouseLeave={onMouseLeave}
         className={`text-sm truncate flex-1 text-left transition-colors flex items-center gap-1.5 ${
-          personIsLate ? 'text-red-300' : isMedecin ? 'text-red-400 hover:text-red-300' : 'text-blue-400 hover:text-blue-300'
+          personIsLate ? 'text-red-300' : 'text-gray-200 hover:text-gray-100'
         }`}
       >
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isMedecin ? 'bg-red-500' : 'bg-blue-400'}`} />
