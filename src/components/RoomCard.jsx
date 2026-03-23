@@ -306,9 +306,12 @@ export default function RoomCard({
             <div className="space-y-2">
               {/* Médecins */}
               {medecins.length === 0 ? (
-                <div className="flex items-center gap-2 bg-[#1A2540]/40 rounded-xl px-2.5 py-2">
+                <div
+                  onClick={() => canManage && onAssign(roomId)}
+                  className={`flex items-center gap-2 bg-[#1A2540]/40 rounded-xl px-2.5 py-2 ${canManage ? 'cursor-pointer hover:bg-[#1A2540]/70 transition-colors' : ''}`}
+                >
                   <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[#1A2540] text-blue-300 border border-blue-800/50">MED</span>
-                  <span className="text-xs text-gray-600 italic">Aucun médecin</span>
+                  <span className="text-xs text-gray-600 italic">{canManage ? '+ Affecter un médecin' : 'Aucun médecin'}</span>
                 </div>
               ) : (
                 <ul className="space-y-1.5">
@@ -325,9 +328,12 @@ export default function RoomCard({
 
               {/* ISA */}
               {infirmiers.length === 0 ? (
-                <div className="flex items-center gap-2 bg-[#1A2540]/40 rounded-xl px-2.5 py-2">
+                <div
+                  onClick={() => canManage && onAssign(roomId)}
+                  className={`flex items-center gap-2 bg-[#1A2540]/40 rounded-xl px-2.5 py-2 ${canManage ? 'cursor-pointer hover:bg-[#1A2540]/70 transition-colors' : ''}`}
+                >
                   <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[#1A2540] text-blue-300 border border-blue-800/50">ISA</span>
-                  <span className="text-xs text-gray-600 italic">Aucun ISA</span>
+                  <span className="text-xs text-gray-600 italic">{canManage ? '+ Affecter un ISA' : 'Aucun ISA'}</span>
                 </div>
               ) : (
                 <ul className="space-y-1.5">
@@ -360,19 +366,11 @@ export default function RoomCard({
                   <LogOut size={14} /> Me retirer
                 </button>
               )}
-              {canManage && (
-                <div className="flex gap-2">
-                  <button onClick={() => onAssign(roomId)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-[#1A2540] hover:bg-[#243050] text-gray-300 text-xs font-medium py-2 rounded-xl transition-colors border border-[#1A3050]">
-                    <Users size={13} /> Affecter
-                  </button>
-                  {isAdmin && (
-                    <button onClick={() => onClose(roomId)}
-                      className="flex-1 flex items-center justify-center gap-1 bg-[#1A2540] hover:bg-[#243050] text-gray-400 text-xs font-medium py-2 rounded-xl transition-colors border border-[#1A3050]">
-                      <Lock size={13} /> Fermer
-                    </button>
-                  )}
-                </div>
+              {isAdmin && (
+                <button onClick={() => onClose(roomId)} title="Fermer la salle"
+                  className="flex items-center justify-center bg-[#1A2540] hover:bg-[#243050] text-gray-400 p-2 rounded-xl transition-colors border border-[#1A3050]">
+                  <Lock size={16} />
+                </button>
               )}
             </>
           ) : (
