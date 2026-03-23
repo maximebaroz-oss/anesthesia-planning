@@ -71,6 +71,39 @@ function gradeLabel(grade) {
   return ''
 }
 
+function JoinConfirmModal({ onConfirm, onCancel }) {
+  const [startTime, setStartTime] = useState(getCurrentTime())
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl w-full max-w-xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-700">
+          <h3 className="text-white font-bold text-sm">Rejoindre la salle</h3>
+        </div>
+        <div className="px-5 py-4">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+            Heure de début
+          </label>
+          <input
+            type="time"
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="px-5 pb-4 flex gap-2">
+          <button onClick={onCancel} className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 rounded-xl transition-colors">
+            Annuler
+          </button>
+          <button onClick={() => onConfirm(startTime)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+            <UserPlus size={14} /> Rejoindre
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function LeaveConfirmModal({ name, onConfirm, onCancel }) {
   const [endTime, setEndTime] = useState(getCurrentTime())
 
@@ -81,30 +114,22 @@ function LeaveConfirmModal({ name, onConfirm, onCancel }) {
           <h3 className="text-white font-bold text-sm">Quitter la salle ?</h3>
           {name && <p className="text-gray-400 text-xs mt-0.5">{name}</p>}
         </div>
-        <div className="px-5 py-4 space-y-3">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-              Heure de fin
-            </label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={e => setEndTime(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="px-5 py-4">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+            Heure de fin
+          </label>
+          <input
+            type="time"
+            value={endTime}
+            onChange={e => setEndTime(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
         <div className="px-5 pb-4 flex gap-2">
-          <button
-            onClick={onCancel}
-            className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 rounded-xl transition-colors"
-          >
+          <button onClick={onCancel} className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 rounded-xl transition-colors">
             Annuler
           </button>
-          <button
-            onClick={() => onConfirm(endTime)}
-            className="flex-1 bg-red-700 hover:bg-red-600 text-white text-sm font-medium py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"
-          >
+          <button onClick={() => onConfirm(endTime)} className="flex-1 bg-red-700 hover:bg-red-600 text-white text-sm font-medium py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5">
             <LogOut size={14} /> Quitter
           </button>
         </div>
@@ -187,6 +212,7 @@ export default function RoomCard({
   const [tooltip, setTooltip] = useState(null)
   const timerRef = useRef(null)
   const [leaveTarget, setLeaveTarget] = useState(null)
+  const [showJoinConfirm, setShowJoinConfirm] = useState(false)
 
   function handleMouseEnter(profile, e) {
     if (!profile?.phone) return
@@ -227,6 +253,13 @@ export default function RoomCard({
           <Phone size={11} />
           {tooltip.phone}
         </div>
+      )}
+
+      {showJoinConfirm && (
+        <JoinConfirmModal
+          onConfirm={startTime => { onJoin(roomId, startTime); setShowJoinConfirm(false) }}
+          onCancel={() => setShowJoinConfirm(false)}
+        />
       )}
 
       {leaveTarget && (
@@ -328,7 +361,7 @@ export default function RoomCard({
           {!isClosed && (
             <>
               {!isAssigned ? (
-                <button onClick={() => onJoin(roomId)}
+                <button onClick={() => setShowJoinConfirm(true)}
                   className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 rounded-xl transition-colors">
                   <UserPlus size={15} /> Me rejoindre
                 </button>

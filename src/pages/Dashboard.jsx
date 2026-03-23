@@ -130,7 +130,7 @@ export default function Dashboard({ sector, unit, onBack }) {
     return () => supabase.removeChannel(channel)
   }, [fetchData])
 
-  async function handleJoin(roomId) {
+  async function handleJoin(roomId, startTime) {
     if (!profile) return
     const { data: existing } = await supabase
       .from('assignments').select('id')
@@ -142,7 +142,7 @@ export default function Dashboard({ sector, unit, onBack }) {
         room_id: roomId,
         date: selectedDate,
         assigned_by: profile.id,
-        start_time: getCurrentTime(),
+        start_time: startTime ?? getCurrentTime(),
       })
     }
     await fetchData()
