@@ -188,9 +188,9 @@ export default function Dashboard({ sector, unit, onBack }) {
   }
 
   async function handleUpdateAssignmentTime(assignmentId, field, value) {
-    const { error } = await supabase.from('assignments').update({ [field]: value }).eq('id', assignmentId)
-    console.log('Update time:', { assignmentId, field, value, error })
-    await fetchData()
+    await supabase.from('assignments').update({ [field]: value }).eq('id', assignmentId)
+    setAssignments(prev => prev.map(a => a.id === assignmentId ? { ...a, [field]: value } : a))
+    fetchData()
   }
 
   async function handleUpdateRoomSchedule(roomId, field, value) {
