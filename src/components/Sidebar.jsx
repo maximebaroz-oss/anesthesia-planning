@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, User, Users, Stethoscope, Phone, Edit2, Check } from 'lucide-react'
+import { X, User, Users, Stethoscope, Phone, Edit2, Check, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -10,7 +10,87 @@ const GRADE_LABELS = {
   iade: 'ISA',
 }
 
-function ProfilePanel({ onClose }) {
+const ROOM_NAMES = {
+  1: 'Gastro 4', 2: 'Gastro 5', 3: 'Broncho 7', 4: 'Radio 11',
+  5: 'Radio 12', 6: 'Neuro-radio 13', 7: 'Cardio 17', 8: 'Tardif', 9: 'IRM/Scanner',
+}
+
+const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+const MONTH_NAMES_FR = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'août', 'sep', 'oct', 'nov', 'déc']
+
+function PresenceHistory() {
+  const { profile: currentProfile } = useAuth()
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!currentProfile) return
+    supabase.from('assignments')
+      .select('date, start_time, end_time, room_id')
+      .eq('user_id', currentProfile.id)
+      .order('date', { ascending: false })
+      .limit(60)
+      .then(({ data }) => { setHistory(data ?? []); setLoading(false) })
+  }, [currentProfile?.id])
+
+  if (loading) return <p className="text-gray-500 text-sm text-center py-4">Chargement...</p>
+  if (history.length === 0) return <p className="text-gray-500 text-sm text-center py-4 italic">Aucune présence enregistrée</p>
+
+  // Group by week (Monday as start)
+  const byWeek = {}
+  history.forEach(h => {
+    const d = new Date(h.date + 'T00:00:00')
+    const monday = new Date(d)
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+    const key = monday.toISOString().split('T')[0]
+    if (!byWeek[key]) byWeek[key] = []
+    byWeek[key].push(h)
+  })
+
+  return (
+    <div className="space-y-5">
+      {Object.entries(byWeek)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([weekStart, entries]) => {
+          const monday = new Date(weekStart + 'T00:00:00')
+          const sunday = new Date(monday)
+          sunday.setDate(monday.getDate() + 6)
+          const weekLabel = `${monday.getDate()} ${MONTH_NAMES_FR[monday.getMonth()]} — ${sunday.getDate()} ${MONTH_NAMES_FR[sunday.getMonth()]}`
+
+          return (
+            <div key={weekStart}>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{weekLabel}</p>
+              <div className="space-y-1.5">
+                {entries.map((h, i) => {
+                  const d = new Date(h.date + 'T00:00:00')
+                  const dayName = DAY_NAMES_FR[d.getDay()]
+                  const dateStr = `${d.getDate()} ${MONTH_NAMES_FR[d.getMonth()]}`
+                  const start = h.start_time?.slice(0, 5) ?? '--:--'
+                  const end = h.end_time?.slice(0, 5) ?? '--:--'
+                  const roomName = ROOM_NAMES[h.room_id] ?? `Salle ${h.room_id}`
+                  return (
+                    <div key={i} className="bg-gray-700 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-300 w-8 flex-shrink-0">{dayName}</span>
+                        <span className="text-xs text-gray-500">{dateStr}</span>
+                        <span className="text-xs text-gray-600 truncate">{roomName}</span>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Clock size={10} className="text-gray-600" />
+                        <span className="text-xs text-blue-300">{start} → {end}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+    </div>
+  )
+}
+
+function ProfilePanel() {
   const { profile: currentProfile } = useAuth()
   const [editingPhone, setEditingPhone] = useState(false)
   const [phone, setPhone] = useState(currentProfile?.phone ?? '')
@@ -28,11 +108,15 @@ function ProfilePanel({ onClose }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 p-4 bg-gray-700 rounded-xl">
-        <div className="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ${
+          currentProfile.profession === 'medecin' ? 'bg-red-900' : 'bg-blue-900'
+        }`}>
           {currentProfile.full_name.charAt(0)}
         </div>
         <div>
-          <p className="text-white font-bold">{currentProfile.full_name}</p>
+          <p className={`font-bold ${currentProfile.profession === 'medecin' ? 'text-red-300' : 'text-blue-300'}`}>
+            {currentProfile.full_name}
+          </p>
           <p className="text-gray-400 text-xs">{GRADE_LABELS[currentProfile.grade] ?? currentProfile.grade}</p>
           <p className="text-gray-500 text-xs">{currentProfile.profession === 'medecin' ? 'Médecin (Med)' : 'Infirmier (ISA)'}</p>
         </div>
@@ -50,17 +134,10 @@ function ProfilePanel({ onClose }) {
               className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
             />
-            <button
-              onClick={savePhone}
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg p-2 transition-colors"
-            >
+            <button onClick={savePhone} disabled={saving} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg p-2 transition-colors">
               <Check size={16} />
             </button>
-            <button
-              onClick={() => setEditingPhone(false)}
-              className="text-gray-500 hover:text-white rounded-lg p-2 transition-colors"
-            >
+            <button onClick={() => setEditingPhone(false)} className="text-gray-500 hover:text-white rounded-lg p-2 transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -75,6 +152,11 @@ function ProfilePanel({ onClose }) {
             <Edit2 size={12} className="text-gray-600 ml-auto flex-shrink-0" />
           </button>
         )}
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Historique des présences</p>
+        <PresenceHistory />
       </div>
     </div>
   )
@@ -93,17 +175,18 @@ function StaffRow({ p, profession, canEdit }) {
     setEditing(false)
   }
 
+  const nameColor = profession === 'medecin' ? 'text-red-400' : 'text-blue-400'
+  const avatarBg = profession === 'medecin' ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'
+
   return (
     <div className="bg-gray-700 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-            profession === 'medecin' ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'
-          }`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarBg}`}>
             {p.full_name.charAt(0)}
           </div>
           <div>
-            <p className="text-white text-sm font-medium">{p.full_name}</p>
+            <p className={`text-sm font-medium ${nameColor}`}>{p.full_name}</p>
             <p className="text-gray-500 text-xs">{GRADE_LABELS[p.grade] ?? p.grade}</p>
           </div>
         </div>
@@ -179,9 +262,9 @@ function StaffList({ profession }) {
 }
 
 const MENU_ITEMS = [
-  { id: 'profil',   label: 'Mon profil',       icon: User },
-  { id: 'medecins', label: 'Liste des Med',      icon: Stethoscope },
-  { id: 'isa',      label: 'Liste des ISA',     icon: Users },
+  { id: 'profil',   label: 'Mon profil',   icon: User },
+  { id: 'medecins', label: 'Liste des Med', icon: Stethoscope },
+  { id: 'isa',      label: 'Liste des ISA', icon: Users },
 ]
 
 export default function Sidebar({ open, onClose }) {
@@ -189,16 +272,13 @@ export default function Sidebar({ open, onClose }) {
 
   return (
     <>
-      {/* Overlay */}
       {open && (
         <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
       )}
 
-      {/* Drawer */}
       <div className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-gray-900 border-r border-gray-700 z-50 flex flex-col transition-transform duration-300 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
           <span className="text-white font-bold text-lg">Menu</span>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
@@ -206,7 +286,6 @@ export default function Sidebar({ open, onClose }) {
           </button>
         </div>
 
-        {/* Nav items */}
         <div className="flex border-b border-gray-700">
           {MENU_ITEMS.map(item => {
             const Icon = item.icon
@@ -226,7 +305,6 @@ export default function Sidebar({ open, onClose }) {
           })}
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {activeItem === 'profil' && <ProfilePanel />}
           {activeItem === 'medecins' && <StaffList profession="medecin" />}
