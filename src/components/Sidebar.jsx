@@ -98,7 +98,7 @@ function StaffRow({ p, profession, canEdit }) {
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-            profession === 'medecin' ? 'bg-blue-900 text-blue-300' : 'bg-emerald-900 text-emerald-300'
+            profession === 'medecin' ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'
           }`}>
             {p.full_name.charAt(0)}
           </div>

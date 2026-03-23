@@ -95,7 +95,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                         onClick={() => onAssign(p.id)}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-red-900 flex items-center justify-center text-red-300 font-bold text-sm flex-shrink-0">
                           {p.full_name.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -120,7 +120,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
                         onClick={() => onAssign(p.id)}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-green-900 flex items-center justify-center text-green-300 font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
                           {p.full_name.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
