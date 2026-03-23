@@ -307,7 +307,7 @@ export default function Sidebar({ open, onClose }) {
         <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
       )}
 
-      <div className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-[#0D1117] border-r border-gray-800 z-50 flex flex-col transition-transform duration-300 ${
+      <div className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-[#081328] border-r border-[#1A3050]/60 z-50 flex flex-col transition-transform duration-300 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">

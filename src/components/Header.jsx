@@ -18,52 +18,44 @@ export default function Header({ sector, unit, onBack, onMenuOpen }) {
   })
 
   return (
-    <header className="bg-[#0D1117] border-b border-gray-800 text-white px-4 py-3 shadow-lg sticky top-0 z-10">
+    <header className="bg-[#081328] border-b border-[#1A3050]/60 text-white px-4 py-3 shadow-xl sticky top-0 z-10">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
           {onMenuOpen && (
-            <button
-              onClick={onMenuOpen}
-              className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-            >
+            <button onClick={onMenuOpen} className="p-1.5 rounded-lg hover:bg-[#1A2540] text-gray-500 hover:text-white transition-colors">
               <Menu size={20} />
             </button>
           )}
           {onBack && (
-            <button
-              onClick={onBack}
-              className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors mr-1"
-            >
+            <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-[#1A2540] text-gray-500 hover:text-white transition-colors mr-1">
               <ArrowLeft size={18} />
             </button>
           )}
-          <span className="text-2xl">🏥</span>
           <div>
             <div className="flex items-center gap-1.5">
-              {sector && <span className="text-xs font-bold text-gray-400">{sector.name}</span>}
-              {sector && unit && <span className="text-gray-600 text-xs">/</span>}
-              {unit && <span className="font-bold text-sm text-white">{unit.name}</span>}
-              {!sector && <span className="font-bold text-sm text-white">Planning Bloc</span>}
+              <span className="font-bold text-blue-400 text-sm tracking-wide">OR Command</span>
+              {sector && <span className="text-[#1A3050] text-xs">|</span>}
+              {sector && <span className="text-xs text-gray-500">{sector.name}</span>}
+              {unit && <span className="text-gray-600 text-xs">/</span>}
+              {unit && <span className="text-xs text-gray-400">{unit.name}</span>}
             </div>
-            <div className="text-gray-400 text-xs capitalize">{today}</div>
+            <div className="text-gray-600 text-xs capitalize">{today}</div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {profile && (
             <div className="text-right">
-              <div className="text-sm font-medium leading-tight text-white">{profile.full_name}</div>
-              <div className="text-xs text-gray-400">
+              <div className="text-sm font-medium leading-tight text-white">
+                {profile.profession === 'medecin' ? `Dr. ${profile.full_name}` : profile.full_name}
+              </div>
+              <div className="text-xs text-gray-500">
                 {GRADE_LABELS[profile.grade] ?? profile.grade}
-                {profile.is_admin && <span className="ml-1 text-yellow-400">★</span>}
+                {profile.is_admin && <span className="ml-1 text-blue-400">★</span>}
               </div>
             </div>
           )}
-          <button
-            onClick={signOut}
-            className="p-2 rounded-lg hover:bg-gray-700 active:bg-gray-600 transition-colors text-gray-400 hover:text-white"
-            title="Déconnexion"
-          >
+          <button onClick={signOut} className="p-2 rounded-lg hover:bg-[#1A2540] transition-colors text-gray-500 hover:text-white" title="Déconnexion">
             <LogOut size={18} />
           </button>
         </div>
