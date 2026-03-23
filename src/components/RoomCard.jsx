@@ -18,7 +18,7 @@ function getCurrentTime() {
 function getRoomStatus(roomId, closures, assignments) {
   if (closures.some(c => c.room_id === roomId)) return 'closed'
   const roomAssignments = assignments.filter(a => a.room_id === roomId)
-  const hasMedecin = roomAssignments.some(a => a.profiles?.profession === 'medecin')
+  const hasMedecin  = roomAssignments.some(a => a.profiles?.profession === 'medecin')
   const hasInfirmier = roomAssignments.some(a => a.profiles?.profession === 'infirmier')
   if (hasMedecin && hasInfirmier) return 'complete'
   if (hasMedecin || hasInfirmier) return 'understaffed'
@@ -26,38 +26,48 @@ function getRoomStatus(roomId, closures, assignments) {
 }
 
 const STATUS_CONFIG = {
-  closed:       { dot: 'bg-slate-500',  text: 'text-slate-400',  label: 'Fermée'     },
-  complete:     { dot: 'bg-green-400',  text: 'text-green-400',  label: 'Complet'    },
-  understaffed: { dot: 'bg-amber-400',  text: 'text-amber-400',  label: 'Incomplet'  },
-  available:    { dot: 'bg-blue-400',   text: 'text-blue-400',   label: 'Disponible' },
+  closed:       { dot: 'bg-stone-500',   label: 'Fermée'     },
+  complete:     { dot: 'bg-green-400',   label: 'Complet'    },
+  understaffed: { dot: 'bg-orange-400',  label: 'Incomplet'  },
+  available:    { dot: 'bg-amber-400',   label: 'Disponible' },
+}
+
+// Palette de couleurs Hors Bloc (tons chauds)
+const C = {
+  bg:        '#150D04',   // fond carte
+  header:    '#231608',   // en-tête carte
+  border:    '#3D2A10',   // bordure
+  borderAlt: '#4A3518',   // bordure plus claire
+  surface:   '#2D1E08',   // surface secondaire
+  surfaceHov:'#3D2A10',   // hover surface
+  accent:    '#D97706',   // ambre (amber-600)
+  accentBar: '#F59E0B',   // accent bar (amber-500)
 }
 
 function TimeInput({ value, onSave, placeholder = '--:--', editable = true, large = false }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value ?? '')
+  const [draft,   setDraft]   = useState(value ?? '')
 
   const cls = large ? 'text-2xl font-bold text-white tracking-tight' : 'text-xs text-gray-400'
 
-  if (!editable) {
+  if (!editable)
     return <span className={cls}>{value ?? <span className="opacity-40">{placeholder}</span>}</span>
-  }
 
-  if (editing) {
+  if (editing)
     return (
       <input
-        type="time"
-        value={draft}
+        type="time" value={draft}
         onChange={e => setDraft(e.target.value)}
         onBlur={() => { onSave(draft); setEditing(false) }}
         onKeyDown={e => {
           if (e.key === 'Enter') { onSave(draft); setEditing(false) }
           if (e.key === 'Escape') setEditing(false)
         }}
-        className={`bg-[#081328] border border-blue-500 rounded px-1 py-0.5 text-white focus:outline-none ${large ? 'w-20 text-xl' : 'w-16 text-xs'}`}
+        style={{ background: C.bg, borderColor: C.accentBar }}
+        className={`border rounded px-1 py-0.5 text-white focus:outline-none ${large ? 'w-20 text-xl' : 'w-16 text-xs'}`}
         autoFocus
       />
     )
-  }
 
   return (
     <button onClick={() => { setDraft(value ?? ''); setEditing(true) }}
@@ -68,19 +78,16 @@ function TimeInput({ value, onSave, placeholder = '--:--', editable = true, larg
 }
 
 function gradeLabel(grade) {
-  if (grade === 'cadre') return 'Cadre'
+  if (grade === 'cadre')       return 'Cadre'
   if (grade === 'chef_clinique') return 'CDC'
-  if (grade === 'interne') return 'Interne'
+  if (grade === 'interne')     return 'Interne'
   return ''
 }
 
 function TypeBadge({ isMedecin }) {
   return (
-    <span className={`text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
-      isMedecin
-        ? 'bg-[#1A2540] text-blue-300 border border-blue-800/50'
-        : 'bg-[#1A2540] text-blue-300 border border-blue-800/50'
-    }`}>
+    <span style={{ background: C.surface, borderColor: C.borderAlt }}
+      className="text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0 text-amber-300 border">
       {isMedecin ? 'MED' : 'ISA'}
     </span>
   )
@@ -90,20 +97,23 @@ function JoinConfirmModal({ onConfirm, onCancel }) {
   const [startTime, setStartTime] = useState(getCurrentTime())
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 px-4">
-      <div className="bg-[#0E1C2E] border border-[#1A3050] rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#1A3050]">
+      <div style={{ background: C.bg, borderColor: C.border }} className="border rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
+        <div style={{ borderColor: C.border }} className="px-5 py-4 border-b">
           <h3 className="text-white font-bold">Rejoindre la salle</h3>
         </div>
         <div className="px-5 py-4">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest block mb-2">Heure de début</label>
+          <label className="text-xs font-semibold text-stone-500 uppercase tracking-widest block mb-2">Heure de début</label>
           <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-            className="w-full bg-[#081328] border border-[#1A3050] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            style={{ background: '#0F0A05', borderColor: C.border }}
+            className="w-full border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-amber-600" />
         </div>
         <div className="px-5 pb-4 flex gap-2">
-          <button onClick={onCancel} className="flex-1 bg-[#1A2540] hover:bg-[#243050] text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-colors">
+          <button onClick={onCancel}
+            style={{ background: C.surface }} className="flex-1 hover:opacity-80 text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-opacity">
             Annuler
           </button>
-          <button onClick={() => onConfirm(startTime)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+          <button onClick={() => onConfirm(startTime)}
+            className="flex-1 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5">
             <UserPlus size={14} /> Rejoindre
           </button>
         </div>
@@ -116,21 +126,24 @@ function LeaveConfirmModal({ name, onConfirm, onCancel }) {
   const [endTime, setEndTime] = useState(getCurrentTime())
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 px-4">
-      <div className="bg-[#0E1C2E] border border-[#1A3050] rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#1A3050]">
+      <div style={{ background: C.bg, borderColor: C.border }} className="border rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
+        <div style={{ borderColor: C.border }} className="px-5 py-4 border-b">
           <h3 className="text-white font-bold">Quitter la salle ?</h3>
-          {name && <p className="text-gray-500 text-xs mt-0.5">{name}</p>}
+          {name && <p className="text-stone-500 text-xs mt-0.5">{name}</p>}
         </div>
         <div className="px-5 py-4">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest block mb-2">Heure de fin</label>
+          <label className="text-xs font-semibold text-stone-500 uppercase tracking-widest block mb-2">Heure de fin</label>
           <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-            className="w-full bg-[#081328] border border-[#1A3050] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            style={{ background: '#0F0A05', borderColor: C.border }}
+            className="w-full border rounded-xl px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-amber-600" />
         </div>
         <div className="px-5 pb-4 flex gap-2">
-          <button onClick={onCancel} className="flex-1 bg-[#1A2540] hover:bg-[#243050] text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-colors">
+          <button onClick={onCancel}
+            style={{ background: C.surface }} className="flex-1 hover:opacity-80 text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-opacity">
             Annuler
           </button>
-          <button onClick={() => onConfirm(endTime)} className="flex-1 bg-red-700 hover:bg-red-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+          <button onClick={() => onConfirm(endTime)}
+            className="flex-1 bg-red-700 hover:bg-red-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5">
             <LogOut size={14} /> Quitter
           </button>
         </div>
@@ -148,39 +161,34 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
   const isPresent = !!startTime
 
   return (
-    <li className="bg-[#1A2540]/60 rounded-xl px-2.5 py-2 space-y-1">
-      {/* Ligne 1 : badge + nom + bouton retirer */}
+    <li style={{ background: `${C.surface}99` }} className="rounded-xl px-2.5 py-2 space-y-1">
       <div className="flex items-center gap-2 min-w-0">
         <TypeBadge isMedecin={isMedecin} />
-        <button
-          onClick={() => onProfileClick(a.profiles)}
-          onMouseEnter={e => onMouseEnter(a.profiles, e)}
-          onMouseLeave={onMouseLeave}
-          className="flex-1 min-w-0 text-left"
-        >
-          <p className={`text-xs font-semibold ${personIsLate ? 'text-red-300' : 'text-white hover:text-blue-300 transition-colors'}`}>
+        <button onClick={() => onProfileClick(a.profiles)}
+          onMouseEnter={e => onMouseEnter(a.profiles, e)} onMouseLeave={onMouseLeave}
+          className="flex-1 min-w-0 text-left">
+          <p className={`text-xs font-semibold ${personIsLate ? 'text-red-300' : 'text-white hover:text-amber-300 transition-colors'}`}>
             {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
           </p>
           {a.profiles?.grade && (
-            <p className="text-xs text-gray-500 leading-none">{gradeLabel(a.profiles.grade)}</p>
+            <p className="text-xs text-stone-600 leading-none">{gradeLabel(a.profiles.grade)}</p>
           )}
         </button>
         {(isMine || canManage) && (
-          <button onClick={() => onRequestLeave(a)} className="p-0.5 text-gray-700 hover:text-red-400 transition-colors flex-shrink-0">
+          <button onClick={() => onRequestLeave(a)} className="p-0.5 text-stone-700 hover:text-red-400 transition-colors flex-shrink-0">
             <X size={11} />
           </button>
         )}
       </div>
-      {/* Ligne 2 : heures + indicateur présence */}
       {(startTime || endTime || isMine || canManage) && (
         <div className="flex items-center gap-1 pl-8">
-          <Clock size={9} className="text-gray-700 flex-shrink-0" />
+          <Clock size={9} className="text-stone-700 flex-shrink-0" />
           <TimeInput value={startTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} />
-          <span className="text-gray-700 text-xs">→</span>
-          <TimeInput value={endTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time', v)} />
+          <span className="text-stone-700 text-xs">→</span>
+          <TimeInput value={endTime}   placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time',   v)} />
           {isPresent && !personIsLate && (
             <div className="ml-1 w-4 h-4 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
-              <span className="text-green-400" style={{fontSize:'9px'}}>✓</span>
+              <span className="text-green-400" style={{ fontSize: '9px' }}>✓</span>
             </div>
           )}
         </div>
@@ -209,9 +217,9 @@ export default function RoomCard({
   const openingTime = roomSchedule?.opening_time?.slice(0, 5) ?? null
   const roomIsLate  = isToday && closingTime && isLate(closingTime) && roomAssignments.length > 0 && !isClosed
 
-  const [tooltip, setTooltip]             = useState(null)
-  const timerRef                          = useRef(null)
-  const [leaveTarget, setLeaveTarget]     = useState(null)
+  const [tooltip,         setTooltip]         = useState(null)
+  const timerRef                              = useRef(null)
+  const [leaveTarget,     setLeaveTarget]     = useState(null)
   const [showJoinConfirm, setShowJoinConfirm] = useState(false)
   const myAssignment = roomAssignments.find(a => a.user_id === currentProfile?.id)
 
@@ -236,9 +244,9 @@ export default function RoomCard({
   return (
     <>
       {tooltip && (
-        <div className="fixed z-50 bg-[#0E1C2E] border border-[#1A3050] text-white text-xs rounded-xl px-3 py-1.5 shadow-2xl pointer-events-none flex items-center gap-1.5"
-          style={{ top: tooltip.top, left: tooltip.left }}>
-          <Phone size={11} className="text-blue-400" /> {tooltip.phone}
+        <div style={{ background: C.bg, borderColor: C.border, top: tooltip.top, left: tooltip.left }}
+          className="fixed z-50 border text-white text-xs rounded-xl px-3 py-1.5 shadow-2xl pointer-events-none flex items-center gap-1.5">
+          <Phone size={11} className="text-amber-400" /> {tooltip.phone}
         </div>
       )}
       {showJoinConfirm && (
@@ -248,70 +256,62 @@ export default function RoomCard({
         />
       )}
       {leaveTarget && (
-        <LeaveConfirmModal
-          name={leaveTarget.name}
-          onConfirm={handleConfirmLeave}
-          onCancel={() => setLeaveTarget(null)}
-        />
+        <LeaveConfirmModal name={leaveTarget.name} onConfirm={handleConfirmLeave} onCancel={() => setLeaveTarget(null)} />
       )}
 
-      <div className={`rounded-2xl border shadow-xl overflow-hidden flex flex-col bg-[#0E1C2E] transition-colors ${
-        roomIsLate ? 'border-red-500/50' : 'border-[#1A3050]'
-      }`}>
+      <div style={{ background: C.bg, borderColor: roomIsLate ? '' : C.border }}
+        className={`rounded-2xl border shadow-xl overflow-hidden flex flex-col transition-colors ${roomIsLate ? 'border-red-500/50' : ''}`}>
 
         {/* ── En-tête ── */}
-        <div className="bg-[#1B2E4B] px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b border-[#243D60]">
+        <div style={{ background: C.header, borderColor: C.borderAlt }}
+          className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="w-0.5 h-4 rounded-full bg-blue-500 flex-shrink-0" />
-            <span className={`font-bold text-sm ${isClosed ? 'text-gray-500' : 'text-white'}`}>
+            <span style={{ background: C.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+            <span className={`font-bold text-sm ${isClosed ? 'text-stone-500' : 'text-white'}`}>
               {roomName || `Salle ${roomId}`}
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className={`w-2 h-2 rounded-full ${config.dot}`} />
-            {isClosed && <Lock size={13} className="text-gray-600" />}
+            {isClosed && <Lock size={13} className="text-stone-600" />}
           </div>
         </div>
 
-        {/* ── SHIFT SLOT ── */}
+        {/* ── Horaire salle ── */}
         {!isClosed && (
-          <div className="px-3 pb-3">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-1">Horaire</p>
+          <div className="px-3 pt-2.5 pb-3">
+            <p className="text-xs font-semibold text-stone-600 uppercase tracking-widest mb-1">Horaire</p>
             <div className={`flex items-center gap-1.5 ${roomIsLate ? 'text-red-400' : ''}`}>
-              <TimeInput
-                value={openingTime} placeholder="--:--" editable={canManage} large
-                onSave={v => onUpdateRoomSchedule(roomId, 'opening_time', v)}
-              />
+              <TimeInput value={openingTime} placeholder="--:--" editable={canManage} large
+                onSave={v => onUpdateRoomSchedule(roomId, 'opening_time', v)} />
               <span className={`text-xl font-bold ${roomIsLate ? 'text-red-400' : 'text-white'}`}> - </span>
-              <TimeInput
-                value={closingTime} placeholder="--:--" editable={canManage} large
-                onSave={v => onUpdateRoomSchedule(roomId, 'closing_time', v)}
-              />
+              <TimeInput value={closingTime} placeholder="--:--" editable={canManage} large
+                onSave={v => onUpdateRoomSchedule(roomId, 'closing_time', v)} />
               {roomIsLate && <span className="text-red-400 text-xs font-bold ml-1">⚠</span>}
             </div>
           </div>
         )}
 
         {/* ── Séparateur ── */}
-        <div className="border-t border-[#1A3050]/70 mx-3" />
+        <div style={{ borderColor: `${C.border}B0` }} className="border-t mx-3" />
 
         {/* ── Personnel ── */}
         <div className="flex-1 px-3 py-3">
           {isClosed ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
-              <Lock size={24} className="text-gray-700 mb-2" />
-              <p className="text-sm text-gray-600 font-medium">Salle fermée</p>
+              <Lock size={24} className="text-stone-700 mb-2" />
+              <p className="text-sm text-stone-600 font-medium">Salle fermée</p>
             </div>
           ) : (
             <div className="space-y-2">
               {/* Médecins */}
               {medecins.length === 0 ? (
-                <div
-                  onClick={() => canManage && onAssign(roomId)}
-                  className={`flex items-center gap-2 bg-[#1A2540]/40 rounded-xl px-2.5 py-2 ${canManage ? 'cursor-pointer hover:bg-[#1A2540]/70 transition-colors' : ''}`}
-                >
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[#1A2540] text-blue-300 border border-blue-800/50">MED</span>
-                  <span className="text-xs text-gray-600 italic">{canManage ? '+ Affecter un médecin' : 'Aucun médecin'}</span>
+                <div onClick={() => canManage && onAssign(roomId)}
+                  style={{ background: `${C.surface}66` }}
+                  className={`flex items-center gap-2 rounded-xl px-2.5 py-2 ${canManage ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}>
+                  <span style={{ background: C.surface, borderColor: C.borderAlt }}
+                    className="text-xs font-bold px-1.5 py-0.5 rounded text-amber-300 border">MED</span>
+                  <span className="text-xs text-stone-600 italic">{canManage ? '+ Affecter un médecin' : 'Aucun médecin'}</span>
                 </div>
               ) : (
                 <ul className="space-y-1.5">
@@ -320,20 +320,19 @@ export default function RoomCard({
                       isToday={isToday} currentProfile={currentProfile} canManage={canManage}
                       onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
                       onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
-                      onRequestLeave={handleRequestLeave}
-                    />
+                      onRequestLeave={handleRequestLeave} />
                   ))}
                 </ul>
               )}
 
               {/* ISA */}
               {infirmiers.length === 0 ? (
-                <div
-                  onClick={() => canManage && onAssign(roomId)}
-                  className={`flex items-center gap-2 bg-[#1A2540]/40 rounded-xl px-2.5 py-2 ${canManage ? 'cursor-pointer hover:bg-[#1A2540]/70 transition-colors' : ''}`}
-                >
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[#1A2540] text-blue-300 border border-blue-800/50">ISA</span>
-                  <span className="text-xs text-gray-600 italic">{canManage ? '+ Affecter un ISA' : 'Aucun ISA'}</span>
+                <div onClick={() => canManage && onAssign(roomId)}
+                  style={{ background: `${C.surface}66` }}
+                  className={`flex items-center gap-2 rounded-xl px-2.5 py-2 ${canManage ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}>
+                  <span style={{ background: C.surface, borderColor: C.borderAlt }}
+                    className="text-xs font-bold px-1.5 py-0.5 rounded text-amber-300 border">ISA</span>
+                  <span className="text-xs text-stone-600 italic">{canManage ? '+ Affecter un ISA' : 'Aucun ISA'}</span>
                 </div>
               ) : (
                 <ul className="space-y-1.5">
@@ -342,8 +341,7 @@ export default function RoomCard({
                       isToday={isToday} currentProfile={currentProfile} canManage={canManage}
                       onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
                       onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
-                      onRequestLeave={handleRequestLeave}
-                    />
+                      onRequestLeave={handleRequestLeave} />
                   ))}
                 </ul>
               )}
@@ -352,23 +350,25 @@ export default function RoomCard({
         </div>
 
         {/* ── Actions ── */}
-        <div className="border-t border-[#1A3050]/70 px-3 pt-2.5 pb-3 space-y-2">
+        <div style={{ borderColor: `${C.border}B0` }} className="border-t px-3 pt-2.5 pb-3 space-y-2">
           {!isClosed ? (
             <>
               {!isAssigned ? (
                 <button onClick={() => setShowJoinConfirm(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors tracking-wide">
+                  className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors tracking-wide">
                   <UserPlus size={15} /> Rejoindre
                 </button>
               ) : (
                 <button onClick={() => myAssignment && handleRequestLeave(myAssignment)}
-                  className="w-full flex items-center justify-center gap-2 bg-[#1A2540] hover:bg-[#243050] text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-colors border border-[#1A3050]">
+                  style={{ background: C.surface, borderColor: C.border }}
+                  className="w-full flex items-center justify-center gap-2 border text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-opacity hover:opacity-80">
                   <LogOut size={14} /> Me retirer
                 </button>
               )}
               {isAdmin && (
                 <button onClick={() => onClose(roomId)} title="Fermer la salle"
-                  className="flex items-center justify-center bg-[#1A2540] hover:bg-[#243050] text-gray-400 p-2 rounded-xl transition-colors border border-[#1A3050]">
+                  style={{ background: C.surface, borderColor: C.border }}
+                  className="flex items-center justify-center border text-stone-400 p-2 rounded-xl transition-opacity hover:opacity-80">
                   <Lock size={16} />
                 </button>
               )}
@@ -376,7 +376,7 @@ export default function RoomCard({
           ) : (
             isAdmin && (
               <button onClick={() => onOpen(roomId)}
-                className="w-full flex items-center justify-center gap-1.5 bg-[#1A2540] hover:bg-[#243050] text-green-400 text-sm font-medium py-2.5 rounded-xl transition-colors border border-green-700/30">
+                className="w-full flex items-center justify-center gap-1.5 bg-green-900/20 hover:bg-green-900/40 text-green-400 text-sm font-medium py-2.5 rounded-xl transition-colors border border-green-700/30">
                 <Unlock size={14} /> Ouvrir la salle
               </button>
             )

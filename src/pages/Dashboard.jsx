@@ -228,8 +228,8 @@ export default function Dashboard({ sector, unit, onBack }) {
                 return (
                   <button key={i} onClick={() => handleWeekSelect(i)}
                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
-                      isSelected ? 'bg-blue-600 text-white'
-                      : containsToday ? 'bg-[#1A2540] text-blue-400 border border-[#1A3050]'
+                      isSelected ? 'bg-amber-600 text-white'
+                      : containsToday ? 'bg-[#1A2540] text-amber-400 border border-[#1A3050]'
                       : 'bg-[#0E1C2E]/60 text-gray-600 hover:bg-[#1A2540] hover:text-white'
                     }`}>
                     S{weekNum}
@@ -252,12 +252,12 @@ export default function Dashboard({ sector, unit, onBack }) {
                 <button key={i} onClick={() => setSelectedDate(dateStr)}
                   className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all flex flex-col items-center gap-0.5 ${
                     isSelected ? 'bg-[#1A3A6B] text-white border border-blue-500/50 shadow-lg shadow-blue-900/30'
-                    : isToday ? 'bg-[#1A2540] text-blue-400 border border-[#1A3050]'
+                    : isToday ? 'bg-[#1A2540] text-amber-400 border border-[#1A3050]'
                     : isPast ? 'text-gray-700 hover:bg-[#0E1C2E] hover:text-gray-500'
                     : 'text-gray-500 hover:bg-[#0E1C2E] hover:text-gray-300'
                   }`}>
                   <span className="text-xs uppercase tracking-wide">{DAY_NAMES[i]}</span>
-                  <span className={`text-sm font-bold ${isSelected ? 'text-white' : isToday ? 'text-blue-400' : ''}`}>{day.getDate()}</span>
+                  <span className={`text-sm font-bold ${isSelected ? 'text-white' : isToday ? 'text-amber-400' : ''}`}>{day.getDate()}</span>
                 </button>
               )
             })}
@@ -269,7 +269,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       <div className="bg-[#081328] border-b border-[#1A3050]/60 px-4 py-2">
         <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-600">
           <span className="capitalize">{selectedDayLabel} — <span className="font-semibold text-gray-300">{totalAssigned}</span> affecté(s)</span>
-          <button onClick={fetchData} className="flex items-center gap-1.5 text-blue-500 hover:text-blue-400 transition-colors">
+          <button onClick={fetchData} className="flex items-center gap-1.5 text-blue-500 hover:text-amber-400 transition-colors">
             <RefreshCw size={14} />
             Actualiser
           </button>
