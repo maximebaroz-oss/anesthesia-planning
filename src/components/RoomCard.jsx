@@ -363,7 +363,7 @@ export default function RoomCard({
               {!isAssigned ? (
                 <button onClick={() => setShowJoinConfirm(true)}
                   className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 rounded-xl transition-colors">
-                  <UserPlus size={15} /> Me rejoindre
+                  <UserPlus size={15} /> Rejoindre
                 </button>
               ) : (
                 <button onClick={() => myAssignment && handleRequestLeave(myAssignment)}
