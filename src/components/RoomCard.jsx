@@ -148,35 +148,42 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
   const isPresent = !!startTime
 
   return (
-    <li className="flex items-center gap-2 min-w-0 bg-[#1A2540]/60 rounded-xl px-2.5 py-2">
-      <TypeBadge isMedecin={isMedecin} />
-      <button
-        onClick={() => onProfileClick(a.profiles)}
-        onMouseEnter={e => onMouseEnter(a.profiles, e)}
-        onMouseLeave={onMouseLeave}
-        className="flex-1 min-w-0 text-left"
-      >
-        <p className={`text-xs font-semibold truncate ${personIsLate ? 'text-red-300' : 'text-white hover:text-blue-300 transition-colors'}`}>
-          {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
-        </p>
-        {a.profiles?.grade && (
-          <p className="text-xs text-gray-500">{gradeLabel(a.profiles.grade)}</p>
-        )}
-      </button>
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        <TimeInput value={startTime} placeholder="--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} />
-        <span className="text-gray-700 text-xs">→</span>
-        <TimeInput value={endTime}   placeholder="--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time',   v)} />
-      </div>
-      {isPresent && !personIsLate && (
-        <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
-          <span className="text-green-400 text-xs">✓</span>
-        </div>
-      )}
-      {(isMine || canManage) && (
-        <button onClick={() => onRequestLeave(a)} className="p-0.5 text-gray-700 hover:text-red-400 transition-colors flex-shrink-0">
-          <X size={11} />
+    <li className="bg-[#1A2540]/60 rounded-xl px-2.5 py-2 space-y-1">
+      {/* Ligne 1 : badge + nom + bouton retirer */}
+      <div className="flex items-center gap-2 min-w-0">
+        <TypeBadge isMedecin={isMedecin} />
+        <button
+          onClick={() => onProfileClick(a.profiles)}
+          onMouseEnter={e => onMouseEnter(a.profiles, e)}
+          onMouseLeave={onMouseLeave}
+          className="flex-1 min-w-0 text-left"
+        >
+          <p className={`text-xs font-semibold truncate ${personIsLate ? 'text-red-300' : 'text-white hover:text-blue-300 transition-colors'}`}>
+            {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
+          </p>
+          {a.profiles?.grade && (
+            <p className="text-xs text-gray-500 leading-none">{gradeLabel(a.profiles.grade)}</p>
+          )}
         </button>
+        {(isMine || canManage) && (
+          <button onClick={() => onRequestLeave(a)} className="p-0.5 text-gray-700 hover:text-red-400 transition-colors flex-shrink-0">
+            <X size={11} />
+          </button>
+        )}
+      </div>
+      {/* Ligne 2 : heures + indicateur présence */}
+      {(startTime || endTime || isMine || canManage) && (
+        <div className="flex items-center gap-1 pl-8">
+          <Clock size={9} className="text-gray-700 flex-shrink-0" />
+          <TimeInput value={startTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} />
+          <span className="text-gray-700 text-xs">→</span>
+          <TimeInput value={endTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time', v)} />
+          {isPresent && !personIsLate && (
+            <div className="ml-1 w-4 h-4 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
+              <span className="text-green-400" style={{fontSize:'9px'}}>✓</span>
+            </div>
+          )}
+        </div>
       )}
     </li>
   )
