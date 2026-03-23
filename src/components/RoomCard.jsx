@@ -37,7 +37,7 @@ function TimeInput({ value, onSave, placeholder = '--:--', editable = true, larg
   const [draft, setDraft] = useState(value ?? '')
 
   const cls = large
-    ? 'text-base font-bold text-white'
+    ? 'text-xl font-bold text-white tracking-tight'
     : 'text-xs text-gray-300'
 
   if (!editable) {
@@ -135,6 +135,17 @@ function LeaveConfirmModal({ name, onConfirm, onCancel }) {
   )
 }
 
+function Avatar({ name, isMedecin }) {
+  const initials = isMedecin ? 'MD' : 'ISA'
+  return (
+    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+      isMedecin ? 'bg-red-900/60 text-red-300' : 'bg-blue-900/60 text-blue-300'
+    }`}>
+      {initials}
+    </div>
+  )
+}
+
 function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProfileClick, onMouseEnter, onMouseLeave, onRequestLeave }) {
   const endTime   = a.end_time?.slice(0, 5)   ?? null
   const startTime = a.start_time?.slice(0, 5) ?? null
@@ -143,16 +154,18 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
   const isMedecin = a.profiles?.profession === 'medecin'
 
   return (
-    <li className="flex items-center gap-1.5 min-w-0">
-      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isMedecin ? 'bg-red-400' : 'bg-blue-400'}`} />
+    <li className="flex items-center gap-2 min-w-0 bg-gray-800/50 rounded-xl px-2 py-1.5">
+      <Avatar name={a.profiles?.full_name} isMedecin={isMedecin} />
       <button
         onClick={() => onProfileClick(a.profiles)}
         onMouseEnter={e => onMouseEnter(a.profiles, e)}
         onMouseLeave={onMouseLeave}
-        className={`text-xs truncate flex-1 text-left transition-colors ${personIsLate ? 'text-red-300' : 'text-gray-200 hover:text-white'}`}
+        className={`text-xs truncate flex-1 text-left transition-colors ${personIsLate ? 'text-red-300' : 'text-gray-100 hover:text-white'}`}
       >
-        {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
-        {a.profiles?.grade && <span className="text-gray-600 ml-1">{gradeLabel(a.profiles.grade)}</span>}
+        <span className="block font-medium truncate">
+          {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
+        </span>
+        {a.profiles?.grade && <span className="text-gray-500 text-xs">{gradeLabel(a.profiles.grade)}</span>}
       </button>
       <div className="flex items-center gap-0.5 flex-shrink-0">
         <TimeInput value={startTime} placeholder="--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} />
@@ -234,8 +247,8 @@ export default function RoomCard({
         />
       )}
 
-      <div className={`rounded-2xl border shadow-md overflow-hidden flex flex-col bg-gray-900 transition-colors ${
-        roomIsLate ? 'border-red-500/40' : 'border-gray-700/50'
+      <div className={`rounded-2xl border shadow-lg overflow-hidden flex flex-col bg-[#0F1623] transition-colors ${
+        roomIsLate ? 'border-red-500/40' : 'border-[#1E2D4A]/80'
       }`}>
 
         {/* ── En-tête ── */}
@@ -249,26 +262,28 @@ export default function RoomCard({
 
         {/* ── Horaire salle ── */}
         {!isClosed && (
-          <div className="px-3 pb-2.5">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Horaire salle</p>
-            <div className="flex items-center gap-1.5">
-              <Clock size={11} className={roomIsLate ? 'text-red-500' : 'text-gray-600'} />
-              <TimeInput
-                value={openingTime} placeholder="--:--" editable={canManage} large
-                onSave={v => onUpdateRoomSchedule(roomId, 'opening_time', v)}
-              />
-              <span className="text-gray-600 text-sm font-bold">–</span>
-              <TimeInput
-                value={closingTime} placeholder="--:--" editable={canManage} large
-                onSave={v => onUpdateRoomSchedule(roomId, 'closing_time', v)}
-              />
-              {roomIsLate && <span className="text-red-400 text-xs font-bold">⚠</span>}
+          <div className="px-3 pb-3">
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-1">Shift Slot</p>
+            <div className="flex items-center gap-2">
+              <Clock size={12} className={roomIsLate ? 'text-red-500' : 'text-gray-500'} />
+              <div className="flex items-center gap-1">
+                <TimeInput
+                  value={openingTime} placeholder="--:--" editable={canManage} large
+                  onSave={v => onUpdateRoomSchedule(roomId, 'opening_time', v)}
+                />
+                <span className={`font-bold ${roomIsLate ? 'text-red-400' : 'text-gray-500'}`}> – </span>
+                <TimeInput
+                  value={closingTime} placeholder="--:--" editable={canManage} large
+                  onSave={v => onUpdateRoomSchedule(roomId, 'closing_time', v)}
+                />
+              </div>
+              {roomIsLate && <span className="text-red-400 text-xs font-bold ml-1">⚠ Dépassé</span>}
             </div>
           </div>
         )}
 
         {/* ── Séparateur ── */}
-        <div className="border-t border-gray-800" />
+        <div className="border-t border-[#1E2D4A]/60" />
 
         {/* ── Personnel ── */}
         <div className="flex-1 px-3 py-2.5">
@@ -321,7 +336,7 @@ export default function RoomCard({
         </div>
 
         {/* ── Actions ── */}
-        <div className="border-t border-gray-800 px-3 pt-2.5 pb-3 space-y-2">
+        <div className="border-t border-[#1E2D4A]/60 px-3 pt-2.5 pb-3 space-y-2">
           {!isClosed ? (
             <>
               {!isAssigned ? (
