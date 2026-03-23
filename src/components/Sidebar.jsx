@@ -116,7 +116,7 @@ function ProfilePanel() {
         </div>
         <div>
           <p className="font-bold text-white">
-            {currentProfile.full_name}
+            {currentProfile.profession === 'medecin' ? `Dr. ${currentProfile.full_name}` : currentProfile.full_name}
           </p>
           <p className="text-gray-400 text-xs">{GRADE_LABELS[currentProfile.grade] ?? currentProfile.grade}</p>
           <p className="text-gray-500 text-xs">{currentProfile.profession === 'medecin' ? 'Médecin (Med)' : 'Infirmier (ISA)'}</p>
@@ -187,7 +187,7 @@ function StaffRow({ p, profession, canEdit }) {
             {p.full_name.charAt(0)}
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-200">{p.full_name}</p>
+            <p className="text-sm font-medium text-gray-200">{profession === 'medecin' ? `Dr. ${p.full_name}` : p.full_name}</p>
             <p className="text-gray-500 text-xs">{GRADE_LABELS[p.grade] ?? p.grade}</p>
           </div>
         </div>

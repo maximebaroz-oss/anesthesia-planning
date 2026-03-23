@@ -156,7 +156,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, roomId, onUpdateTime
         }`}
       >
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isMedecin ? 'bg-red-500' : 'bg-blue-400'}`} />
-        {a.profiles?.full_name}
+        {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
         {a.profiles?.grade && (
           <span className="text-xs text-gray-500 ml-1">{gradeLabel(a.profiles.grade)}</span>
         )}
