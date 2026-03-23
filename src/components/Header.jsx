@@ -18,7 +18,7 @@ export default function Header({ sector, unit, onBack, onMenuOpen }) {
   })
 
   return (
-    <header className="bg-gray-900 border-b border-gray-700 text-white px-4 py-3 shadow-md sticky top-0 z-10">
+    <header className="bg-[#0D1117] border-b border-gray-800 text-white px-4 py-3 shadow-lg sticky top-0 z-10">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
           {onMenuOpen && (

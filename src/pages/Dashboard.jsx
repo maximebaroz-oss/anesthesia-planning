@@ -209,15 +209,15 @@ export default function Dashboard({ sector, unit, onBack }) {
   })
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-[#080C14] flex flex-col">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
 
       {/* Sélecteur semaine/jour */}
-      <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
+      <div className="bg-[#0D1117] border-b border-gray-800 px-4 py-3">
         <div className="max-w-4xl mx-auto space-y-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0">
+            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors flex-shrink-0">
               <ChevronLeft size={18} />
             </button>
             <div className="flex flex-1 gap-2">
@@ -229,20 +229,20 @@ export default function Dashboard({ sector, unit, onBack }) {
                   <button key={i} onClick={() => handleWeekSelect(i)}
                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
                       isSelected ? 'bg-blue-600 text-white'
-                      : containsToday ? 'bg-gray-800 text-blue-400 border border-blue-700'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                      : containsToday ? 'bg-gray-800 text-blue-400 border border-blue-800'
+                      : 'bg-gray-800/60 text-gray-500 hover:bg-gray-800 hover:text-white'
                     }`}>
                     S{weekNum}
                   </button>
                 )
               })}
             </div>
-            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex-shrink-0">
+            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors flex-shrink-0">
               <ChevronRight size={18} />
             </button>
           </div>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {selectedWeekDays.map((day, i) => {
               const dateStr = formatDateKey(day)
               const isSelected = dateStr === selectedDate
@@ -250,14 +250,14 @@ export default function Dashboard({ sector, unit, onBack }) {
               const isPast = dateStr < todayStr
               return (
                 <button key={i} onClick={() => setSelectedDate(dateStr)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors flex flex-col items-center gap-0.5 ${
-                    isSelected ? 'bg-blue-600 text-white'
-                    : isToday ? 'bg-blue-900/50 text-blue-300 border border-blue-700'
-                    : isPast ? 'text-gray-600 hover:bg-gray-800 hover:text-gray-400'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all flex flex-col items-center gap-0.5 ${
+                    isSelected ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
+                    : isToday ? 'bg-blue-900/30 text-blue-400 border border-blue-800/60'
+                    : isPast ? 'text-gray-700 hover:bg-gray-800/50 hover:text-gray-500'
+                    : 'text-gray-500 hover:bg-gray-800/50 hover:text-gray-300'
                   }`}>
-                  <span>{DAY_NAMES[i]}</span>
-                  <span className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-blue-300' : ''}`}>{day.getDate()}</span>
+                  <span className="text-xs">{DAY_NAMES[i]}</span>
+                  <span className={`text-sm font-bold ${isSelected ? 'text-white' : isToday ? 'text-blue-400' : ''}`}>{day.getDate()}</span>
                 </button>
               )
             })}
@@ -266,10 +266,10 @@ export default function Dashboard({ sector, unit, onBack }) {
       </div>
 
       {/* Barre info */}
-      <div className="bg-gray-900 border-b border-gray-700 px-4 py-2">
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-400">
-          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold text-white">{totalAssigned}</span> affecté(s)</span>
-          <button onClick={fetchData} className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors">
+      <div className="bg-[#0D1117] border-b border-gray-800 px-4 py-2">
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-500">
+          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold text-gray-300">{totalAssigned}</span> affecté(s)</span>
+          <button onClick={fetchData} className="flex items-center gap-1.5 text-blue-500 hover:text-blue-400 transition-colors">
             <RefreshCw size={14} />
             Actualiser
           </button>
@@ -280,7 +280,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       <main className="flex-1 px-3 py-4 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-gray-600">
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin" />
               <p className="text-sm">Chargement...</p>
             </div>
