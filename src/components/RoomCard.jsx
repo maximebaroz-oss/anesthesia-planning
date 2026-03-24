@@ -353,7 +353,15 @@ export default function RoomCard({
             </div>
           ) : (
             <div className="space-y-2">
-              {medecins.length === 0 ? (
+              {/* ── Médecins ── */}
+              <div className="space-y-1.5">
+                {medecins.map(a => (
+                  <PersonRow key={a.id} a={a}
+                    isToday={isToday} currentProfile={currentProfile} canManage={canManage}
+                    onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
+                    onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                    onRequestLeave={handleRequestLeave} />
+                ))}
                 <div onClick={() => canManage && onAssign(roomId, 'medecin')}
                   style={{ background: WARM.surface, borderColor: WARM.border }}
                   className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
@@ -363,19 +371,17 @@ export default function RoomCard({
                     {canManage ? '+ Affecter un médecin' : 'Aucun médecin'}
                   </span>
                 </div>
-              ) : (
-                <ul className="space-y-1.5">
-                  {medecins.map(a => (
-                    <PersonRow key={a.id} a={a}
-                      isToday={isToday} currentProfile={currentProfile} canManage={canManage}
-                      onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
-                      onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
-                      onRequestLeave={handleRequestLeave} />
-                  ))}
-                </ul>
-              )}
+              </div>
 
-              {infirmiers.length === 0 ? (
+              {/* ── ISA ── */}
+              <div className="space-y-1.5">
+                {infirmiers.map(a => (
+                  <PersonRow key={a.id} a={a}
+                    isToday={isToday} currentProfile={currentProfile} canManage={canManage}
+                    onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
+                    onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                    onRequestLeave={handleRequestLeave} />
+                ))}
                 <div onClick={() => canManage && onAssign(roomId, 'infirmier')}
                   style={{ background: WARM.surface, borderColor: WARM.border }}
                   className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
@@ -385,17 +391,7 @@ export default function RoomCard({
                     {canManage ? '+ Affecter un ISA' : 'Aucun ISA'}
                   </span>
                 </div>
-              ) : (
-                <ul className="space-y-1.5">
-                  {infirmiers.map(a => (
-                    <PersonRow key={a.id} a={a}
-                      isToday={isToday} currentProfile={currentProfile} canManage={canManage}
-                      onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
-                      onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
-                      onRequestLeave={handleRequestLeave} />
-                  ))}
-                </ul>
-              )}
+              </div>
             </div>
           )}
         </div>
