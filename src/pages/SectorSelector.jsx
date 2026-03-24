@@ -4,10 +4,10 @@ import { SECTORS } from '../config/sectors'
 
 // Palette bloc opératoire — pastels cliniques
 const UNIT_STYLES = {
-  duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8', label: 'bg-blue-50 text-blue-600' },
-  extop:  { bg: '#F0FDF4', border: '#BBF7D0', dot: '#22C55E', text: '#15803D', label: 'bg-green-50 text-green-600' },
-  unicat: { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569', label: 'bg-slate-50 text-slate-500' },
-  bocha:  { bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6', text: '#0F766E', label: 'bg-teal-50 text-teal-600' },
+  duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8' },
+  extop:  { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569' },
+  unicat: { bg: '#FFF7ED', border: '#FED7AA', dot: '#F97316', text: '#C2410C' },
+  bocha:  { bg: '#FAF5FF', border: '#E9D5FF', dot: '#A855F7', text: '#7E22CE' },
 }
 
 const GRADE_LABELS = {

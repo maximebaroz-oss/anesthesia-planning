@@ -2,9 +2,9 @@ import { ArrowLeft, ChevronRight } from 'lucide-react'
 
 const UNIT_STYLES = {
   duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8' },
-  extop:  { bg: '#F0FDF4', border: '#BBF7D0', dot: '#22C55E', text: '#15803D' },
-  unicat: { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569' },
-  bocha:  { bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6', text: '#0F766E' },
+  extop:  { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569' },
+  unicat: { bg: '#FFF7ED', border: '#FED7AA', dot: '#F97316', text: '#C2410C' },
+  bocha:  { bg: '#FAF5FF', border: '#E9D5FF', dot: '#A855F7', text: '#7E22CE' },
 }
 
 export default function UnitSelector({ sector, onSelect, onBack }) {
