@@ -22,6 +22,19 @@ const ROOM_NAMES = {
   9: 'IRM/Scanner',
 }
 
+// Horaires par défaut — salle 8 (Tardif) : pas d'ouverture, fermeture 19h
+const DEFAULT_SCHEDULES = {
+  1: { opening_time: '07:00', closing_time: '16:00' },
+  2: { opening_time: '07:00', closing_time: '16:00' },
+  3: { opening_time: '07:00', closing_time: '16:00' },
+  4: { opening_time: '07:00', closing_time: '16:00' },
+  5: { opening_time: '07:00', closing_time: '16:00' },
+  6: { opening_time: '07:00', closing_time: '16:00' },
+  7: { opening_time: '07:00', closing_time: '16:00' },
+  8: { opening_time: null,    closing_time: '19:00' },
+  9: { opening_time: '07:00', closing_time: '16:00' },
+}
+
 const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
 function getMonday(date) {
@@ -295,7 +308,7 @@ export default function Dashboard({ sector, unit, onBack }) {
                 roomName={ROOM_NAMES[roomId]}
                 assignments={assignments}
                 closures={closures}
-                roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? null}
+                roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
                 currentProfile={profile}
                 isToday={selectedDate === todayStr}
                 onJoin={handleJoin}
