@@ -21,7 +21,7 @@ export default function UnitSelector({ sector, onSelect, onBack }) {
                 {sector.name}
               </span>
             </div>
-            <div className="text-white font-bold text-sm mt-0.5">Choisir une unité</div>
+            <div className="text-white font-bold text-sm mt-0.5">Choisir un secteur</div>
           </div>
         </div>
       </header>
@@ -29,7 +29,7 @@ export default function UnitSelector({ sector, onSelect, onBack }) {
       {/* Content */}
       <main className="flex-1 px-4 py-8 max-w-4xl mx-auto w-full">
         <h2 className="text-white text-xl font-bold mb-1">{sector.name}</h2>
-        <p className="text-gray-500 text-sm mb-6">Sélectionnez une unité</p>
+        <p className="text-gray-500 text-sm mb-6">Sélectionnez un secteur</p>
 
         <div className="space-y-3">
           {sector.units.map(unit => (

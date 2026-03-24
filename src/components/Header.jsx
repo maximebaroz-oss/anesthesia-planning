@@ -37,10 +37,10 @@ export default function Header({ sector, unit, onBack, onMenuOpen }) {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-sm tracking-wide" style={{ color: '#6B5C48' }}>Planning Bloc</span>
-              {sector && <span style={{ color: '#C9B89A' }} className="text-xs">|</span>}
+              {sector && <span style={{ color: '#B8B0A4' }} className="text-xs"> · </span>}
               {sector && <span className="text-xs" style={{ color: '#6B5F52' }}>{sector.name}</span>}
-              {unit   && <span style={{ color: '#C9B89A' }} className="text-xs">/</span>}
-              {unit   && <span className="text-xs" style={{ color: '#6B5F52' }}>{unit.name}</span>}
+              {unit   && <span style={{ color: '#B8B0A4' }} className="text-xs"> › </span>}
+              {unit   && <span className="text-xs font-semibold" style={{ color: '#2A2318' }}>{unit.name}</span>}
             </div>
             <div className="text-xs capitalize" style={{ color: '#9E9489' }}>{today}</div>
           </div>

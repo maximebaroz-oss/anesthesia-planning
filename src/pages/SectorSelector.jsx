@@ -40,8 +40,8 @@ export default function SectorSelector({ onSelect }) {
 
       {/* Content */}
       <main className="flex-1 px-4 py-8 max-w-4xl mx-auto w-full">
-        <h2 className="text-white text-xl font-bold mb-1">Choisir un secteur</h2>
-        <p className="text-gray-500 text-sm mb-6">Sélectionnez votre secteur pour accéder au planning</p>
+        <h2 className="text-white text-xl font-bold mb-1">Choisir une unité</h2>
+        <p className="text-gray-500 text-sm mb-6">Sélectionnez votre unité pour accéder au planning</p>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {SECTORS.map(sector => {
@@ -65,7 +65,7 @@ export default function SectorSelector({ onSelect }) {
                 <div className="text-white font-bold text-lg">{sector.name}</div>
                 <div className="text-gray-500 text-xs mt-1">
                   {hasUnits
-                    ? `${sector.units.length} unité${sector.units.length > 1 ? 's' : ''}`
+                    ? `${sector.units.length} secteur${sector.units.length > 1 ? 's' : ''}`
                     : 'À venir'}
                 </div>
               </button>
