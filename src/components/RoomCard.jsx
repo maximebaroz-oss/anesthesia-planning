@@ -94,8 +94,11 @@ function gradeLabel(grade) {
 
 function TypeBadge({ isMedecin }) {
   return (
-    <span style={{ background: WARM.surface, borderColor: WARM.borderAlt, color: WARM.accent }}
-      className="text-xs font-bold px-1.5 py-0.5 rounded border flex-shrink-0">
+    <span style={{
+      background: WARM.surface,
+      borderColor: isMedecin ? '#FCA5A5' : '#93C5FD',
+      color: isMedecin ? '#DC2626' : '#2563EB',
+    }} className="text-xs font-bold px-1.5 py-0.5 rounded border flex-shrink-0">
       {isMedecin ? 'MED' : 'ISA'}
     </span>
   )
@@ -332,7 +335,7 @@ export default function RoomCard({
                 <div onClick={() => canManage && onAssign(roomId, 'medecin')}
                   style={{ background: WARM.surface, borderColor: WARM.border }}
                   className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
-                  <span style={{ background: WARM.cardHead, borderColor: WARM.borderAlt, color: WARM.accent }}
+                  <span style={{ background: WARM.cardHead, borderColor: '#FCA5A5', color: '#DC2626' }}
                     className="text-xs font-bold px-1.5 py-0.5 rounded border">MED</span>
                   <span className="text-xs italic" style={{ color: WARM.textFaint }}>
                     {canManage ? '+ Affecter un médecin' : 'Aucun médecin'}
@@ -354,7 +357,7 @@ export default function RoomCard({
                 <div onClick={() => canManage && onAssign(roomId, 'infirmier')}
                   style={{ background: WARM.surface, borderColor: WARM.border }}
                   className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
-                  <span style={{ background: WARM.cardHead, borderColor: WARM.borderAlt, color: WARM.accent }}
+                  <span style={{ background: WARM.cardHead, borderColor: '#93C5FD', color: '#2563EB' }}
                     className="text-xs font-bold px-1.5 py-0.5 rounded border">ISA</span>
                   <span className="text-xs italic" style={{ color: WARM.textFaint }}>
                     {canManage ? '+ Affecter un ISA' : 'Aucun ISA'}
