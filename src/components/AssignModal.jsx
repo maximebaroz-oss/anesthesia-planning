@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, Search } from 'lucide-react'
 
 const GRADE_LABELS = {
-  cadre: 'Cadre',
+  adjoint: 'Adjoint',
   chef_clinique: 'CDC',
   interne: 'Interne',
   iade: 'ISA',
@@ -24,10 +24,10 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
     return true
   })
 
-  const cadres   = filtered.filter(p => p.profession === 'medecin' && p.grade === 'cadre')
+  const cadres   = filtered.filter(p => p.profession === 'medecin' && p.grade === 'adjoint')
   const cdcs     = filtered.filter(p => p.profession === 'medecin' && p.grade === 'chef_clinique')
   const internes = filtered.filter(p => p.profession === 'medecin' && p.grade === 'interne')
-  const autresMed = filtered.filter(p => p.profession === 'medecin' && !['cadre','chef_clinique','interne'].includes(p.grade))
+  const autresMed = filtered.filter(p => p.profession === 'medecin' && !['adjoint','chef_clinique','interne'].includes(p.grade))
   const infirmiers = filtered.filter(p => p.profession === 'infirmier')
 
   return (
@@ -89,7 +89,7 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
               {(filter === 'all' || filter === 'medecin') && (
                 <>
                   {[
-                    { label: 'Cadres',  list: cadres },
+                    { label: 'Adjoints', list: cadres },
                     { label: 'CDC',     list: cdcs },
                     { label: 'Internes',list: internes },
                     { label: 'Médecins',list: autresMed },

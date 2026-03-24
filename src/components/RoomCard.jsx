@@ -86,7 +86,7 @@ function TimeInput({ value, onSave, placeholder = '--:--', editable = true, larg
 }
 
 function gradeLabel(grade) {
-  if (grade === 'cadre')        return 'Cadre'
+  if (grade === 'adjoint')      return 'Adjoint'
   if (grade === 'chef_clinique') return 'CDC'
   if (grade === 'interne')      return 'Interne'
   return ''

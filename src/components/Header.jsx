@@ -2,7 +2,7 @@ import { LogOut, ArrowLeft, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const GRADE_LABELS = {
-  cadre: 'Cadre',
+  adjoint: 'Adjoint',
   chef_clinique: 'Chef de clinique',
   interne: 'Interne',
   iade: 'ISA',

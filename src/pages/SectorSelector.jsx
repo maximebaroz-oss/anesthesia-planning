@@ -11,7 +11,7 @@ const UNIT_STYLES = {
 }
 
 const GRADE_LABELS = {
-  cadre: 'Cadre', chef_clinique: 'CDC', interne: 'Interne', iade: 'ISA',
+  adjoint: 'Adjoint', chef_clinique: 'CDC', interne: 'Interne', iade: 'ISA',
 }
 
 export default function SectorSelector({ onSelect }) {

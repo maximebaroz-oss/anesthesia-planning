@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 const GRADE_LABELS = {
-  cadre: 'Cadre',
+  adjoint: 'Adjoint',
   chef_clinique: 'Chef de clinique',
   interne: 'Interne',
   iade: 'ISA',
