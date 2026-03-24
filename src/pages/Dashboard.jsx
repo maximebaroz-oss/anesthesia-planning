@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
@@ -7,6 +7,158 @@ import RoomCard from '../components/RoomCard'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
+
+const WARM = {
+  cardBg:    '#F5F3F0',
+  cardHead:  '#EAE7E2',
+  border:    '#CEC8BF',
+  borderAlt: '#B8B0A4',
+  surface:   '#E2DED8',
+  accent:    '#6B5C48',
+  accentBar: '#8A7560',
+  text:      '#2A2318',
+  textSub:   '#6B5F52',
+  textFaint: '#9E9489',
+}
+
+function SupervisorCard({ date, allProfiles, canManage }) {
+  const { profile: currentProfile } = useAuth()
+  const [supervisor, setSupervisor] = useState(null)   // profile object or null
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const dropRef = useRef(null)
+
+  // Fetch supervisor for this date
+  useEffect(() => {
+    setLoading(true)
+    supabase.from('supervisors').select('user_id, profiles!supervisors_user_id_fkey(*)').eq('date', date).maybeSingle()
+      .then(({ data }) => {
+        setSupervisor(data?.profiles ?? null)
+        setLoading(false)
+      })
+  }, [date])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) { if (dropRef.current && !dropRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  async function assignSupervisor(profile) {
+    await supabase.from('supervisors').upsert(
+      { date, user_id: profile.id, assigned_by: currentProfile?.id },
+      { onConflict: 'date' }
+    )
+    setSupervisor(profile)
+    setOpen(false)
+    setSearch('')
+  }
+
+  async function removeSupervisor() {
+    await supabase.from('supervisors').delete().eq('date', date)
+    setSupervisor(null)
+  }
+
+  const medecins = allProfiles.filter(p => p.profession === 'medecin' &&
+    (p.grade === 'adjoint' || p.grade === 'chef_clinique'))
+  const filtered = medecins.filter(p =>
+    !search || p.full_name.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div style={{ background: WARM.cardBg, borderColor: WARM.border, boxShadow: '0 2px 12px rgba(180,130,60,0.08)' }}
+      className="rounded-2xl border overflow-visible mb-4 col-span-full">
+      <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+        className="px-4 pt-3 pb-2.5 flex items-center gap-2 border-b">
+        <span style={{ background: WARM.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+        <ShieldCheck size={14} style={{ color: WARM.accentBar }} />
+        <span className="font-bold text-sm" style={{ color: WARM.text }}>Superviseur HB</span>
+      </div>
+
+      <div className="px-4 py-3 flex items-center gap-3">
+        {loading ? (
+          <span className="text-sm italic" style={{ color: WARM.textFaint }}>Chargement...</span>
+        ) : supervisor ? (
+          <>
+            <div style={{ background: WARM.surface, borderColor: WARM.border }}
+              className="flex-1 flex items-center gap-2.5 rounded-xl px-3 py-2 border">
+              <div style={{ background: WARM.accentBar }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                {supervisor.full_name.charAt(0)}
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: WARM.text }}>
+                  Dr. {supervisor.full_name}
+                </p>
+                <p className="text-xs" style={{ color: WARM.textFaint }}>
+                  {supervisor.grade === 'adjoint' ? 'Adjoint' : 'Chef de clinique'}
+                </p>
+              </div>
+            </div>
+            {canManage && (
+              <button onClick={removeSupervisor}
+                style={{ color: WARM.textFaint }}
+                className="p-1.5 hover:text-red-500 transition-colors flex-shrink-0">
+                <X size={16} />
+              </button>
+            )}
+          </>
+        ) : (
+          <span className="text-sm italic" style={{ color: WARM.textFaint }}>Aucun superviseur assigné</span>
+        )}
+
+        {canManage && (
+          <div className="relative flex-shrink-0" ref={dropRef}>
+            <button onClick={() => { setOpen(v => !v); setSearch('') }}
+              style={{ background: WARM.accentBar }}
+              className="flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity">
+              {supervisor ? 'Changer' : 'Assigner'}
+              <ChevronDown size={14} />
+            </button>
+
+            {open && (
+              <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+                className="absolute right-0 top-full mt-2 w-64 border rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="p-2 border-b" style={{ borderColor: WARM.border }}>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Rechercher..."
+                    style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
+                    className="w-full text-sm px-3 py-1.5 rounded-lg border focus:outline-none placeholder-gray-400"
+                  />
+                </div>
+                <div className="max-h-56 overflow-y-auto py-1">
+                  {filtered.length === 0 ? (
+                    <p className="text-xs text-center py-3" style={{ color: WARM.textFaint }}>Aucun résultat</p>
+                  ) : filtered.map(p => (
+                    <button key={p.id} onClick={() => assignSupervisor(p)}
+                      style={{ color: WARM.text }}
+                      className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity flex items-center gap-2">
+                      <div style={{ background: WARM.surface }}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: WARM.accentBar, color: '#fff' }}>
+                        {p.full_name.charAt(0)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Dr. {p.full_name}</span>
+                        <span className="text-xs ml-1.5" style={{ color: WARM.textFaint }}>
+                          {p.grade === 'adjoint' ? 'Adj.' : 'CDC'}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const ROOMS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -301,6 +453,11 @@ export default function Dashboard({ sector, unit, onBack }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <SupervisorCard
+              date={selectedDate}
+              allProfiles={allProfiles}
+              canManage={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
+            />
             {ROOMS.map(roomId => (
               <RoomCard
                 key={roomId}
