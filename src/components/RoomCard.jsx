@@ -178,7 +178,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
   const isPresent    = !!startTime
 
   return (
-    <li style={{ background: WARM.surface, borderColor: WARM.border }}
+    <li style={{ background: WARM.surface, borderColor: '#86EFAC' }}
       className="rounded-xl px-2.5 py-2 space-y-1 border">
       <div className="flex items-center gap-2 min-w-0">
         <TypeBadge isMedecin={isMedecin} />
