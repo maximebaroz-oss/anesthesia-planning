@@ -16,49 +16,51 @@ export default function Header({ sector, unit, onBack, onMenuOpen }) {
   })
 
   return (
-    <header style={{ background: '#150D04', borderColor: '#3D2A1060' }}
-      className="border-b text-white px-4 py-3 shadow-xl sticky top-0 z-10">
+    <header style={{ background: '#FAF7F2', borderColor: '#DDD0B8' }}
+      className="border-b text-white px-4 py-3 shadow-sm sticky top-0 z-10">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
           {onMenuOpen && (
             <button onClick={onMenuOpen}
-              style={{ '--hover-bg': '#2D1E08' }}
-              className="p-1.5 rounded-lg hover:bg-[#2D1E08] text-stone-500 hover:text-white transition-colors">
+              style={{ color: '#8B7355' }}
+              className="p-1.5 rounded-lg hover:bg-[#F5EDE0] transition-colors">
               <Menu size={20} />
             </button>
           )}
           {onBack && (
             <button onClick={onBack}
-              className="p-1.5 rounded-lg hover:bg-[#2D1E08] text-stone-500 hover:text-white transition-colors mr-1">
+              style={{ color: '#8B7355' }}
+              className="p-1.5 rounded-lg hover:bg-[#F5EDE0] transition-colors mr-1">
               <ArrowLeft size={18} />
             </button>
           )}
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-amber-400 text-sm tracking-wide">Planning Bloc</span>
-              {sector && <span className="text-stone-700 text-xs">|</span>}
-              {sector && <span className="text-xs text-stone-500">{sector.name}</span>}
-              {unit   && <span className="text-stone-600 text-xs">/</span>}
-              {unit   && <span className="text-xs text-stone-400">{unit.name}</span>}
+              <span className="font-bold text-sm tracking-wide" style={{ color: '#B45309' }}>Planning Bloc</span>
+              {sector && <span style={{ color: '#C9B89A' }} className="text-xs">|</span>}
+              {sector && <span className="text-xs" style={{ color: '#8B7355' }}>{sector.name}</span>}
+              {unit   && <span style={{ color: '#C9B89A' }} className="text-xs">/</span>}
+              {unit   && <span className="text-xs" style={{ color: '#8B7355' }}>{unit.name}</span>}
             </div>
-            <div className="text-stone-600 text-xs capitalize">{today}</div>
+            <div className="text-xs capitalize" style={{ color: '#BFA98A' }}>{today}</div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {profile && (
             <div className="text-right">
-              <div className="text-sm font-medium leading-tight text-white">
+              <div className="text-sm font-medium leading-tight" style={{ color: '#2D1E08' }}>
                 {profile.profession === 'medecin' ? `Dr. ${profile.full_name}` : profile.full_name}
               </div>
-              <div className="text-xs text-stone-500">
+              <div className="text-xs" style={{ color: '#8B7355' }}>
                 {GRADE_LABELS[profile.grade] ?? profile.grade}
-                {profile.is_admin && <span className="ml-1 text-amber-400">★</span>}
+                {profile.is_admin && <span className="ml-1" style={{ color: '#D97706' }}>★</span>}
               </div>
             </div>
           )}
           <button onClick={signOut}
-            className="p-2 rounded-lg hover:bg-[#2D1E08] transition-colors text-stone-500 hover:text-white"
+            style={{ color: '#8B7355' }}
+            className="p-2 rounded-lg hover:bg-[#F5EDE0] transition-colors"
             title="Déconnexion">
             <LogOut size={18} />
           </button>

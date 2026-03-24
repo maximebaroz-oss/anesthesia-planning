@@ -307,12 +307,13 @@ export default function Sidebar({ open, onClose }) {
         <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
       )}
 
-      <div className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-[#150D04] border-r border-[#3D2A10]/60 z-50 flex flex-col transition-transform duration-300 ${
-        open ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
-          <span className="text-white font-bold text-lg">Menu</span>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
+      <div style={{ background: '#FAF7F2', borderColor: '#DDD0B8' }}
+        className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] border-r z-50 flex flex-col transition-transform duration-300 ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+        <div className="flex items-center justify-between px-4 py-4 border-b" style={{ borderColor: '#DDD0B8' }}>
+          <span className="font-bold text-lg" style={{ color: '#2D1E08' }}>Menu</span>
+          <button onClick={onClose} className="p-2 rounded-lg transition-colors" style={{ color: '#8B7355' }}>
             <X size={20} />
           </button>
         </div>
