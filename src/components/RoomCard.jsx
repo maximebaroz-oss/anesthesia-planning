@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut } from 'lucide-react'
+import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle } from 'lucide-react'
 
 function isLate(timeStr) {
   if (!timeStr) return false
@@ -178,11 +178,19 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
   const personIsLate = isToday && endTime && isLate(endTime)
   const isMine       = a.user_id === currentProfile?.id
   const isMedecin    = a.profiles?.profession === 'medecin'
-  const isPresent    = !!startTime
+  const isValidated  = !!startTime
+  const isSenior     = ['adjoint', 'chef_clinique'].includes(a.profiles?.grade)
+  const canValidate  = !!currentProfile // n'importe qui de connecté peut valider
+
+  // Bordure : verte (médecin) ou bleue (ISA) si validé, neutre sinon
+  const borderColor = isValidated
+    ? (isMedecin ? '#86EFAC' : '#93C5FD')
+    : WARM.border
+  const borderCls = isValidated && isSenior ? 'border-4' : 'border'
 
   return (
-    <li style={{ background: WARM.surface, borderColor: '#86EFAC' }}
-      className={`rounded-xl px-2.5 py-2 space-y-1 ${ ['adjoint','chef_clinique'].includes(a.profiles?.grade) ? 'border-4' : 'border' }`}>
+    <li style={{ background: WARM.surface, borderColor }}
+      className={`rounded-xl px-2.5 py-2 space-y-1 ${borderCls}`}>
       <div className="flex items-center gap-2 min-w-0">
         <TypeBadge isMedecin={isMedecin} />
         <button onClick={() => onProfileClick(a.profiles)}
@@ -196,6 +204,18 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
             <p className="text-xs leading-none" style={{ color: WARM.textFaint }}>{gradeLabel(a.profiles.grade)}</p>
           )}
         </button>
+
+        {/* Bouton valider présence (si pas encore validé) */}
+        {!isValidated && canValidate && (
+          <button
+            onClick={() => onUpdateTime(a.id, 'start_time', getCurrentTime())}
+            title="Valider la présence"
+            style={{ color: isMedecin ? '#16A34A' : '#2563EB' }}
+            className="p-0.5 hover:opacity-70 transition-opacity flex-shrink-0">
+            <CheckCircle size={14} />
+          </button>
+        )}
+
         {(isMine || canManage) && (
           <button onClick={() => onRequestLeave(a)}
             style={{ color: WARM.textFaint }}
@@ -204,13 +224,15 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
           </button>
         )}
       </div>
-      {(startTime || endTime || isMine || canManage) && (
+
+      {/* Horaires — uniquement si validé */}
+      {isValidated && (
         <div className="flex items-center gap-1 pl-8">
           <Clock size={9} style={{ color: WARM.textFaint }} className="flex-shrink-0" />
           <TimeInput value={startTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} />
           <span style={{ color: WARM.textFaint }} className="text-xs">→</span>
           <TimeInput value={endTime}   placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time',   v)} />
-          {isPresent && !personIsLate && (
+          {!personIsLate && (
             <div className="ml-1 w-4 h-4 rounded-full bg-green-100 border border-green-300 flex items-center justify-center flex-shrink-0">
               <span className="text-green-600" style={{ fontSize: '9px' }}>✓</span>
             </div>
