@@ -437,10 +437,19 @@ export default function Dashboard({ sector, unit, onBack }) {
       <div className="border-b px-4 py-2" style={{ background: '#F0EDE8', borderColor: '#CEC8BF' }}>
         <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: '#6B5F52' }}>
           <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: '#2A2318' }}>{totalAssigned}</span> affecté(s)</span>
-          <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: '#6B5C48' }}>
-            <RefreshCw size={14} />
-            Actualiser
-          </button>
+          <div className="flex items-center gap-2">
+            {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
+              <button onClick={() => setShowImport(true)}
+                className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                style={{ background: '#E2DED8', color: '#6B5C48' }}>
+                <FileSpreadsheet size={13} />
+                Import
+              </button>
+            )}
+            <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: '#6B5C48' }}>
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -486,6 +495,14 @@ export default function Dashboard({ sector, unit, onBack }) {
 
       {selectedProfile && (
         <ProfileModal profile={selectedProfile} onClose={() => setSelectedProfile(null)} />
+      )}
+
+      {showImport && (
+        <ImportPlanningModal
+          profiles={allProfiles}
+          onClose={() => setShowImport(false)}
+          onImported={() => { fetchData(); setShowImport(false) }}
+        />
       )}
 
       {assignModal?.roomId && (
