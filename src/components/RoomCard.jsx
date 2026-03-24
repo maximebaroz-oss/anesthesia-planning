@@ -321,7 +321,7 @@ export default function RoomCard({
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className={`w-2 h-2 rounded-full ${config.dot}`} />
+            <span className={`w-3.5 h-3.5 rounded-full ${config.dot}`} />
             {isClosed && <Lock size={13} style={{ color: WARM.textFaint }} />}
           </div>
         </div>
