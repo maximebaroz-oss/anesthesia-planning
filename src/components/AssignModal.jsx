@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { X, Search } from 'lucide-react'
 
 const GRADE_LABELS = {
-  adjoint: 'Adjoint',
+  adjoint: 'Adj.',
   chef_clinique: 'CDC',
-  interne: 'Interne',
+  interne: 'Int.',
+  consultant: 'Cons.',
   iade: 'ISA',
 }
 
-export default function AssignModal({ roomId, profiles, assignments, today, onAssign, onClose }) {
+export default function AssignModal({ roomId, roomName, profiles, assignments, today, defaultFilter, onAssign, onClose }) {
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState(defaultFilter ?? 'all')
 
   const alreadyInRoom = assignments
     .filter(a => a.room_id === roomId)
@@ -24,117 +25,86 @@ export default function AssignModal({ roomId, profiles, assignments, today, onAs
     return true
   })
 
-  const cadres   = filtered.filter(p => p.profession === 'medecin' && p.grade === 'adjoint')
-  const cdcs     = filtered.filter(p => p.profession === 'medecin' && p.grade === 'chef_clinique')
-  const internes = filtered.filter(p => p.profession === 'medecin' && p.grade === 'interne')
-  const autresMed = filtered.filter(p => p.profession === 'medecin' && !['adjoint','chef_clinique','interne'].includes(p.grade))
+  const medSections = [
+    { label: 'Adjoints',    list: filtered.filter(p => p.profession === 'medecin' && p.grade === 'adjoint') },
+    { label: 'CDC',         list: filtered.filter(p => p.profession === 'medecin' && p.grade === 'chef_clinique') },
+    { label: 'Internes',    list: filtered.filter(p => p.profession === 'medecin' && p.grade === 'interne') },
+    { label: 'Consultants', list: filtered.filter(p => p.profession === 'medecin' && p.grade === 'consultant') },
+    { label: 'Médecins',    list: filtered.filter(p => p.profession === 'medecin' && !['adjoint','chef_clinique','interne','consultant'].includes(p.grade)) },
+  ].filter(s => s.list.length > 0)
   const infirmiers = filtered.filter(p => p.profession === 'infirmier')
+
+  const title = defaultFilter === 'medecin' ? 'Affecter un médecin'
+              : defaultFilter === 'infirmier' ? 'Affecter un ISA'
+              : 'Affecter du personnel'
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-gray-800 border border-gray-700 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 pt-4 pb-3 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+        <div className="px-4 pt-3 pb-2.5 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="font-bold text-white">Affecter à la Salle {roomId}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Sélectionnez un membre du personnel</p>
+            <h2 className="font-bold text-white text-sm">{title}</h2>
+            <p className="text-xs text-gray-500">{roomName ?? `Salle ${roomId}`}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
-          >
-            <X size={20} />
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white">
+            <X size={18} />
           </button>
         </div>
 
-        {/* Search + filter */}
-        <div className="px-4 py-3 space-y-2 flex-shrink-0">
+        {/* Search + filter (filter tabs only if not locked to one profession) */}
+        <div className="px-3 py-2 space-y-2 flex-shrink-0">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher..."
-              className="w-full bg-gray-900 border border-gray-600 rounded-xl pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher..." autoFocus
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="flex gap-2">
-            {[
-              { value: 'all', label: 'Tous' },
-              { value: 'medecin', label: 'Med' },
-              { value: 'infirmier', label: 'ISA' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setFilter(opt.value)}
-                className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  filter === opt.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {!defaultFilter && (
+            <div className="flex gap-1.5">
+              {[{ value: 'all', label: 'Tous' }, { value: 'medecin', label: 'Med' }, { value: 'infirmier', label: 'ISA' }].map(opt => (
+                <button key={opt.value} onClick={() => setFilter(opt.value)}
+                  className={`flex-1 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    filter === opt.value ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* List */}
-        <div className="overflow-y-auto flex-1 px-4 pb-4">
+        {/* List — compact */}
+        <div className="overflow-y-auto flex-1 px-3 pb-3">
           {filtered.length === 0 ? (
-            <p className="text-center text-gray-500 text-sm py-8">Aucun personnel disponible</p>
+            <p className="text-center text-gray-500 text-sm py-6">Aucun personnel disponible</p>
           ) : (
-            <div className="space-y-4">
-              {(filter === 'all' || filter === 'medecin') && (
-                <>
-                  {[
-                    { label: 'Adjoints', list: cadres },
-                    { label: 'CDC',     list: cdcs },
-                    { label: 'Internes',list: internes },
-                    { label: 'Médecins',list: autresMed },
-                  ].filter(s => s.list.length > 0).map(section => (
-                    <div key={section.label}>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{section.label}</p>
-                      <div className="space-y-1">
-                        {section.list.map(p => (
-                          <button
-                            key={p.id}
-                            onClick={() => onAssign(p.id)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-red-900 flex items-center justify-center text-red-300 font-bold text-sm flex-shrink-0">
-                              {p.full_name.charAt(0)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">Dr. {p.full_name}</p>
-                              <p className="text-xs text-gray-400">{GRADE_LABELS[p.grade] ?? p.grade}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-
+            <div className="space-y-3">
+              {(filter === 'all' || filter === 'medecin') && medSections.map(section => (
+                <div key={section.label}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 px-1">{section.label}</p>
+                  <div>
+                    {section.list.map(p => (
+                      <button key={p.id} onClick={() => onAssign(p.id)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-left">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                        <span className="text-sm text-white truncate flex-1">Dr. {p.full_name}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0">{GRADE_LABELS[p.grade] ?? ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
               {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">ISA</p>
-                  <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 px-1">ISA</p>
+                  <div>
                     {infirmiers.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => onAssign(p.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-700 active:bg-gray-600 transition-colors text-left"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
-                          {p.full_name.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{p.full_name}</p>
-                          <p className="text-xs text-gray-400">ISA</p>
-                        </div>
+                      <button key={p.id} onClick={() => onAssign(p.id)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-left">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                        <span className="text-sm text-white truncate">{p.full_name}</span>
                       </button>
                     ))}
                   </div>

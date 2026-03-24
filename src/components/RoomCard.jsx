@@ -329,7 +329,7 @@ export default function RoomCard({
           ) : (
             <div className="space-y-2">
               {medecins.length === 0 ? (
-                <div onClick={() => canManage && onAssign(roomId)}
+                <div onClick={() => canManage && onAssign(roomId, 'medecin')}
                   style={{ background: WARM.surface, borderColor: WARM.border }}
                   className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
                   <span style={{ background: WARM.cardHead, borderColor: WARM.borderAlt, color: WARM.accent }}
@@ -351,7 +351,7 @@ export default function RoomCard({
               )}
 
               {infirmiers.length === 0 ? (
-                <div onClick={() => canManage && onAssign(roomId)}
+                <div onClick={() => canManage && onAssign(roomId, 'infirmier')}
                   style={{ background: WARM.surface, borderColor: WARM.border }}
                   className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
                   <span style={{ background: WARM.cardHead, borderColor: WARM.borderAlt, color: WARM.accent }}

@@ -229,7 +229,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const [closures, setClosures] = useState([])
   const [roomSchedules, setRoomSchedules] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
-  const [assignModalRoom, setAssignModalRoom] = useState(null)
+  const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -334,21 +334,21 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   async function handleAssign(userId) {
     const canManage = profile?.is_admin || profile?.grade === 'chef_clinique'
-    if (!canManage || !assignModalRoom) return
+    if (!canManage || !assignModal?.roomId) return
     const { data: existing } = await supabase
       .from('assignments').select('id')
-      .eq('user_id', userId).eq('room_id', assignModalRoom).eq('date', selectedDate)
+      .eq('user_id', userId).eq('room_id', assignModal?.roomId).eq('date', selectedDate)
       .maybeSingle()
     if (!existing) {
       await supabase.from('assignments').insert({
         user_id: userId,
-        room_id: assignModalRoom,
+        room_id: assignModal?.roomId,
         date: selectedDate,
         assigned_by: profile.id,
         start_time: getCurrentTime(),
       })
     }
-    setAssignModalRoom(null)
+    setAssignModal(null)
     await fetchData()
   }
 
@@ -472,7 +472,7 @@ export default function Dashboard({ sector, unit, onBack }) {
                 onLeave={handleLeave}
                 onClose={handleClose}
                 onOpen={handleOpen}
-                onAssign={(id) => setAssignModalRoom(id)}
+                onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
                 onProfileClick={(p) => setSelectedProfile(p)}
                 onUpdateTime={handleUpdateAssignmentTime}
                 onUpdateRoomSchedule={handleUpdateRoomSchedule}
@@ -486,14 +486,16 @@ export default function Dashboard({ sector, unit, onBack }) {
         <ProfileModal profile={selectedProfile} onClose={() => setSelectedProfile(null)} />
       )}
 
-      {assignModalRoom && (
+      {assignModal?.roomId && (
         <AssignModal
-          roomId={assignModalRoom}
+          roomId={assignModal.roomId}
+          roomName={ROOM_NAMES[assignModal.roomId]}
           profiles={allProfiles}
           assignments={assignments}
           today={selectedDate}
+          defaultFilter={assignModal.profession}
           onAssign={handleAssign}
-          onClose={() => setAssignModalRoom(null)}
+          onClose={() => setAssignModal(null)}
         />
       )}
     </div>

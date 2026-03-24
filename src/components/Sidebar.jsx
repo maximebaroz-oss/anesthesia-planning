@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 const GRADE_LABELS = {
-  adjoint: 'Adjoint',
-  chef_clinique: 'Chef de clinique',
-  interne: 'Interne',
+  adjoint: 'Adj.',
+  chef_clinique: 'CDC',
+  interne: 'Int.',
+  consultant: 'Cons.',
   iade: 'ISA',
 }
 
@@ -176,58 +177,48 @@ function StaffRow({ p, profession, canEdit }) {
     setEditing(false)
   }
 
-  const nameColor = profession === 'medecin' ? 'text-red-400' : 'text-blue-400'
-  const avatarBg = profession === 'medecin' ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'
+  const dot = profession === 'medecin' ? 'bg-red-400' : 'bg-blue-400'
 
   return (
-    <div className="bg-gray-700 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarBg}`}>
-            {p.full_name.charAt(0)}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-200">{profession === 'medecin' ? `Dr. ${p.full_name}` : p.full_name}</p>
-            <p className="text-gray-500 text-xs">{GRADE_LABELS[p.grade] ?? p.grade}</p>
-          </div>
-        </div>
+    <div>
+      <div className="flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-gray-700/50 transition-colors">
+        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+        <span className="text-xs text-gray-200 flex-1 truncate">
+          {profession === 'medecin' ? `Dr. ${p.full_name}` : p.full_name}
+        </span>
+        <span className="text-xs text-gray-600 flex-shrink-0">{GRADE_LABELS[p.grade] ?? ''}</span>
         <button
           onClick={() => { setShowPhone(v => !v); setEditing(false) }}
-          className={`p-1.5 rounded-lg transition-colors ${phone ? 'text-blue-400 hover:text-blue-300' : 'text-gray-600 hover:text-gray-400'}`}
+          className={`p-0.5 rounded transition-colors flex-shrink-0 ${phone ? 'text-blue-400' : 'text-gray-600 hover:text-gray-400'}`}
         >
-          <Phone size={15} />
+          <Phone size={11} />
         </button>
       </div>
 
       {showPhone && (
-        <div className="px-3 pb-3">
+        <div className="px-4 pb-1">
           {editing ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="tel"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="06 12 34 56 78"
-                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                autoFocus
+            <div className="flex items-center gap-1.5">
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                placeholder="06 12 34 56 78" autoFocus
+                className="flex-1 bg-gray-900 border border-gray-600 rounded-md px-2 py-1 text-xs text-white focus:outline-none"
               />
-              <button onClick={savePhone} disabled={saving} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg p-1.5 transition-colors">
-                <Check size={14} />
+              <button onClick={savePhone} disabled={saving} className="bg-blue-600 text-white rounded-md p-1 transition-colors">
+                <Check size={11} />
               </button>
-              <button onClick={() => setEditing(false)} className="text-gray-500 hover:text-white rounded-lg p-1.5 transition-colors">
-                <X size={14} />
+              <button onClick={() => setEditing(false)} className="text-gray-500 hover:text-white rounded-md p-1">
+                <X size={11} />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
-              {phone ? (
-                <span className="text-sm text-blue-300">{phone}</span>
-              ) : (
-                <span className="text-sm text-gray-600 italic">Non renseigné</span>
-              )}
+            <div className="flex items-center justify-between bg-gray-800 rounded-md px-2 py-1">
+              {phone
+                ? <span className="text-xs text-blue-300">{phone}</span>
+                : <span className="text-xs text-gray-600 italic">Non renseigné</span>
+              }
               {canEdit && (
-                <button onClick={() => setEditing(true)} className="text-gray-600 hover:text-blue-400 transition-colors ml-2">
-                  <Edit2 size={13} />
+                <button onClick={() => setEditing(true)} className="text-gray-600 hover:text-blue-400 ml-2">
+                  <Edit2 size={11} />
                 </button>
               )}
             </div>
@@ -239,9 +230,10 @@ function StaffRow({ p, profession, canEdit }) {
 }
 
 const MED_SECTIONS = [
-  { label: 'Adjoints', grade: 'adjoint' },
-  { label: 'CDC',      grade: 'chef_clinique' },
-  { label: 'Internes', grade: 'interne' },
+  { label: 'Adjoints',    grade: 'adjoint' },
+  { label: 'CDC',         grade: 'chef_clinique' },
+  { label: 'Internes',    grade: 'interne' },
+  { label: 'Consultants', grade: 'consultant' },
 ]
 
 
