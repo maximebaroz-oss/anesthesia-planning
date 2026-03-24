@@ -179,7 +179,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
 
   return (
     <li style={{ background: WARM.surface, borderColor: '#86EFAC' }}
-      className={`rounded-xl px-2.5 py-2 space-y-1 ${ ['adjoint','chef_clinique'].includes(a.profiles?.grade) ? 'border-2' : 'border' }`}>
+      className={`rounded-xl px-2.5 py-2 space-y-1 ${ ['adjoint','chef_clinique'].includes(a.profiles?.grade) ? 'border-4' : 'border' }`}>
       <div className="flex items-center gap-2 min-w-0">
         <TypeBadge isMedecin={isMedecin} />
         <button onClick={() => onProfileClick(a.profiles)}
