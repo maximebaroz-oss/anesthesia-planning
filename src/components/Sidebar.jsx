@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react'
-import { X, User, Users, Stethoscope, Phone, Edit2, Check, Clock } from 'lucide-react'
+import { X, User, Users, Stethoscope, Phone, Edit2, Check, Clock, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+
+const WARM = {
+  bg: '#FAF7F2',
+  surface: '#F0EBE1',
+  cardHead: '#E8E0D4',
+  border: '#DDD0B8',
+  text: '#2D1E08',
+  textMid: '#6B5C48',
+  textFaint: '#9E9489',
+  accentBar: '#8A7560',
+  hover: '#E2DED8',
+}
 
 const GRADE_LABELS = {
   adjoint: 'Adj.',
@@ -35,10 +47,9 @@ function PresenceHistory() {
       .then(({ data }) => { setHistory(data ?? []); setLoading(false) })
   }, [currentProfile?.id])
 
-  if (loading) return <p className="text-gray-500 text-sm text-center py-4">Chargement...</p>
-  if (history.length === 0) return <p className="text-gray-500 text-sm text-center py-4 italic">Aucune présence enregistrée</p>
+  if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: WARM.textFaint }}>Chargement...</p>
+  if (history.length === 0) return <p className="text-sm text-center py-4 italic" style={{ color: WARM.textFaint }}>Aucune présence enregistrée</p>
 
-  // Group by week (Monday as start)
   const byWeek = {}
   history.forEach(h => {
     const d = new Date(h.date + 'T00:00:00')
@@ -61,7 +72,7 @@ function PresenceHistory() {
 
           return (
             <div key={weekStart}>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{weekLabel}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>{weekLabel}</p>
               <div className="space-y-1.5">
                 {entries.map((h, i) => {
                   const d = new Date(h.date + 'T00:00:00')
@@ -71,15 +82,16 @@ function PresenceHistory() {
                   const end = h.end_time?.slice(0, 5) ?? '--:--'
                   const roomName = ROOM_NAMES[h.room_id] ?? `Salle ${h.room_id}`
                   return (
-                    <div key={i} className="bg-gray-700 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                    <div key={i} className="rounded-lg px-3 py-2 flex items-center justify-between gap-2"
+                      style={{ background: WARM.surface, border: `1px solid ${WARM.border}` }}>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-300 w-8 flex-shrink-0">{dayName}</span>
-                        <span className="text-xs text-gray-500">{dateStr}</span>
-                        <span className="text-xs text-gray-600 truncate">{roomName}</span>
+                        <span className="text-sm font-bold w-8 flex-shrink-0" style={{ color: WARM.text }}>{dayName}</span>
+                        <span className="text-xs" style={{ color: WARM.textMid }}>{dateStr}</span>
+                        <span className="text-xs truncate" style={{ color: WARM.textFaint }}>{roomName}</span>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <Clock size={10} className="text-gray-600" />
-                        <span className="text-xs text-blue-300">{start} → {end}</span>
+                        <Clock size={10} style={{ color: WARM.textFaint }} />
+                        <span className="text-xs" style={{ color: WARM.textMid }}>{start} → {end}</span>
                       </div>
                     </div>
                   )
@@ -92,11 +104,30 @@ function PresenceHistory() {
   )
 }
 
-function ProfilePanel() {
+function ProfilePanel({ selectedDate }) {
   const { profile: currentProfile } = useAuth()
   const [editingPhone, setEditingPhone] = useState(false)
   const [phone, setPhone] = useState(currentProfile?.phone ?? '')
   const [saving, setSaving] = useState(false)
+  const [todayRoom, setTodayRoom] = useState(null)
+
+  const isMed = currentProfile?.profession === 'medecin'
+  const accentColor = isMed ? '#DC2626' : '#2563EB'
+  const accentBg = isMed ? '#FEF2F2' : '#EFF6FF'
+  const accentBorder = isMed ? '#FECACA' : '#BFDBFE'
+
+  useEffect(() => {
+    if (!currentProfile || !selectedDate) return
+    supabase.from('assignments')
+      .select('room_id, start_time')
+      .eq('user_id', currentProfile.id)
+      .eq('date', selectedDate)
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setTodayRoom(data[0])
+        else setTodayRoom(null)
+      })
+  }, [currentProfile?.id, selectedDate])
 
   async function savePhone() {
     setSaving(true)
@@ -107,25 +138,38 @@ function ProfilePanel() {
 
   if (!currentProfile) return null
 
+  const initials = currentProfile.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const displayName = isMed ? `Dr. ${currentProfile.full_name}` : currentProfile.full_name
+  const gradeLabel = GRADE_LABELS[currentProfile.grade] ?? currentProfile.grade
+  const roomName = todayRoom ? (ROOM_NAMES[todayRoom.room_id] ?? `Salle ${todayRoom.room_id}`) : null
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3 p-4 bg-gray-700 rounded-xl">
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ${
-          currentProfile.profession === 'medecin' ? 'bg-red-900' : 'bg-blue-900'
-        }`}>
-          {currentProfile.full_name.charAt(0)}
+      {/* Carte identité */}
+      <div className="rounded-xl p-4 flex items-center gap-3"
+        style={{ background: accentBg, border: `2px solid ${accentBorder}` }}>
+        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 text-white"
+          style={{ background: accentColor }}>
+          {initials}
         </div>
-        <div>
-          <p className="font-bold text-white">
-            {currentProfile.profession === 'medecin' ? `Dr. ${currentProfile.full_name}` : currentProfile.full_name}
-          </p>
-          <p className="text-gray-400 text-xs">{GRADE_LABELS[currentProfile.grade] ?? currentProfile.grade}</p>
-          <p className="text-gray-500 text-xs">{currentProfile.profession === 'medecin' ? 'Médecin (Med)' : 'Infirmier (ISA)'}</p>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold truncate" style={{ color: WARM.text }}>{displayName}</p>
+          <p className="text-xs" style={{ color: WARM.textMid }}>{gradeLabel} · {isMed ? 'Médecin' : 'ISA'}</p>
+          {roomName && (
+            <div className="flex items-center gap-1 mt-1">
+              <MapPin size={11} style={{ color: accentColor }} />
+              <span className="text-xs font-medium" style={{ color: accentColor }}>
+                {roomName}
+                {todayRoom?.start_time ? ` · validé ${todayRoom.start_time.slice(0, 5)}` : ' · non validé'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Téléphone */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Téléphone</p>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>Téléphone</p>
         {editingPhone ? (
           <div className="flex items-center gap-2">
             <input
@@ -133,38 +177,46 @@ function ProfilePanel() {
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="06 12 34 56 78"
-              className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
+              className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none"
               autoFocus
             />
-            <button onClick={savePhone} disabled={saving} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg p-2 transition-colors">
+            <button onClick={savePhone} disabled={saving}
+              style={{ background: WARM.accentBar }}
+              className="text-white rounded-lg p-2 transition-colors">
               <Check size={16} />
             </button>
-            <button onClick={() => setEditingPhone(false)} className="text-gray-500 hover:text-white rounded-lg p-2 transition-colors">
+            <button onClick={() => setEditingPhone(false)}
+              style={{ color: WARM.textFaint }}
+              className="rounded-lg p-2 transition-colors">
               <X size={16} />
             </button>
           </div>
         ) : (
-          <button onClick={() => setEditingPhone(true)} className="w-full flex items-center gap-2 p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition-colors text-left">
-            <Phone size={15} className="text-gray-500 flex-shrink-0" />
+          <button onClick={() => setEditingPhone(true)}
+            style={{ background: WARM.surface, borderColor: WARM.border }}
+            className="w-full flex items-center gap-2 p-3 border rounded-xl transition-colors text-left hover:opacity-80">
+            <Phone size={15} style={{ color: WARM.textFaint }} className="flex-shrink-0" />
             {phone ? (
-              <span className="text-sm text-blue-400">{phone}</span>
+              <span className="text-sm" style={{ color: WARM.textMid }}>{phone}</span>
             ) : (
-              <span className="text-sm text-gray-500 italic">Cliquer pour ajouter</span>
+              <span className="text-sm italic" style={{ color: WARM.textFaint }}>Cliquer pour ajouter</span>
             )}
-            <Edit2 size={12} className="text-gray-600 ml-auto flex-shrink-0" />
+            <Edit2 size={12} style={{ color: WARM.textFaint }} className="ml-auto flex-shrink-0" />
           </button>
         )}
       </div>
 
+      {/* Historique */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Historique des présences</p>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>Historique des présences</p>
         <PresenceHistory />
       </div>
     </div>
   )
 }
 
-function StaffRow({ p, profession, canEdit }) {
+function StaffRow({ p, profession, canEdit, isMe }) {
   const [showPhone, setShowPhone] = useState(false)
   const [editing, setEditing] = useState(false)
   const [phone, setPhone] = useState(p.phone ?? '')
@@ -177,15 +229,26 @@ function StaffRow({ p, profession, canEdit }) {
     setEditing(false)
   }
 
-  const dot = profession === 'medecin' ? 'bg-red-400' : 'bg-blue-400'
+  const isMed = profession === 'medecin'
+  const dot = isMed ? 'bg-red-400' : 'bg-blue-400'
+  const myBg = isMed ? '#FEF2F2' : '#EFF6FF'
+  const myBorder = isMed ? '#FECACA' : '#BFDBFE'
+  const myColor = isMed ? '#DC2626' : '#2563EB'
 
   return (
     <div>
-      <div className="flex items-center gap-2 px-1 py-1 rounded-lg transition-colors"
-        style={{ '--tw-bg-opacity': 1 }} onMouseEnter={e => e.currentTarget.style.background='#E2DED8'} onMouseLeave={e => e.currentTarget.style.background=''}>
+      <div
+        className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors"
+        style={isMe
+          ? { background: myBg, border: `1px solid ${myBorder}` }
+          : {}}
+        onMouseEnter={e => { if (!isMe) e.currentTarget.style.background = WARM.hover }}
+        onMouseLeave={e => { if (!isMe) e.currentTarget.style.background = '' }}
+      >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
-        <span className="text-xs flex-1 truncate" style={{ color: '#2A2318' }}>
-          {profession === 'medecin' ? `Dr. ${p.full_name}` : p.full_name}
+        <span className="text-xs flex-1 truncate font-medium" style={{ color: isMe ? myColor : '#2A2318' }}>
+          {isMed ? `Dr. ${p.full_name}` : p.full_name}
+          {isMe && <span className="ml-1 text-xs font-bold">(moi)</span>}
         </span>
         <span className="text-xs flex-shrink-0" style={{ color: '#9E9489' }}>{GRADE_LABELS[p.grade] ?? ''}</span>
         <button
@@ -203,10 +266,12 @@ function StaffRow({ p, profession, canEdit }) {
             <div className="flex items-center gap-1.5">
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                 placeholder="06 12 34 56 78" autoFocus
-                style={{ background: '#E2DED8', borderColor: '#CEC8BF', color: '#2A2318' }}
+                style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
                 className="flex-1 border rounded-md px-2 py-1 text-xs focus:outline-none"
               />
-              <button onClick={savePhone} disabled={saving} style={{ background: '#8A7560' }} className="text-white rounded-md p-1 transition-colors">
+              <button onClick={savePhone} disabled={saving}
+                style={{ background: WARM.accentBar }}
+                className="text-white rounded-md p-1 transition-colors">
                 <Check size={11} />
               </button>
               <button onClick={() => setEditing(false)} style={{ color: '#9E9489' }} className="rounded-md p-1">
@@ -214,9 +279,9 @@ function StaffRow({ p, profession, canEdit }) {
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between rounded-md px-2 py-1" style={{ background: '#E2DED8' }}>
+            <div className="flex items-center justify-between rounded-md px-2 py-1" style={{ background: WARM.surface }}>
               {phone
-                ? <span className="text-xs" style={{ color: '#6B5C48' }}>{phone}</span>
+                ? <span className="text-xs" style={{ color: WARM.textMid }}>{phone}</span>
                 : <span className="text-xs italic" style={{ color: '#B8B0A4' }}>Non renseigné</span>
               }
               {canEdit && (
@@ -239,7 +304,6 @@ const MED_SECTIONS = [
   { label: 'Consultants', grade: 'consultant' },
 ]
 
-
 function StaffList({ profession }) {
   const { profile: currentProfile } = useAuth()
   const [staff, setStaff] = useState([])
@@ -250,13 +314,14 @@ function StaffList({ profession }) {
       .then(({ data }) => { setStaff(data ?? []); setLoading(false) })
   }, [profession])
 
-  if (loading) return <p className="text-gray-500 text-sm text-center py-4">Chargement...</p>
+  if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: WARM.textFaint }}>Chargement...</p>
 
   if (profession === 'infirmier') {
     return (
-      <div className="space-y-2">
+      <div className="space-y-1">
         {staff.map(p => (
           <StaffRow key={p.id} p={p} profession={profession}
+            isMe={p.id === currentProfile?.id}
             canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
         ))}
       </div>
@@ -274,10 +339,11 @@ function StaffList({ profession }) {
     <div className="space-y-4">
       {sections.map(section => (
         <div key={section.label}>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#8A7560' }}>{section.label}</p>
-          <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: WARM.accentBar }}>{section.label}</p>
+          <div className="space-y-0.5">
             {section.list.map(p => (
               <StaffRow key={p.id} p={p} profession={profession}
+                isMe={p.id === currentProfile?.id}
                 canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
             ))}
           </div>
@@ -293,7 +359,7 @@ const MENU_ITEMS = [
   { id: 'isa',      label: 'Liste des ISA', icon: Users },
 ]
 
-export default function Sidebar({ open, onClose }) {
+export default function Sidebar({ open, onClose, selectedDate }) {
   const [activeItem, setActiveItem] = useState('profil')
 
   return (
@@ -302,18 +368,21 @@ export default function Sidebar({ open, onClose }) {
         <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
       )}
 
-      <div style={{ background: '#FAF7F2', borderColor: '#DDD0B8' }}
+      <div style={{ background: WARM.bg, borderColor: WARM.border }}
         className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] border-r z-50 flex flex-col transition-transform duration-300 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}>
-        <div className="flex items-center justify-between px-4 py-4 border-b" style={{ borderColor: '#DDD0B8' }}>
-          <span className="font-bold text-lg" style={{ color: '#2D1E08' }}>Menu</span>
-          <button onClick={onClose} className="p-2 rounded-lg transition-colors" style={{ color: '#8B7355' }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-4 border-b" style={{ borderColor: WARM.border }}>
+          <span className="font-bold text-lg" style={{ color: WARM.text }}>Menu</span>
+          <button onClick={onClose} className="p-2 rounded-lg transition-colors" style={{ color: WARM.textMid }}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex border-b border-gray-800">
+        {/* Tabs */}
+        <div className="flex border-b" style={{ borderColor: WARM.border }}>
           {MENU_ITEMS.map(item => {
             const Icon = item.icon
             const isActive = activeItem === item.id
@@ -321,8 +390,11 @@ export default function Sidebar({ open, onClose }) {
               <button
                 key={item.id}
                 onClick={() => setActiveItem(item.id)}
+                style={isActive
+                  ? { color: WARM.text, borderBottomColor: WARM.accentBar, background: WARM.surface }
+                  : { color: WARM.textFaint }}
                 className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-                  isActive ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'
+                  isActive ? 'border-b-2' : 'hover:opacity-80'
                 }`}
               >
                 <Icon size={18} />
@@ -332,8 +404,9 @@ export default function Sidebar({ open, onClose }) {
           })}
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {activeItem === 'profil' && <ProfilePanel />}
+          {activeItem === 'profil' && <ProfilePanel selectedDate={selectedDate} />}
           {activeItem === 'medecins' && <StaffList profession="medecin" />}
           {activeItem === 'isa' && <StaffList profession="infirmier" />}
         </div>

@@ -377,7 +377,7 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#EDEAE5' }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} selectedDate={selectedDate} />
       <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
 
       {/* Sélecteur semaine/jour */}
