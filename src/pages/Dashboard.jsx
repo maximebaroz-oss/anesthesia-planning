@@ -209,15 +209,15 @@ export default function Dashboard({ sector, unit, onBack }) {
   })
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#F5F0E8' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#EDEAE5' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
 
       {/* Sélecteur semaine/jour */}
-      <div className="border-b px-4 py-3" style={{ background: '#FAF7F2', borderColor: '#DDD0B8' }}>
+      <div className="border-b px-4 py-3" style={{ background: '#F0EDE8', borderColor: '#CEC8BF' }}>
         <div className="max-w-4xl mx-auto space-y-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: '#8B7355' }}>
+            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: '#6B5F52' }}>
               <ChevronLeft size={18} />
             </button>
             <div className="flex flex-1 gap-2">
@@ -228,17 +228,17 @@ export default function Dashboard({ sector, unit, onBack }) {
                 return (
                   <button key={i} onClick={() => handleWeekSelect(i)}
                     style={isSelected
-                      ? { background: '#D97706', color: '#fff' }
+                      ? { background: '#8A7560', color: '#fff' }
                       : containsToday
-                        ? { background: '#FBF5EA', color: '#B45309', border: '1px solid #DDD0B8' }
-                        : { background: '#EDE0C8', color: '#8B7355' }}
+                        ? { background: '#EAE7E2', color: '#6B5C48', border: '1px solid #CEC8BF' }
+                        : { background: '#E2DED8', color: '#6B5F52' }}
                     className="flex-1 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80">
                     S{weekNum}
                   </button>
                 )
               })}
             </div>
-            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: '#8B7355' }}>
+            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: '#6B5F52' }}>
               <ChevronRight size={18} />
             </button>
           </div>
@@ -252,10 +252,10 @@ export default function Dashboard({ sector, unit, onBack }) {
               return (
                 <button key={i} onClick={() => setSelectedDate(dateStr)}
                   style={isSelected
-                    ? { background: '#D97706', color: '#fff' }
+                    ? { background: '#8A7560', color: '#fff' }
                     : isToday
-                      ? { background: '#FBF5EA', color: '#B45309', border: '1px solid #DDD0B8' }
-                      : { color: isPast ? '#C9B89A' : '#8B7355' }}
+                      ? { background: '#EAE7E2', color: '#6B5C48', border: '1px solid #CEC8BF' }
+                      : { color: isPast ? '#B8B0A4' : '#6B5F52' }}
                   className="flex-1 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80 flex flex-col items-center gap-0.5">
                   <span className="text-xs uppercase tracking-wide">{DAY_NAMES[i]}</span>
                   <span className="text-sm font-bold">{day.getDate()}</span>
@@ -267,10 +267,10 @@ export default function Dashboard({ sector, unit, onBack }) {
       </div>
 
       {/* Barre info */}
-      <div className="border-b px-4 py-2" style={{ background: '#FAF7F2', borderColor: '#DDD0B8' }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: '#8B7355' }}>
-          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: '#2D1E08' }}>{totalAssigned}</span> affecté(s)</span>
-          <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: '#B45309' }}>
+      <div className="border-b px-4 py-2" style={{ background: '#F0EDE8', borderColor: '#CEC8BF' }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: '#6B5F52' }}>
+          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: '#2A2318' }}>{totalAssigned}</span> affecté(s)</span>
+          <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: '#6B5C48' }}>
             <RefreshCw size={14} />
             Actualiser
           </button>
@@ -281,7 +281,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       <main className="flex-1 px-3 py-4 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center" style={{ color: '#8B7355' }}>
+            <div className="text-center" style={{ color: '#6B5F52' }}>
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin" />
               <p className="text-sm">Chargement...</p>
             </div>

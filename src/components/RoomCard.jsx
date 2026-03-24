@@ -32,20 +32,20 @@ const STATUS_CONFIG = {
   available:    { dot: 'bg-amber-400',  label: 'Disponible' },
 }
 
-// Palette Hors Bloc — tons chauds sur fond crème
+// Palette Hors Bloc — gris chauds sobres
 const WARM = {
-  pageBg:    '#F5F0E8',
-  cardBg:    '#FFFFFF',
-  cardHead:  '#FBF5EA',
-  border:    '#DDD0B8',
-  borderAlt: '#C9B89A',
-  surface:   '#F5EDE0',
-  surfaceHov:'#EDE0C8',
-  accent:    '#B45309',   // amber-700
-  accentBar: '#D97706',   // amber-600
-  text:      '#2D1E08',
-  textSub:   '#8B7355',
-  textFaint: '#BFA98A',
+  pageBg:    '#EDEAE5',
+  cardBg:    '#F5F3F0',
+  cardHead:  '#EAE7E2',
+  border:    '#CEC8BF',
+  borderAlt: '#B8B0A4',
+  surface:   '#E2DED8',
+  surfaceHov:'#D6D0C8',
+  accent:    '#6B5C48',   // brun-gris foncé
+  accentBar: '#8A7560',   // brun-gris moyen
+  text:      '#2A2318',
+  textSub:   '#6B5F52',
+  textFaint: '#9E9489',
 }
 
 function TimeInput({ value, onSave, placeholder = '--:--', editable = true, large = false }) {
