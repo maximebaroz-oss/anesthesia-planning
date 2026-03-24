@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { X, Search } from 'lucide-react'
 
+const WARM = {
+  cardBg: '#F5F3F0', cardHead: '#EAE7E2', border: '#CEC8BF',
+  surface: '#E2DED8', accentBar: '#8A7560',
+  text: '#2A2318', textSub: '#6B5F52', textFaint: '#9E9489',
+}
+
 const GRADE_LABELS = {
   adjoint: 'Adj.',
   chef_clinique: 'CDC',
@@ -39,35 +45,40 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
               : 'Affecter du personnel'
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-gray-800 border border-gray-700 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+        className="border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
+
         {/* Header */}
-        <div className="px-4 pt-3 pb-2.5 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+          className="px-4 pt-3 pb-2.5 border-b flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="font-bold text-white text-sm">{title}</h2>
-            <p className="text-xs text-gray-500">{roomName ?? `Salle ${roomId}`}</p>
+            <h2 className="font-bold text-sm" style={{ color: WARM.text }}>{title}</h2>
+            <p className="text-xs" style={{ color: WARM.textFaint }}>{roomName ?? `Salle ${roomId}`}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white">
+          <button onClick={onClose} style={{ color: WARM.textFaint }} className="p-1.5 rounded-full hover:opacity-70 transition-opacity">
             <X size={18} />
           </button>
         </div>
 
-        {/* Search + filter (filter tabs only if not locked to one profession) */}
+        {/* Search + filter */}
         <div className="px-3 py-2 space-y-2 flex-shrink-0">
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: WARM.textFaint }} />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher..." autoFocus
-              className="w-full bg-gray-900 border border-gray-600 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
+              className="w-full border rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none placeholder-stone-400"
             />
           </div>
           {!defaultFilter && (
             <div className="flex gap-1.5">
               {[{ value: 'all', label: 'Tous' }, { value: 'medecin', label: 'Med' }, { value: 'infirmier', label: 'ISA' }].map(opt => (
                 <button key={opt.value} onClick={() => setFilter(opt.value)}
-                  className={`flex-1 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    filter === opt.value ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}>
+                  style={filter === opt.value
+                    ? { background: WARM.accentBar, color: '#fff' }
+                    : { background: WARM.surface, color: WARM.textSub }}
+                  className="flex-1 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80">
                   {opt.label}
                 </button>
               ))}
@@ -75,22 +86,23 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
           )}
         </div>
 
-        {/* List — compact */}
+        {/* List */}
         <div className="overflow-y-auto flex-1 px-3 pb-3">
           {filtered.length === 0 ? (
-            <p className="text-center text-gray-500 text-sm py-6">Aucun personnel disponible</p>
+            <p className="text-sm py-6 text-center" style={{ color: WARM.textFaint }}>Aucun personnel disponible</p>
           ) : (
             <div className="space-y-3">
               {(filter === 'all' || filter === 'medecin') && medSections.map(section => (
                 <div key={section.label}>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 px-1">{section.label}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-1 px-1" style={{ color: WARM.accentBar }}>{section.label}</p>
                   <div>
                     {section.list.map(p => (
                       <button key={p.id} onClick={() => onAssign(p.id)}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-left">
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-opacity hover:opacity-70 text-left"
+                        style={{ color: WARM.text }}>
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                        <span className="text-sm text-white truncate flex-1">Dr. {p.full_name}</span>
-                        <span className="text-xs text-gray-500 flex-shrink-0">{GRADE_LABELS[p.grade] ?? ''}</span>
+                        <span className="text-sm truncate flex-1">Dr. {p.full_name}</span>
+                        <span className="text-xs flex-shrink-0" style={{ color: WARM.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
                       </button>
                     ))}
                   </div>
@@ -98,13 +110,14 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
               ))}
               {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 px-1">ISA</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-1 px-1" style={{ color: WARM.accentBar }}>ISA</p>
                   <div>
                     {infirmiers.map(p => (
                       <button key={p.id} onClick={() => onAssign(p.id)}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-left">
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-opacity hover:opacity-70 text-left"
+                        style={{ color: WARM.text }}>
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-                        <span className="text-sm text-white truncate">{p.full_name}</span>
+                        <span className="text-sm truncate">{p.full_name}</span>
                       </button>
                     ))}
                   </div>

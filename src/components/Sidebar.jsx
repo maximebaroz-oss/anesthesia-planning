@@ -181,15 +181,17 @@ function StaffRow({ p, profession, canEdit }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-gray-700/50 transition-colors">
+      <div className="flex items-center gap-2 px-1 py-1 rounded-lg transition-colors"
+        style={{ '--tw-bg-opacity': 1 }} onMouseEnter={e => e.currentTarget.style.background='#E2DED8'} onMouseLeave={e => e.currentTarget.style.background=''}>
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
-        <span className="text-xs text-gray-200 flex-1 truncate">
+        <span className="text-xs flex-1 truncate" style={{ color: '#2A2318' }}>
           {profession === 'medecin' ? `Dr. ${p.full_name}` : p.full_name}
         </span>
-        <span className="text-xs text-gray-600 flex-shrink-0">{GRADE_LABELS[p.grade] ?? ''}</span>
+        <span className="text-xs flex-shrink-0" style={{ color: '#9E9489' }}>{GRADE_LABELS[p.grade] ?? ''}</span>
         <button
           onClick={() => { setShowPhone(v => !v); setEditing(false) }}
-          className={`p-0.5 rounded transition-colors flex-shrink-0 ${phone ? 'text-blue-400' : 'text-gray-600 hover:text-gray-400'}`}
+          className="p-0.5 rounded transition-colors flex-shrink-0"
+          style={{ color: phone ? '#6B5C48' : '#B8B0A4' }}
         >
           <Phone size={11} />
         </button>
@@ -201,23 +203,24 @@ function StaffRow({ p, profession, canEdit }) {
             <div className="flex items-center gap-1.5">
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                 placeholder="06 12 34 56 78" autoFocus
-                className="flex-1 bg-gray-900 border border-gray-600 rounded-md px-2 py-1 text-xs text-white focus:outline-none"
+                style={{ background: '#E2DED8', borderColor: '#CEC8BF', color: '#2A2318' }}
+                className="flex-1 border rounded-md px-2 py-1 text-xs focus:outline-none"
               />
-              <button onClick={savePhone} disabled={saving} className="bg-blue-600 text-white rounded-md p-1 transition-colors">
+              <button onClick={savePhone} disabled={saving} style={{ background: '#8A7560' }} className="text-white rounded-md p-1 transition-colors">
                 <Check size={11} />
               </button>
-              <button onClick={() => setEditing(false)} className="text-gray-500 hover:text-white rounded-md p-1">
+              <button onClick={() => setEditing(false)} style={{ color: '#9E9489' }} className="rounded-md p-1">
                 <X size={11} />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between bg-gray-800 rounded-md px-2 py-1">
+            <div className="flex items-center justify-between rounded-md px-2 py-1" style={{ background: '#E2DED8' }}>
               {phone
-                ? <span className="text-xs text-blue-300">{phone}</span>
-                : <span className="text-xs text-gray-600 italic">Non renseigné</span>
+                ? <span className="text-xs" style={{ color: '#6B5C48' }}>{phone}</span>
+                : <span className="text-xs italic" style={{ color: '#B8B0A4' }}>Non renseigné</span>
               }
               {canEdit && (
-                <button onClick={() => setEditing(true)} className="text-gray-600 hover:text-blue-400 ml-2">
+                <button onClick={() => setEditing(true)} className="ml-2" style={{ color: '#9E9489' }}>
                   <Edit2 size={11} />
                 </button>
               )}
@@ -271,7 +274,7 @@ function StaffList({ profession }) {
     <div className="space-y-4">
       {sections.map(section => (
         <div key={section.label}>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{section.label}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#8A7560' }}>{section.label}</p>
           <div className="space-y-2">
             {section.list.map(p => (
               <StaffRow key={p.id} p={p} profession={profession}
