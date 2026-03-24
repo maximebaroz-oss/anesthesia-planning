@@ -362,15 +362,15 @@ export default function RoomCard({
                     onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
                     onRequestLeave={handleRequestLeave} />
                 ))}
-                <div onClick={() => canManage && onAssign(roomId, 'medecin')}
-                  style={{ background: WARM.surface, borderColor: WARM.border }}
-                  className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
-                  <span style={{ background: WARM.cardHead, borderColor: '#FCA5A5', color: '#DC2626' }}
-                    className="text-xs font-bold px-1.5 py-0.5 rounded border">MED</span>
-                  <span className="text-xs italic" style={{ color: WARM.textFaint }}>
-                    {canManage ? '+ Affecter un médecin' : 'Aucun médecin'}
-                  </span>
-                </div>
+                {canManage ? (
+                  <button onClick={() => onAssign(roomId, 'medecin')}
+                    style={{ borderColor: '#FCA5A5', color: '#DC2626' }}
+                    className="w-6 h-6 rounded-full border flex items-center justify-center hover:opacity-70 transition-opacity text-sm font-bold flex-shrink-0">
+                    +
+                  </button>
+                ) : medecins.length === 0 ? (
+                  <span className="text-xs italic" style={{ color: WARM.textFaint }}>Aucun médecin</span>
+                ) : null}
               </div>
 
               {/* ── ISA ── */}
@@ -382,15 +382,15 @@ export default function RoomCard({
                     onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
                     onRequestLeave={handleRequestLeave} />
                 ))}
-                <div onClick={() => canManage && onAssign(roomId, 'infirmier')}
-                  style={{ background: WARM.surface, borderColor: WARM.border }}
-                  className={`flex items-center gap-2 rounded-xl px-2.5 py-2 border ${canManage ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}>
-                  <span style={{ background: WARM.cardHead, borderColor: '#93C5FD', color: '#2563EB' }}
-                    className="text-xs font-bold px-1.5 py-0.5 rounded border">ISA</span>
-                  <span className="text-xs italic" style={{ color: WARM.textFaint }}>
-                    {canManage ? '+ Affecter un ISA' : 'Aucun ISA'}
-                  </span>
-                </div>
+                {canManage ? (
+                  <button onClick={() => onAssign(roomId, 'infirmier')}
+                    style={{ borderColor: '#93C5FD', color: '#2563EB' }}
+                    className="w-6 h-6 rounded-full border flex items-center justify-center hover:opacity-70 transition-opacity text-sm font-bold flex-shrink-0">
+                    +
+                  </button>
+                ) : infirmiers.length === 0 ? (
+                  <span className="text-xs italic" style={{ color: WARM.textFaint }}>Aucun ISA</span>
+                ) : null}
               </div>
             </div>
           )}
