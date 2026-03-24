@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet } from 'lucide-react'
+import ImportPlanningModal from '../components/ImportPlanningModal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
@@ -230,6 +231,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const [roomSchedules, setRoomSchedules] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
   const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
+  const [showImport, setShowImport] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
