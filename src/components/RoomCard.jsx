@@ -317,7 +317,7 @@ export default function RoomCard({
           <div className="flex items-center gap-2 min-w-0">
             <span style={{ background: WARM.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
             <span className="font-bold text-sm" style={{ color: isClosed ? WARM.textFaint : WARM.text }}>
-              {roomName || `Salle ${roomId}`}
+              {roomSchedule?.activity ?? roomName ?? `Salle ${roomId}`}
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">

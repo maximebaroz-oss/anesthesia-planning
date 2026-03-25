@@ -521,6 +521,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       {showImport && (
         <ImportPlanningModal
           profiles={allProfiles}
+          unit={unit}
           onClose={() => setShowImport(false)}
           onImported={() => { fetchData(); setShowImport(false) }}
         />
