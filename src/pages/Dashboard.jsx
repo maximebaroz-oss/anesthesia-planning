@@ -22,23 +22,24 @@ const WARM = {
   textFaint: '#9E9489',
 }
 
-function SupervisorCard({ date, allProfiles, canManage }) {
+function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel }) {
   const { profile: currentProfile } = useAuth()
-  const [supervisor, setSupervisor] = useState(null)   // profile object or null
+  const [supervisor, setSupervisor] = useState(null)
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const dropRef = useRef(null)
 
-  // Fetch supervisor for this date
+  // Fetch supervisor for this date + unit
   useEffect(() => {
     setLoading(true)
-    supabase.from('supervisors').select('user_id, profiles!supervisors_user_id_fkey(*)').eq('date', date).maybeSingle()
+    supabase.from('supervisors').select('user_id, profiles!supervisors_user_id_fkey(*)')
+      .eq('date', date).eq('unit_id', unitId).maybeSingle()
       .then(({ data }) => {
         setSupervisor(data?.profiles ?? null)
         setLoading(false)
       })
-  }, [date])
+  }, [date, unitId])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -49,8 +50,8 @@ function SupervisorCard({ date, allProfiles, canManage }) {
 
   async function assignSupervisor(profile) {
     await supabase.from('supervisors').upsert(
-      { date, user_id: profile.id, assigned_by: currentProfile?.id },
-      { onConflict: 'date' }
+      { date, unit_id: unitId, user_id: profile.id, assigned_by: currentProfile?.id },
+      { onConflict: 'date,unit_id' }
     )
     setSupervisor(profile)
     setOpen(false)
@@ -58,7 +59,7 @@ function SupervisorCard({ date, allProfiles, canManage }) {
   }
 
   async function removeSupervisor() {
-    await supabase.from('supervisors').delete().eq('date', date)
+    await supabase.from('supervisors').delete().eq('date', date).eq('unit_id', unitId)
     setSupervisor(null)
   }
 
@@ -74,7 +75,7 @@ function SupervisorCard({ date, allProfiles, canManage }) {
         className="px-4 pt-3 pb-2.5 flex items-center gap-2 border-b">
         <span style={{ background: WARM.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
         <ShieldCheck size={14} style={{ color: WARM.accentBar }} />
-        <span className="font-bold text-sm" style={{ color: WARM.text }}>Superviseur HB</span>
+        <span className="font-bold text-sm" style={{ color: WARM.text }}>Superviseur {unitLabel}</span>
       </div>
 
       <div className="px-4 py-3 flex items-center gap-3">
@@ -161,9 +162,13 @@ function SupervisorCard({ date, allProfiles, canManage }) {
   )
 }
 
-const ROOMS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+const UNIT_ROOMS = {
+  'hors-bloc': [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  'julliard':  [10, 11, 12, 13, 14],
+}
 
 const ROOM_NAMES = {
+  // Hors Bloc (HB)
   1: 'Gastro 4',
   2: 'Gastro 5',
   3: 'Broncho 7',
@@ -173,19 +178,31 @@ const ROOM_NAMES = {
   7: 'Cardio 17',
   8: 'Tardif',
   9: 'IRM/Scanner',
+  // Julliard
+  10: 'Viscérale 10',
+  11: 'Urg Viscérale 11',
+  12: 'Viscérale 12',
+  13: 'Uro 13',
+  14: 'Viscérale 14',
 }
 
 // Horaires par défaut — salle 8 (Tardif) : pas d'ouverture, fermeture 19h
 const DEFAULT_SCHEDULES = {
-  1: { opening_time: '07:00', closing_time: '16:00' },
-  2: { opening_time: '07:00', closing_time: '16:00' },
-  3: { opening_time: '07:00', closing_time: '16:00' },
-  4: { opening_time: '07:00', closing_time: '16:00' },
-  5: { opening_time: '07:00', closing_time: '16:00' },
-  6: { opening_time: '07:00', closing_time: '16:00' },
-  7: { opening_time: '07:00', closing_time: '16:00' },
-  8: { opening_time: null,    closing_time: '19:00' },
-  9: { opening_time: '07:00', closing_time: '16:00' },
+  1:  { opening_time: '07:00', closing_time: '16:00' },
+  2:  { opening_time: '07:00', closing_time: '16:00' },
+  3:  { opening_time: '07:00', closing_time: '16:00' },
+  4:  { opening_time: '07:00', closing_time: '16:00' },
+  5:  { opening_time: '07:00', closing_time: '16:00' },
+  6:  { opening_time: '07:00', closing_time: '16:00' },
+  7:  { opening_time: '07:00', closing_time: '16:00' },
+  8:  { opening_time: null,    closing_time: '19:00' },
+  9:  { opening_time: '07:00', closing_time: '16:00' },
+  // Julliard — toutes ouvrent à 7h
+  10: { opening_time: '07:00', closing_time: '16:00' },
+  11: { opening_time: '07:00', closing_time: '19:00' },
+  12: { opening_time: '07:00', closing_time: '16:00' },
+  13: { opening_time: '07:00', closing_time: '17:00' },
+  14: { opening_time: '07:00', closing_time: '19:00' },
 }
 
 const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -226,6 +243,8 @@ function getCurrentTime() {
 
 export default function Dashboard({ sector, unit, onBack }) {
   const { profile } = useAuth()
+  const ROOMS = UNIT_ROOMS[unit?.id] ?? UNIT_ROOMS['hors-bloc']
+  const unitLabel = unit?.name ?? 'HB'
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
   const [roomSchedules, setRoomSchedules] = useState([])
@@ -468,6 +487,8 @@ export default function Dashboard({ sector, unit, onBack }) {
               date={selectedDate}
               allProfiles={allProfiles}
               canManage={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
+              unitId={unit?.id ?? 'hors-bloc'}
+              unitLabel={unitLabel}
             />
             {ROOMS.map(roomId => (
               <RoomCard

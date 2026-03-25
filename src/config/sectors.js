@@ -5,6 +5,7 @@ export const SECTORS = [
     color: 'blue',
     units: [
       { id: 'hors-bloc', name: 'Hors Bloc' },
+      { id: 'julliard',  name: 'Julliard' },
     ],
   },
   {
