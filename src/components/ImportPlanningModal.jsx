@@ -118,15 +118,24 @@ function parseDUSheet(rows, profiles) {
     if (isNaN(roomId) || roomId < 9 || roomId > 14) continue
     for (const day of days) {
       const cell = String(row[day.colIdx] ?? '').trim()
-      if (!cell) continue // empty = salle non active ce jour
-      const { activity, closingTime } = parseDUCell(cell)
-      entries.push({
-        date: day.date, dayLabel: day.header,
-        rowLabel: `Salle ${roomId}`, excelName: cell,
-        type: 'schedule', roomId,
-        activity, closingTime,
-        profile: null,
-      })
+      if (!cell) {
+        // Cellule vide = salle fermée ce jour
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: `Salle ${roomId}`, excelName: '—',
+          type: 'closure', roomId,
+          activity: null, closingTime: null, profile: null,
+        })
+      } else {
+        const { activity, closingTime } = parseDUCell(cell)
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: `Salle ${roomId}`, excelName: cell,
+          type: 'schedule', roomId,
+          activity, closingTime,
+          profile: null,
+        })
+      }
     }
   }
 
@@ -210,6 +219,15 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
             closing_time: entry.closingTime ?? null,
             activity: entry.activity,
           }, { onConflict: 'room_id,date' })
+        } else if (entry.type === 'closure') {
+          // Salle vide dans le planning = fermeture
+          const { data: existing } = await supabase.from('room_closures').select('id')
+            .eq('room_id', entry.roomId).eq('date', entry.date).maybeSingle()
+          if (!existing) {
+            await supabase.from('room_closures').insert({
+              room_id: entry.roomId, date: entry.date, closed_by: currentProfile?.id,
+            })
+          }
         }
       }
       setStep('done')
@@ -220,8 +238,9 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
     }
   }
 
-  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule') ?? []
+  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure') ?? []
   const scheduleEntries = preview?.entries.filter(e => e.type === 'schedule') ?? []
+  const closureEntries  = preview?.entries.filter(e => e.type === 'closure') ?? []
   const matchedCount    = personEntries.filter(e => e.profile).length
   const unmatchedCount  = personEntries.filter(e => e.excelName && !e.profile).length
   const dates = preview ? [...new Set(preview.entries.map(e => e.date))] : []
@@ -298,15 +317,22 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                     <span className="text-sm font-semibold" style={{ color: WARM.text }}>{scheduleEntries.length} horaire(s)</span>
                   </div>
                 )}
+                {closureEntries.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{closureEntries.length} fermeture(s)</span>
+                  </div>
+                )}
                 <span className="text-xs ml-auto" style={{ color: WARM.textFaint }}>{dates.length} jour(s)</span>
               </div>
 
               {/* Per-day tables */}
               <div className="space-y-4">
                 {dates.map(date => {
-                  const dayPerson = personEntries.filter(e => e.date === date)
-                  const daySched  = scheduleEntries.filter(e => e.date === date)
-                  const allDay    = [...dayPerson, ...daySched]
+                  const dayPerson  = personEntries.filter(e => e.date === date)
+                  const daySched   = scheduleEntries.filter(e => e.date === date)
+                  const dayClose   = closureEntries.filter(e => e.date === date)
+                  const allDay     = [...dayPerson, ...daySched, ...dayClose]
                   const label     = allDay[0]?.dayLabel ?? date
                   return (
                     <div key={date}>
@@ -327,7 +353,12 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                               {entry.excelName}
                             </span>
                             <span style={{ color: WARM.textFaint }} className="flex-shrink-0">→</span>
-                            {entry.type === 'schedule' ? (
+                            {entry.type === 'closure' ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                                <span className="text-red-500 font-medium">Salle fermée</span>
+                              </div>
+                            ) : entry.type === 'schedule' ? (
                               <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
                                 <span style={{ color: WARM.text }}>
