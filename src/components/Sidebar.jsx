@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, User, Users, Stethoscope, Phone, Edit2, Check, Clock, MapPin } from 'lucide-react'
+import { X, User, Users, Stethoscope, Phone, Edit2, Check, Clock, MapPin, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -353,10 +353,170 @@ function StaffList({ profession }) {
   )
 }
 
+function SearchPanel({ selectedDate }) {
+  const [query, setQuery] = useState('')
+  const [allProfiles, setAllProfiles] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [weekAssignments, setWeekAssignments] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, full_name, profession, grade').order('full_name')
+      .then(({ data }) => setAllProfiles(data ?? []))
+  }, [])
+
+  const filtered = query.length >= 2
+    ? allProfiles.filter(p => p.full_name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : []
+
+  function getWeekDays() {
+    const base = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date()
+    const monday = new Date(base)
+    monday.setDate(base.getDate() - ((base.getDay() + 6) % 7))
+    return Array.from({ length: 5 }, (_, i) => {
+      const day = new Date(monday)
+      day.setDate(monday.getDate() + i)
+      return day.toISOString().split('T')[0]
+    })
+  }
+
+  useEffect(() => {
+    if (!selected) return
+    const days = getWeekDays()
+    setLoading(true)
+    supabase.from('assignments')
+      .select('date, room_id, start_time')
+      .eq('user_id', selected.id)
+      .gte('date', days[0])
+      .lte('date', days[4])
+      .order('date')
+      .then(({ data }) => { setWeekAssignments(data ?? []); setLoading(false) })
+  }, [selected?.id, selectedDate])
+
+  function selectProfile(p) {
+    setSelected(p)
+    setQuery(p.full_name)
+  }
+
+  const isMed = selected?.profession === 'medecin'
+  const accentColor = isMed ? '#DC2626' : '#2563EB'
+  const accentBg = isMed ? '#FEF2F2' : '#EFF6FF'
+  const accentBorder = isMed ? '#FECACA' : '#BFDBFE'
+  const weekDays = getWeekDays()
+  const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
+
+  return (
+    <div className="space-y-4">
+      {/* Search input */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: WARM.textFaint }} />
+        <input
+          type="text"
+          value={query}
+          onChange={e => { setQuery(e.target.value); setSelected(null); setWeekAssignments([]) }}
+          placeholder="Nom du médecin ou ISA..."
+          style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
+          className="w-full border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none"
+        />
+      </div>
+
+      {/* Suggestions */}
+      {!selected && filtered.length > 0 && (
+        <div className="rounded-xl overflow-hidden border" style={{ borderColor: WARM.border }}>
+          {filtered.map(p => {
+            const isMedP = p.profession === 'medecin'
+            return (
+              <button key={p.id} onClick={() => selectProfile(p)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:opacity-80 transition-opacity border-b last:border-0"
+                style={{ background: WARM.surface, borderColor: WARM.border }}>
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isMedP ? 'bg-red-400' : 'bg-blue-400'}`} />
+                <span className="text-xs flex-1 truncate" style={{ color: WARM.text }}>
+                  {isMedP ? `Dr. ${p.full_name}` : p.full_name}
+                </span>
+                <span className="text-xs" style={{ color: WARM.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {!selected && query.length >= 2 && filtered.length === 0 && (
+        <p className="text-xs text-center italic py-2" style={{ color: WARM.textFaint }}>Aucun résultat</p>
+      )}
+
+      {/* Week schedule for selected person */}
+      {selected && (
+        <div className="space-y-3">
+          <div className="rounded-xl px-3 py-2.5 flex items-center gap-2"
+            style={{ background: accentBg, border: `1px solid ${accentBorder}` }}>
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isMed ? 'bg-red-400' : 'bg-blue-400'}`} />
+            <span className="text-sm font-semibold" style={{ color: accentColor }}>
+              {isMed ? `Dr. ${selected.full_name}` : selected.full_name}
+            </span>
+            <span className="text-xs ml-auto" style={{ color: WARM.textFaint }}>{GRADE_LABELS[selected.grade] ?? ''}</span>
+          </div>
+
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: WARM.textFaint }}>Semaine</p>
+
+          {loading ? (
+            <p className="text-xs italic text-center py-2" style={{ color: WARM.textFaint }}>Chargement...</p>
+          ) : (
+            <div className="space-y-1.5">
+              {weekDays.map((dateStr, i) => {
+                const dayAssignments = weekAssignments.filter(a => a.date === dateStr)
+                const isToday = dateStr === selectedDate
+                const d = new Date(dateStr + 'T00:00:00')
+                const dayNum = d.getDate()
+                const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'août', 'sep', 'oct', 'nov', 'déc']
+
+                return (
+                  <div key={dateStr}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2"
+                    style={{
+                      background: isToday ? accentBg : WARM.surface,
+                      border: `1px solid ${isToday ? accentBorder : WARM.border}`
+                    }}>
+                    <div className="w-14 flex-shrink-0">
+                      <span className="text-xs font-bold" style={{ color: isToday ? accentColor : WARM.textMid }}>
+                        {dayLabels[i]}
+                      </span>
+                      <span className="text-xs ml-1" style={{ color: WARM.textFaint }}>
+                        {dayNum} {monthNames[d.getMonth()]}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {dayAssignments.length === 0 ? (
+                        <span className="text-xs italic" style={{ color: WARM.textFaint }}>—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {dayAssignments.map((a, j) => (
+                            <span key={j} className="text-xs font-medium px-1.5 py-0.5 rounded"
+                              style={{ background: isToday ? accentBorder : WARM.cardHead, color: isToday ? accentColor : WARM.textMid }}>
+                              {ROOM_NAMES[a.room_id] ?? `Salle ${a.room_id}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {dayAssignments.some(a => a.start_time) && (
+                      <Check size={12} style={{ color: accentColor }} className="flex-shrink-0" />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const MENU_ITEMS = [
-  { id: 'profil',   label: 'Mon profil',   icon: User },
-  { id: 'medecins', label: 'Liste des Med', icon: Stethoscope },
-  { id: 'isa',      label: 'Liste des ISA', icon: Users },
+  { id: 'profil',    label: 'Mon profil',   icon: User },
+  { id: 'recherche', label: 'Recherche',    icon: Search },
+  { id: 'medecins',  label: 'Med',          icon: Stethoscope },
+  { id: 'isa',       label: 'ISA',          icon: Users },
 ]
 
 export default function Sidebar({ open, onClose, selectedDate }) {
@@ -407,6 +567,7 @@ export default function Sidebar({ open, onClose, selectedDate }) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {activeItem === 'profil' && <ProfilePanel selectedDate={selectedDate} />}
+          {activeItem === 'recherche' && <SearchPanel selectedDate={selectedDate} />}
           {activeItem === 'medecins' && <StaffList profession="medecin" />}
           {activeItem === 'isa' && <StaffList profession="infirmier" />}
         </div>
