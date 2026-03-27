@@ -163,6 +163,9 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
   )
 }
 
+// Salles sans ISA
+const NO_ISA_ROOMS = new Set([9])
+
 const UNIT_ROOMS = {
   'hors-bloc': [1, 2, 3, 4, 5, 6, 7, 8, 9],
   'julliard':  [10, 11, 12, 13, 14],
@@ -178,7 +181,7 @@ const ROOM_NAMES = {
   6: 'Neuro-radio 13',
   7: 'Cardio 17',
   8: 'Tardif',
-  9: 'IRM/Scanner',
+  9: 'Consultation',
   // Julliard
   10: 'Viscérale 10',
   11: 'Urg Viscérale 11',
@@ -197,7 +200,7 @@ const DEFAULT_SCHEDULES = {
   6:  { opening_time: '07:00', closing_time: '16:00' },
   7:  { opening_time: '07:00', closing_time: '16:00' },
   8:  { opening_time: null,    closing_time: '19:00' },
-  9:  { opening_time: '07:00', closing_time: '16:00' },
+  9:  { opening_time: '08:00', closing_time: '16:00' },
   // Julliard — toutes ouvrent à 7h
   10: { opening_time: '07:00', closing_time: '16:00' },
   11: { opening_time: '07:00', closing_time: '19:00' },
@@ -552,6 +555,7 @@ export default function Dashboard({ sector, unit, onBack }) {
                 key={roomId}
                 roomId={roomId}
                 roomName={ROOM_NAMES[roomId]}
+                noISA={NO_ISA_ROOMS.has(roomId)}
                 assignments={assignments}
                 closures={closures}
                 roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
