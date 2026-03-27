@@ -262,32 +262,27 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
 
   function PersonLine({ p }) {
     const asgns = getAssignments(p.id)
-    const isAssigned = asgns.length > 0
     const isMed = p.profession === 'medecin'
     return (
       <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-        style={{ background: isAssigned ? T.cardBg : T.surface, border: `1px solid ${T.border}`, opacity: isAssigned ? 1 : 0.5 }}>
+        style={{ background: T.cardBg, border: `1px solid ${T.border}` }}>
         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
-          style={{ background: isAssigned ? T.accentBar : T.border }}>
+          style={{ background: T.accentBar }}>
           {p.full_name.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold truncate" style={{ color: T.text }}>
             {isMed ? `Dr. ${p.full_name}` : p.full_name}
           </p>
-          {asgns.length > 0 ? (
-            <div className="flex flex-wrap gap-1 mt-0.5">
-              {asgns.map(a => (
-                <span key={a.id} className="text-xs px-1.5 py-0.5 rounded-md font-medium"
-                  style={{ background: T.accentBar + '22', color: T.accent }}>
-                  {getRoomName(a.room_id)}
-                  {a.start_time && <span style={{ opacity: 0.7 }}> · ✓{a.start_time.slice(0,5)}</span>}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs italic" style={{ color: T.textFaint }}>Non affecté</p>
-          )}
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {asgns.map(a => (
+              <span key={a.id} className="text-xs px-1.5 py-0.5 rounded-md font-medium"
+                style={{ background: T.accentBar + '22', color: T.accent }}>
+                {getRoomName(a.room_id)}
+                {a.start_time && <span style={{ opacity: 0.7 }}> · ✓{a.start_time.slice(0,5)}</span>}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -316,13 +311,13 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
             <p className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5"
               style={{ color: '#DC2626' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
-              Médecins ({medecins.filter(p => getAssignments(p.id).length > 0).length}/{medecins.length})
+              Médecins ({medecins.filter(p => getAssignments(p.id).length > 0).length})
             </p>
             <div className="space-y-1.5">
-              {medecins
-                .sort((a, b) => getAssignments(b.id).length - getAssignments(a.id).length)
-                .map(p => <PersonLine key={p.id} p={p} />)}
-              {medecins.length === 0 && <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun médecin</p>}
+              {medecins.filter(p => getAssignments(p.id).length > 0).map(p => <PersonLine key={p.id} p={p} />)}
+              {medecins.filter(p => getAssignments(p.id).length > 0).length === 0 && (
+                <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun médecin affecté</p>
+              )}
             </div>
           </div>
 
@@ -331,13 +326,13 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
             <p className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5"
               style={{ color: '#2563EB' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
-              ISA ({infirmiers.filter(p => getAssignments(p.id).length > 0).length}/{infirmiers.length})
+              ISA ({infirmiers.filter(p => getAssignments(p.id).length > 0).length})
             </p>
             <div className="space-y-1.5">
-              {infirmiers
-                .sort((a, b) => getAssignments(b.id).length - getAssignments(a.id).length)
-                .map(p => <PersonLine key={p.id} p={p} />)}
-              {infirmiers.length === 0 && <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun ISA enregistré</p>}
+              {infirmiers.filter(p => getAssignments(p.id).length > 0).map(p => <PersonLine key={p.id} p={p} />)}
+              {infirmiers.filter(p => getAssignments(p.id).length > 0).length === 0 && (
+                <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun ISA affecté</p>
+              )}
             </div>
           </div>
         </div>
