@@ -37,10 +37,28 @@ function matchProfile(excelName, profiles) {
   }) ?? null
 }
 
+const FR_MONTHS = {
+  JANVIER:1, FEVRIER:2, 'FÉVRIER':2, MARS:3, AVRIL:4, MAI:5, JUIN:6,
+  JUILLET:7, 'AOÛT':8, AOUT:8, SEPTEMBRE:9, OCTOBRE:10, NOVEMBRE:11, DECEMBRE:12, 'DÉCEMBRE':12,
+}
+
 function parseDateFromHeader(header, year) {
   if (!header) return null
-  const s = String(header).trim()
-  // Format DD.MM ou DD/MM (ex: "24.03", "LUN 24.03", "24/03")
+  const s = String(header).trim().toUpperCase()
+  // Format français : "LUNDI 30 MARS", "MERCREDI 1ER AVRIL", "24 MARS"
+  const frMatch = s.match(/(\d{1,2})(?:ER|E)?\s+([A-ZÉÛÔÀÂÙÈ]+)/)
+  if (frMatch) {
+    const day = parseInt(frMatch[1])
+    const month = FR_MONTHS[frMatch[2]]
+    if (month) {
+      const now = new Date()
+      let y = year
+      if (month < now.getMonth() + 1 - 1) y = year + 1
+      const d = new Date(y, month - 1, day)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+  }
+  // Format DD.MM ou DD/MM (ex: "24.03", "LUN 24.03")
   const dmMatch = s.match(/(\d{1,2})[./](\d{1,2})/)
   if (dmMatch) {
     const day = parseInt(dmMatch[1])
@@ -53,14 +71,9 @@ function parseDateFromHeader(header, year) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     }
   }
-  // Format YYYY-MM-DD (ISO, quand raw:false retourne une date complète)
+  // Format YYYY-MM-DD (ISO)
   const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/)
   if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
-  // Format MM/DD/YYYY (Excel US)
-  const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (usMatch) {
-    return `${usMatch[3]}-${String(usMatch[1]).padStart(2, '0')}-${String(usMatch[2]).padStart(2, '0')}`
-  }
   return null
 }
 
