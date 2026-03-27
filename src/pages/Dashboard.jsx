@@ -248,10 +248,11 @@ function getCurrentTime() {
 function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
   const T = theme
   const [adding, setAdding] = useState(null) // { profession, search, userId, roomId }
+  const unitAssignments = assignments.filter(a => rooms.includes(a.room_id))
   const medecins   = allProfiles.filter(p => p.profession === 'medecin')
   const infirmiers = allProfiles.filter(p => p.profession === 'infirmier')
 
-  function getAssignments(userId) { return assignments.filter(a => a.user_id === userId) }
+  function getAssignments(userId) { return unitAssignments.filter(a => a.user_id === userId) }
   function getRoomName(roomId) { return roomNames[roomId] ?? `Salle ${roomId}` }
 
   async function removeUser(userId) {
