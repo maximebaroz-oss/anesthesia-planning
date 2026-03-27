@@ -328,23 +328,51 @@ function SouhaitsCard({ date, unitId, canEdit, theme }) {
   )
 }
 
-function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
+function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
   const T = theme
-  const [adding, setAdding] = useState(null) // { profession, search, userId, roomId }
+  const [adding, setAdding] = useState(null)
+  const [presence, setPresence] = useState([])
   const unitAssignments = assignments.filter(a => rooms.includes(a.room_id))
   const medecins   = allProfiles.filter(p => p.profession === 'medecin')
   const infirmiers = allProfiles.filter(p => p.profession === 'infirmier')
 
+  useEffect(() => {
+    if (!selectedDate || !unitId) return
+    supabase.from('unit_presence').select('user_id')
+      .eq('date', selectedDate).eq('unit_id', unitId)
+      .then(({ data }) => setPresence(data?.map(r => r.user_id) ?? []))
+  }, [selectedDate, unitId])
+
   function getAssignments(userId) { return unitAssignments.filter(a => a.user_id === userId) }
+  function isPresent(userId) { return presence.includes(userId) }
   function getRoomName(roomId) { return roomNames[roomId] ?? `Salle ${roomId}` }
 
   async function removeUser(userId) {
-    await supabase.from('assignments').delete().eq('user_id', userId).eq('date', selectedDate)
+    await supabase.from('assignments').delete()
+      .eq('user_id', userId).eq('date', selectedDate).in('room_id', rooms)
+    await supabase.from('unit_presence').delete()
+      .eq('user_id', userId).eq('date', selectedDate).eq('unit_id', unitId)
+    setPresence(p => p.filter(id => id !== userId))
+    onRefresh()
+  }
+
+  async function addPresenceOnly() {
+    if (!adding?.userId) return
+    await supabase.from('unit_presence').upsert(
+      { date: selectedDate, unit_id: unitId, user_id: adding.userId, added_by: currentProfile?.id },
+      { onConflict: 'date,unit_id,user_id' }
+    )
+    setPresence(p => [...p, adding.userId])
+    setAdding(null)
     onRefresh()
   }
 
   async function addAssignment() {
     if (!adding?.userId || !adding?.roomId) return
+    await supabase.from('unit_presence').upsert(
+      { date: selectedDate, unit_id: unitId, user_id: adding.userId, added_by: currentProfile?.id },
+      { onConflict: 'date,unit_id,user_id' }
+    )
     const { data: existing } = await supabase.from('assignments').select('id')
       .eq('user_id', adding.userId).eq('room_id', adding.roomId).eq('date', selectedDate).maybeSingle()
     if (!existing) {
@@ -372,13 +400,18 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
             {isMed ? `Dr. ${p.full_name}` : p.full_name}
           </p>
           <div className="flex flex-wrap gap-1 mt-0.5">
-            {asgns.map(a => (
+            {asgns.length > 0 ? asgns.map(a => (
               <span key={a.id} className="text-xs px-1.5 py-0.5 rounded-md font-medium"
                 style={{ background: T.accentBar + '22', color: T.accent }}>
                 {getRoomName(a.room_id)}
                 {a.start_time && <span style={{ opacity: 0.7 }}> · ✓{a.start_time.slice(0,5)}</span>}
               </span>
-            ))}
+            )) : (
+              <span className="text-xs px-1.5 py-0.5 rounded-md font-medium"
+                style={{ background: T.surface, color: T.textFaint }}>
+                Présent
+              </span>
+            )}
           </div>
         </div>
         {canManage && (
@@ -394,19 +427,23 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
 
   function AddPanel({ profession }) {
     const pool = (profession === 'medecin' ? medecins : infirmiers)
-      .filter(p => getAssignments(p.id).length === 0)
+      .filter(p => getAssignments(p.id).length === 0 && !isPresent(p.id))
     const search = adding?.search ?? ''
     const filtered = pool.filter(p => p.full_name.toUpperCase().includes(search.toUpperCase()))
     const isMed = profession === 'medecin'
 
     if (adding?.userId) {
-      // Step 2 : choisir la salle
       const person = allProfiles.find(p => p.id === adding.userId)
       return (
         <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: T.border, background: T.surface }}>
           <p className="text-xs font-semibold" style={{ color: T.text }}>
-            Salle pour {isMed ? `Dr. ${person?.full_name}` : person?.full_name} :
+            {isMed ? `Dr. ${person?.full_name}` : person?.full_name} :
           </p>
+          <button onClick={addPresenceOnly}
+            className="w-full text-xs py-2 rounded-lg font-semibold text-left px-3"
+            style={{ background: T.cardBg, border: `1px solid ${T.border}`, color: T.textSub }}>
+            Juste présent (sans salle)
+          </button>
           <div className="grid grid-cols-2 gap-1.5">
             {rooms.map(roomId => (
               <button key={roomId} onClick={() => setAdding(a => ({ ...a, roomId }))}
@@ -461,15 +498,15 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
   }
 
   function Section({ profession, color, dotColor, label }) {
-    const assigned = (profession === 'medecin' ? medecins : infirmiers)
-      .filter(p => getAssignments(p.id).length > 0)
+    const visible = (profession === 'medecin' ? medecins : infirmiers)
+      .filter(p => getAssignments(p.id).length > 0 || isPresent(p.id))
     const isAdding = adding?.profession === profession
     return (
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color }}>
             <span className={`w-1.5 h-1.5 rounded-full inline-block ${dotColor}`} />
-            {label} ({assigned.length})
+            {label} ({visible.length})
           </p>
           {canManage && !isAdding && (
             <button onClick={() => setAdding({ profession, search: '', userId: null, roomId: null })}
@@ -478,9 +515,9 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
           )}
         </div>
         <div className="space-y-1.5">
-          {assigned.map(p => <PersonLine key={p.id} p={p} />)}
-          {assigned.length === 0 && !isAdding && (
-            <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun affecté</p>
+          {visible.map(p => <PersonLine key={p.id} p={p} />)}
+          {visible.length === 0 && !isAdding && (
+            <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun présent</p>
           )}
           {isAdding && <AddPanel profession={profession} />}
         </div>
@@ -865,6 +902,7 @@ export default function Dashboard({ sector, unit, onBack }) {
           allProfiles={allProfiles}
           rooms={ROOMS}
           roomNames={ROOM_NAMES}
+          unitId={unit?.id ?? 'hors-bloc'}
           dateLabel={selectedDayLabel}
           selectedDate={selectedDate}
           canManage={profile?.is_admin || profile?.grade === 'chef_clinique' || profile?.grade === 'adjoint'}

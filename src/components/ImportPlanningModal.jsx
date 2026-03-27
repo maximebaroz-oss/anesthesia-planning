@@ -333,10 +333,15 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
       } catch (e) { errors.push(e.message) }
     }
 
-    // 3. Affectations (HB)
+    // 3. Affectations + présence unité
     for (const entry of preview.entries.filter(e => e.type === 'assignment')) {
       if (!entry.date || !entry.profile || !entry.roomId) continue
       try {
+        // Marquer comme présent dans l'unité
+        await supabase.from('unit_presence').upsert(
+          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { onConflict: 'date,unit_id,user_id' }
+        )
         const { data: existing } = await supabase.from('assignments').select('id')
           .eq('user_id', entry.profile.id).eq('room_id', entry.roomId).eq('date', entry.date)
           .maybeSingle()
