@@ -209,7 +209,9 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
         : parseHBSheet(rows, profiles)
 
       if (!result) {
-        setError(`Impossible de lire les dates dans l'onglet ${sheetName}.`)
+        const headerRow = rows[0] ?? []
+        const preview = headerRow.slice(0, 6).map((v, i) => `[${i}]=${JSON.stringify(v)}`).join(' ')
+        setError(`Impossible de lire les dates dans l'onglet ${sheetName}. En-tête: ${preview}`)
         return
       }
 
