@@ -206,7 +206,7 @@ const DEFAULT_SCHEDULES = {
   14: { opening_time: '07:00', closing_time: '19:00' },
 }
 
-const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 
 function getMonday(date) {
   const d = new Date(date)
@@ -226,7 +226,7 @@ function getISOWeek(date) {
 }
 
 function getWeekDays(monday) {
-  return Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: 5 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
     return d
