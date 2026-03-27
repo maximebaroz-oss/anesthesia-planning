@@ -19,6 +19,7 @@ const HB_ROWS = [
   { rowIdx: 5, type: 'assignment', label: 'Radio 11',       roomId: 4 },
   { rowIdx: 6, type: 'assignment', label: 'Radio 12',       roomId: 5 },
   { rowIdx: 7, type: 'assignment', label: 'Cardio 17',      roomId: 7 },
+  { rowIdx: 9, type: 'assignment', label: 'Consultation',   roomId: 9 },
 ]
 
 function matchProfile(excelName, profiles) {
@@ -120,19 +121,7 @@ function parseHBSheet(ws, rows, profiles) {
       })
     }
   }
-  // Debug: liste les lignes inconnues avec leur contenu col A
-  const knownRows = new Set(HB_ROWS.map(r => r.rowIdx))
-  const unknownRows = rows.slice(1, 15).map((row, i) => {
-    const idx = i + 1
-    if (knownRows.has(idx)) return null
-    const colA = String(row[0] ?? '').trim()
-    if (!colA) return null
-    return `[${idx}]${colA}`
-  }).filter(Boolean)
-  const weekLabel = unknownRows.length > 0
-    ? `${String(headerRow[0] ?? '')} | lignes?: ${unknownRows.join(', ')}`
-    : String(headerRow[0] ?? '')
-  return { entries, weekLabel }
+  return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
 // Vérifie si une colonne est grisée (= jour férié dans le fichier Excel)
