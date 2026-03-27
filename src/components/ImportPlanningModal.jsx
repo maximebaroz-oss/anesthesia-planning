@@ -330,6 +330,11 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Superviseur ${entry.date}: ${error.message}`)
+        // Aussi marquer comme présent dans l'unité
+        await supabase.from('unit_presence').upsert(
+          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { onConflict: 'date,unit_id,user_id' }
+        )
       } catch (e) { errors.push(e.message) }
     }
 

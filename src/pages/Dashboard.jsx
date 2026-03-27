@@ -338,9 +338,16 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dat
 
   useEffect(() => {
     if (!selectedDate || !unitId) return
-    supabase.from('unit_presence').select('user_id')
-      .eq('date', selectedDate).eq('unit_id', unitId)
-      .then(({ data }) => setPresence(data?.map(r => r.user_id) ?? []))
+    Promise.all([
+      supabase.from('unit_presence').select('user_id').eq('date', selectedDate).eq('unit_id', unitId),
+      supabase.from('supervisors').select('user_id').eq('date', selectedDate).eq('unit_id', unitId),
+    ]).then(([pres, sup]) => {
+      const ids = new Set([
+        ...(pres.data?.map(r => r.user_id) ?? []),
+        ...(sup.data?.map(r => r.user_id) ?? []),
+      ])
+      setPresence([...ids])
+    })
   }, [selectedDate, unitId])
 
   function getAssignments(userId) { return unitAssignments.filter(a => a.user_id === userId) }
@@ -724,7 +731,7 @@ export default function Dashboard({ sector, unit, onBack }) {
     await fetchData()
   }
 
-  const totalAssigned = new Set(assignments.map(a => a.user_id)).size
+  const totalAssigned = new Set(assignments.filter(a => ROOMS.includes(a.room_id)).map(a => a.user_id)).size
 
   const selectedDayLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long'
