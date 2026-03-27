@@ -208,52 +208,71 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
   async function handleConfirm() {
     if (!preview) return
     setStep('importing')
-    try {
-      for (const entry of preview.entries) {
-        if (!entry.date) continue
+    const errors = []
 
-        if (entry.type === 'supervisor') {
-          if (!entry.profile) continue
-          await supabase.from('supervisors').upsert(
-            { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, assigned_by: currentProfile?.id },
-            { onConflict: 'date,unit_id' }
-          )
-        } else if (entry.type === 'assignment') {
-          if (!entry.profile || !entry.roomId) continue
-          const { data: existing } = await supabase.from('assignments').select('id')
-            .eq('user_id', entry.profile.id).eq('room_id', entry.roomId).eq('date', entry.date)
-            .maybeSingle()
-          if (!existing) {
-            await supabase.from('assignments').insert({
-              user_id: entry.profile.id, room_id: entry.roomId,
-              date: entry.date, assigned_by: currentProfile?.id,
-            })
-          }
-        } else if (entry.type === 'schedule') {
-          await supabase.from('room_schedules').upsert({
-            room_id: entry.roomId,
-            date: entry.date,
-            opening_time: '07:00',
-            closing_time: entry.closingTime ?? null,
-            activity: entry.activity,
-          }, { onConflict: 'room_id,date' })
-        } else if (entry.type === 'closure') {
-          // Salle vide dans le planning = fermeture
-          const { data: existing } = await supabase.from('room_closures').select('id')
-            .eq('room_id', entry.roomId).eq('date', entry.date).maybeSingle()
-          if (!existing) {
-            await supabase.from('room_closures').insert({
-              room_id: entry.roomId, date: entry.date, closed_by: currentProfile?.id,
-            })
-          }
+    // 1. Fermetures en premier (priorité max)
+    for (const entry of preview.entries.filter(e => e.type === 'closure')) {
+      if (!entry.date || !entry.roomId) continue
+      try {
+        const { data: existing } = await supabase.from('room_closures').select('id')
+          .eq('room_id', entry.roomId).eq('date', entry.date).maybeSingle()
+        if (!existing) {
+          const { error } = await supabase.from('room_closures').insert({
+            room_id: entry.roomId, date: entry.date, closed_by: currentProfile?.id,
+          })
+          if (error) errors.push(`Fermeture salle ${entry.roomId} ${entry.date}: ${error.message}`)
         }
-      }
-      setStep('done')
-      onImported?.()
-    } catch (err) {
-      setError('Erreur import : ' + err.message)
-      setStep('preview')
+      } catch (e) { errors.push(e.message) }
     }
+
+    // 2. Superviseurs
+    for (const entry of preview.entries.filter(e => e.type === 'supervisor')) {
+      if (!entry.date || !entry.profile) continue
+      try {
+        const { error } = await supabase.from('supervisors').upsert(
+          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, assigned_by: currentProfile?.id },
+          { onConflict: 'date,unit_id' }
+        )
+        if (error) errors.push(`Superviseur ${entry.date}: ${error.message}`)
+      } catch (e) { errors.push(e.message) }
+    }
+
+    // 3. Affectations (HB)
+    for (const entry of preview.entries.filter(e => e.type === 'assignment')) {
+      if (!entry.date || !entry.profile || !entry.roomId) continue
+      try {
+        const { data: existing } = await supabase.from('assignments').select('id')
+          .eq('user_id', entry.profile.id).eq('room_id', entry.roomId).eq('date', entry.date)
+          .maybeSingle()
+        if (!existing) {
+          const { error } = await supabase.from('assignments').insert({
+            user_id: entry.profile.id, room_id: entry.roomId,
+            date: entry.date, assigned_by: currentProfile?.id,
+          })
+          if (error) errors.push(`Affectation: ${error.message}`)
+        }
+      } catch (e) { errors.push(e.message) }
+    }
+
+    // 4. Horaires salles (avec activity si disponible)
+    for (const entry of preview.entries.filter(e => e.type === 'schedule')) {
+      if (!entry.date || !entry.roomId) continue
+      try {
+        // Essai avec activity
+        const payload = { room_id: entry.roomId, date: entry.date, opening_time: '07:00', closing_time: entry.closingTime ?? null, activity: entry.activity }
+        const { error } = await supabase.from('room_schedules').upsert(payload, { onConflict: 'room_id,date' })
+        if (error) {
+          // Retry sans activity si colonne absente
+          const payloadFallback = { room_id: entry.roomId, date: entry.date, opening_time: '07:00', closing_time: entry.closingTime ?? null }
+          const { error: err2 } = await supabase.from('room_schedules').upsert(payloadFallback, { onConflict: 'room_id,date' })
+          if (err2) errors.push(`Horaire salle ${entry.roomId}: ${err2.message}`)
+        }
+      } catch (e) { errors.push(e.message) }
+    }
+
+    if (errors.length > 0) setError(`${errors.length} erreur(s) : ${errors[0]}`)
+    setStep('done')
+    onImported?.()
   }
 
   const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure') ?? []
