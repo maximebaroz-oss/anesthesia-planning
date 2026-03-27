@@ -38,16 +38,30 @@ function matchProfile(excelName, profiles) {
 }
 
 function parseDateFromHeader(header, year) {
-  if (!header || typeof header !== 'string') return null
-  const match = header.match(/(\d+)\.(\d+)/)
-  if (!match) return null
-  const day = parseInt(match[1])
-  const month = parseInt(match[2])
-  const now = new Date()
-  let y = year
-  if (month < now.getMonth() + 1 - 1) y = year + 1
-  const d = new Date(y, month - 1, day)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  if (!header) return null
+  const s = String(header).trim()
+  // Format DD.MM ou DD/MM (ex: "24.03", "LUN 24.03", "24/03")
+  const dmMatch = s.match(/(\d{1,2})[./](\d{1,2})/)
+  if (dmMatch) {
+    const day = parseInt(dmMatch[1])
+    const month = parseInt(dmMatch[2])
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      const now = new Date()
+      let y = year
+      if (month < now.getMonth() + 1 - 1) y = year + 1
+      const d = new Date(y, month - 1, day)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+  }
+  // Format YYYY-MM-DD (ISO, quand raw:false retourne une date complète)
+  const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
+  // Format MM/DD/YYYY (Excel US)
+  const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (usMatch) {
+    return `${usMatch[3]}-${String(usMatch[1]).padStart(2, '0')}-${String(usMatch[2]).padStart(2, '0')}`
+  }
+  return null
 }
 
 // Parse a DU cell like "Urg Viscérale 19H", "Uro 17h", "Viscérale", "Gyneco"
@@ -188,7 +202,7 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
       }
 
       const ws = wb.Sheets[targetSheet]
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false })
 
       const result = isJulliard
         ? parseDUSheet(ws, rows, profiles)
