@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck } from 'lucide-react'
 import ImportPlanningModal from '../components/ImportPlanningModal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -251,6 +251,8 @@ export default function Dashboard({ sector, unit, onBack }) {
   const [closures, setClosures] = useState([])
   const [roomSchedules, setRoomSchedules] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
+  const [dayClosed, setDayClosed] = useState(false)
+  const [weekDayClosures, setWeekDayClosures] = useState([]) // dates fermées de la semaine
   const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
   const [showImport, setShowImport] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState(null)
@@ -294,18 +296,24 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }] = await Promise.all([
+    const unitId = unit?.id ?? 'hors-bloc'
+    const weekDates = selectedWeekDays.map(d => formatDateKey(d))
+    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }] = await Promise.all([
       supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
       supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
+      supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', unitId).maybeSingle(),
+      supabase.from('day_closures').select('date').eq('unit_id', unitId).in('date', weekDates),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
     setAllProfiles(profs ?? [])
     setRoomSchedules(scheds ?? [])
+    setDayClosed(!!dayCls)
+    setWeekDayClosures((weekCls ?? []).map(r => r.date))
     setLoading(false)
-  }, [selectedDate])
+  }, [selectedDate, selectedWeekDays, unit?.id])
 
   useEffect(() => {
     fetchData()
@@ -314,6 +322,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'room_closures' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'room_schedules' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'day_closures' }, () => fetchData())
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [fetchData])
@@ -339,6 +348,22 @@ export default function Dashboard({ sector, unit, onBack }) {
   async function handleLeave(roomId, userId) {
     await supabase.from('assignments').delete()
       .eq('user_id', userId).eq('room_id', roomId).eq('date', selectedDate)
+    await fetchData()
+  }
+
+  async function handleCloseDay() {
+    if (!profile?.is_admin && profile?.grade !== 'chef_clinique') return
+    await supabase.from('day_closures').upsert(
+      { date: selectedDate, unit_id: unit?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: profile.id },
+      { onConflict: 'date,unit_id' }
+    )
+    await fetchData()
+  }
+
+  async function handleOpenDay() {
+    if (!profile?.is_admin && profile?.grade !== 'chef_clinique') return
+    await supabase.from('day_closures').delete()
+      .eq('date', selectedDate).eq('unit_id', unit?.id ?? 'hors-bloc')
     await fetchData()
   }
 
@@ -437,6 +462,7 @@ export default function Dashboard({ sector, unit, onBack }) {
               const isSelected = dateStr === selectedDate
               const isToday = dateStr === todayStr
               const isPast = dateStr < todayStr
+              const isDayClosed = weekDayClosures.includes(dateStr)
               return (
                 <button key={i} onClick={() => setSelectedDate(dateStr)}
                   style={isSelected
@@ -444,9 +470,12 @@ export default function Dashboard({ sector, unit, onBack }) {
                     : isToday
                       ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
                       : { color: isPast ? T.textFaint : T.textSub }}
-                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80 flex flex-col items-center gap-0.5">
+                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80 flex flex-col items-center gap-0.5 relative">
                   <span className="text-xs uppercase tracking-wide">{DAY_NAMES[i]}</span>
                   <span className="text-sm font-bold">{day.getDate()}</span>
+                  {isDayClosed && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-400" />
+                  )}
                 </button>
               )
             })}
@@ -459,6 +488,14 @@ export default function Dashboard({ sector, unit, onBack }) {
         <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: T.textSub }}>
           <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: T.text }}>{totalAssigned}</span> affecté(s)</span>
           <div className="flex items-center gap-2">
+            {(profile?.is_admin || profile?.grade === 'chef_clinique') && (
+              <button onClick={dayClosed ? handleOpenDay : handleCloseDay}
+                className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                style={{ background: dayClosed ? '#FEE2E2' : T.surface, color: dayClosed ? '#DC2626' : T.accent }}>
+                {dayClosed ? <CalendarCheck size={13} /> : <CalendarOff size={13} />}
+                {dayClosed ? 'Réouvrir' : 'Jour férié'}
+              </button>
+            )}
             {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
               <button onClick={() => setShowImport(true)}
                 className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
@@ -482,6 +519,23 @@ export default function Dashboard({ sector, unit, onBack }) {
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin" />
               <p className="text-sm">Chargement...</p>
             </div>
+          </div>
+        ) : dayClosed ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: '#FEE2E2' }}>
+              <CalendarOff size={36} className="text-red-400" />
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-lg" style={{ color: T.text }}>Journée fermée</p>
+              <p className="text-sm mt-1" style={{ color: T.textFaint }}>Jour férié — aucune salle active</p>
+            </div>
+            {(profile?.is_admin || profile?.grade === 'chef_clinique') && (
+              <button onClick={handleOpenDay}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ background: T.surface, color: T.accent }}>
+                <CalendarCheck size={15} /> Réouvrir cette journée
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

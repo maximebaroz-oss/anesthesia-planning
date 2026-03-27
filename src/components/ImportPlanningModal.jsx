@@ -88,7 +88,7 @@ function parseDUCell(text) {
   return { activity: activityNorm, closingTime }
 }
 
-function parseHBSheet(rows, profiles) {
+function parseHBSheet(ws, rows, profiles) {
   const headerRow = rows[0] ?? []
   const year = new Date().getFullYear()
   const days = [1, 2, 3, 4, 5].map(colIdx => ({
@@ -100,6 +100,15 @@ function parseHBSheet(rows, profiles) {
 
   const entries = []
   for (const day of days) {
+    // Colonne grisée = jour férié
+    if (isColumnGrayed(ws, day.colIdx)) {
+      entries.push({
+        date: day.date, dayLabel: day.header,
+        rowLabel: 'Journée', excelName: '🔴 Jour férié',
+        type: 'day_closure', roomId: null, profile: null,
+      })
+      continue
+    }
     for (const { rowIdx, type, label, roomId } of HB_ROWS) {
       const raw = String(rows[rowIdx]?.[day.colIdx] ?? '').trim()
       if (!raw) continue
@@ -112,6 +121,22 @@ function parseHBSheet(rows, profiles) {
     }
   }
   return { entries, weekLabel: String(headerRow[0] ?? '') }
+}
+
+// Vérifie si une colonne est grisée (= jour férié dans le fichier Excel)
+function isColumnGrayed(ws, colIdx, headerRowIdx = 0) {
+  const cellRef = XLSX.utils.encode_cell({ r: headerRowIdx, c: colIdx })
+  const cell = ws[cellRef]
+  if (!cell?.s) return false
+  const fill = cell.s.fill ?? {}
+  const rgb = fill.fgColor?.rgb ?? fill.bgColor?.rgb
+  if (!rgb || rgb.length < 6) return false
+  const r = parseInt(rgb.slice(-6, -4), 16)
+  const g = parseInt(rgb.slice(-4, -2), 16)
+  const b = parseInt(rgb.slice(-2), 16)
+  // Gris = R≈G≈B, pas blanc (255) et pas noir (<40)
+  const isGray = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && r > 80 && r < 230
+  return isGray
 }
 
 // Vérifie si la cellule a un fond noir (= salle fermée dans le fichier Julliard)
@@ -144,6 +169,15 @@ function parseDUSheet(ws, rows, profiles) {
   // Row 2 (idx 1) = Julliard supervisor
   const supRow = rows[1] ?? []
   for (const day of days) {
+    // Colonne grisée = jour férié
+    if (isColumnGrayed(ws, day.colIdx)) {
+      entries.push({
+        date: day.date, dayLabel: day.header,
+        rowLabel: 'Journée', excelName: '🔴 Jour férié',
+        type: 'day_closure', roomId: null, profile: null,
+      })
+      continue
+    }
     const raw = String(supRow[day.colIdx] ?? '').trim()
     if (!raw) continue
     entries.push({
@@ -155,11 +189,13 @@ function parseDUSheet(ws, rows, profiles) {
   }
 
   // Room schedule rows — salles 10-14 uniquement (salle 9 = VVC, ignorée)
+  const grayedCols = new Set(days.filter(d => isColumnGrayed(ws, d.colIdx)).map(d => d.colIdx))
   for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
     const row = rows[rowIdx]
     const roomId = parseInt(String(row[0] ?? '').trim())
     if (isNaN(roomId) || roomId < 10 || roomId > 14) continue
     for (const day of days) {
+      if (grayedCols.has(day.colIdx)) continue // jour férié, déjà géré
       const cell = String(row[day.colIdx] ?? '').trim()
       const black = isCellBlack(ws, day.colIdx, rowIdx)
       if (!cell || black) {
@@ -219,7 +255,7 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
 
       const result = isJulliard
         ? parseDUSheet(ws, rows, profiles)
-        : parseHBSheet(rows, profiles)
+        : parseHBSheet(ws, rows, profiles)
 
       if (!result) {
         const headerRow = rows[0] ?? []
@@ -239,6 +275,18 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
     if (!preview) return
     setStep('importing')
     const errors = []
+
+    // 0. Jours fériés
+    for (const entry of preview.entries.filter(e => e.type === 'day_closure')) {
+      if (!entry.date) continue
+      try {
+        const { error } = await supabase.from('day_closures').upsert(
+          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: currentProfile?.id },
+          { onConflict: 'date,unit_id' }
+        )
+        if (error) errors.push(`Jour férié ${entry.date}: ${error.message}`)
+      } catch (e) { errors.push(e.message) }
+    }
 
     // 1. Fermetures en premier (priorité max)
     for (const entry of preview.entries.filter(e => e.type === 'closure')) {
@@ -305,9 +353,10 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
     if (errors.length === 0) onImported?.()
   }
 
-  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure') ?? []
+  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure' && e.type !== 'day_closure') ?? []
   const scheduleEntries = preview?.entries.filter(e => e.type === 'schedule') ?? []
   const closureEntries  = preview?.entries.filter(e => e.type === 'closure') ?? []
+  const dayClosureEntries = preview?.entries.filter(e => e.type === 'day_closure') ?? []
   const matchedCount    = personEntries.filter(e => e.profile).length
   const unmatchedCount  = personEntries.filter(e => e.excelName && !e.profile).length
   const dates = preview ? [...new Set(preview.entries.map(e => e.date))] : []
@@ -390,6 +439,12 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                     <span className="text-sm font-semibold" style={{ color: WARM.text }}>{closureEntries.length} fermeture(s)</span>
                   </div>
                 )}
+                {dayClosureEntries.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-orange-400" />
+                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{dayClosureEntries.length} jour(s) férié(s)</span>
+                  </div>
+                )}
                 <span className="text-xs ml-auto" style={{ color: WARM.textFaint }}>{dates.length} jour(s)</span>
               </div>
 
@@ -399,7 +454,8 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                   const dayPerson  = personEntries.filter(e => e.date === date)
                   const daySched   = scheduleEntries.filter(e => e.date === date)
                   const dayClose   = closureEntries.filter(e => e.date === date)
-                  const allDay     = [...dayPerson, ...daySched, ...dayClose]
+                  const dayDayCls  = dayClosureEntries.filter(e => e.date === date)
+                  const allDay     = [...dayDayCls, ...dayPerson, ...daySched, ...dayClose]
                   const label     = allDay[0]?.dayLabel ?? date
                   return (
                     <div key={date}>
@@ -420,7 +476,12 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                               {entry.excelName}
                             </span>
                             <span style={{ color: WARM.textFaint }} className="flex-shrink-0">→</span>
-                            {entry.type === 'closure' ? (
+                            {entry.type === 'day_closure' ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                                <span className="text-orange-600 font-medium">Jour férié — journée fermée</span>
+                              </div>
+                            ) : entry.type === 'closure' ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                                 <span className="text-red-500 font-medium">Salle fermée</span>
