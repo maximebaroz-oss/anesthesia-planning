@@ -22,6 +22,16 @@ const HB_ROWS = [
   { rowIdx: 9, type: 'assignment', label: 'Consultation',   roomId: 9 },
 ]
 
+// DU (Julliard) row index (0-based) → { roomId, label, type }
+const DU_ROWS = [
+  { rowIdx: 1,  type: 'supervisor', label: 'Superviseur Julliard',  roomId: null },
+  { rowIdx: 17, type: 'assignment', label: 'Visite J+1',            roomId: 16   },
+  { rowIdx: 18, type: 'assignment', label: 'Consultation',          roomId: 15   },
+  { rowIdx: 19, type: 'supervisor', label: 'Superviseur Julliard',  roomId: null },
+  { rowIdx: 20, type: 'assignment', label: 'Consultation greffe',   roomId: 17   },
+  { rowIdx: 21, type: 'day_note',   label: 'Souhait / Remarque',    roomId: null },
+]
+
 function matchProfile(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
   const name = excelName.trim().toUpperCase().replace(/\s+/g, ' ')
@@ -166,12 +176,11 @@ function parseDUSheet(ws, rows, profiles) {
   if (days.length === 0) return null
 
   const entries = []
+  const grayedCols = new Set(days.filter(d => isColumnGrayed(ws, d.colIdx)).map(d => d.colIdx))
 
-  // Row 2 (idx 1) = Julliard supervisor
-  const supRow = rows[1] ?? []
   for (const day of days) {
     // Colonne grisée = jour férié
-    if (isColumnGrayed(ws, day.colIdx)) {
+    if (grayedCols.has(day.colIdx)) {
       entries.push({
         date: day.date, dayLabel: day.header,
         rowLabel: 'Journée', excelName: '🔴 Jour férié',
@@ -179,28 +188,38 @@ function parseDUSheet(ws, rows, profiles) {
       })
       continue
     }
-    const raw = String(supRow[day.colIdx] ?? '').trim()
-    if (!raw) continue
-    entries.push({
-      date: day.date, dayLabel: day.header,
-      rowLabel: 'Superviseur Julliard', excelName: raw,
-      profile: matchProfile(raw, profiles),
-      type: 'supervisor', roomId: null,
-    })
+
+    // Rows définis (superviseur, affectations, souhait/remarque)
+    for (const { rowIdx, type, label, roomId } of DU_ROWS) {
+      const raw = String(rows[rowIdx]?.[day.colIdx] ?? '').trim()
+      if (!raw) continue
+      if (type === 'day_note') {
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: label, excelName: raw,
+          type: 'day_note', roomId: null, profile: null, noteText: raw,
+        })
+      } else {
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: label, excelName: raw,
+          profile: matchProfile(raw, profiles),
+          type, roomId,
+        })
+      }
+    }
   }
 
-  // Room schedule rows — salles 10-14 uniquement (salle 9 = VVC, ignorée)
-  const grayedCols = new Set(days.filter(d => isColumnGrayed(ws, d.colIdx)).map(d => d.colIdx))
+  // Room schedule rows — salles 10-14 uniquement
   for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
     const row = rows[rowIdx]
     const roomId = parseInt(String(row[0] ?? '').trim())
     if (isNaN(roomId) || roomId < 10 || roomId > 14) continue
     for (const day of days) {
-      if (grayedCols.has(day.colIdx)) continue // jour férié, déjà géré
+      if (grayedCols.has(day.colIdx)) continue
       const cell = String(row[day.colIdx] ?? '').trim()
       const black = isCellBlack(ws, day.colIdx, rowIdx)
       if (!cell || black) {
-        // Cellule vide ou noire = salle fermée ce jour
         entries.push({
           date: day.date, dayLabel: day.header,
           rowLabel: `Salle ${roomId}`, excelName: black ? '⬛ fermée' : '—',
@@ -212,30 +231,13 @@ function parseDUSheet(ws, rows, profiles) {
         entries.push({
           date: day.date, dayLabel: day.header,
           rowLabel: `Salle ${roomId}`, excelName: cell,
-          type: 'schedule', roomId,
-          activity, closingTime,
-          profile: null,
+          type: 'schedule', roomId, activity, closingTime, profile: null,
         })
       }
     }
   }
 
-  // Debug: lignes inconnues (ni sup row 1, ni salles 10-14)
-  const unknownRows = rows.slice(1, 30).map((row, i) => {
-    const idx = i + 1
-    if (idx === 1) return null // superviseur connu
-    const colA = String(row[0] ?? '').trim()
-    const roomId = parseInt(colA)
-    if (!isNaN(roomId) && roomId >= 10 && roomId <= 14) return null
-    if (!colA) return null
-    const sample = String(row[1] ?? '').trim()
-    return `[${idx}]${colA}${sample ? ':' + sample : ''}`
-  }).filter(Boolean)
-  const weekLabel = unknownRows.length > 0
-    ? `${String(headerRow[0] ?? '')} | ?: ${unknownRows.slice(0, 8).join(', ')}`
-    : String(headerRow[0] ?? '')
-
-  return { entries, weekLabel }
+  return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
 export default function ImportPlanningModal({ profiles, unit, onClose, onImported }) {
@@ -364,17 +366,30 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
       } catch (e) { errors.push(e.message) }
     }
 
+    // 5. Souhaits / Remarques → day_notes
+    for (const entry of preview.entries.filter(e => e.type === 'day_note')) {
+      if (!entry.date || !entry.noteText) continue
+      try {
+        const { error } = await supabase.from('day_notes').upsert(
+          { date: entry.date, unit_id: unit?.id ?? 'julliard', content: entry.noteText },
+          { onConflict: 'date,unit_id' }
+        )
+        if (error) errors.push(`Souhait/Remarque ${entry.date}: ${error.message}`)
+      } catch (e) { errors.push(e.message) }
+    }
+
     setImportErrors(errors)
     setStep('done')
     if (errors.length === 0) onImported?.()
   }
 
-  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure' && e.type !== 'day_closure') ?? []
+  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure' && e.type !== 'day_closure' && e.type !== 'day_note') ?? []
   const scheduleEntries = preview?.entries.filter(e => e.type === 'schedule') ?? []
   const closureEntries  = preview?.entries.filter(e => e.type === 'closure') ?? []
   const dayClosureEntries = preview?.entries.filter(e => e.type === 'day_closure') ?? []
+  const dayNoteEntries  = preview?.entries.filter(e => e.type === 'day_note') ?? []
   const matchedCount    = personEntries.filter(e => e.profile).length
-  const unmatchedCount  = personEntries.filter(e => e.excelName && !e.profile).length
+  const unmatchedCount  = personEntries.filter(e => e.excelName && !e.profile && e.type !== 'day_note').length
   const dates = preview ? [...new Set(preview.entries.map(e => e.date))] : []
 
   return (
@@ -461,6 +476,12 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                     <span className="text-sm font-semibold" style={{ color: WARM.text }}>{dayClosureEntries.length} jour(s) férié(s)</span>
                   </div>
                 )}
+                {dayNoteEntries.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-400" />
+                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{dayNoteEntries.length} remarque(s)</span>
+                  </div>
+                )}
                 <span className="text-xs ml-auto" style={{ color: WARM.textFaint }}>{dates.length} jour(s)</span>
               </div>
 
@@ -471,7 +492,8 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                   const daySched   = scheduleEntries.filter(e => e.date === date)
                   const dayClose   = closureEntries.filter(e => e.date === date)
                   const dayDayCls  = dayClosureEntries.filter(e => e.date === date)
-                  const allDay     = [...dayDayCls, ...dayPerson, ...daySched, ...dayClose]
+                  const dayNotes   = dayNoteEntries.filter(e => e.date === date)
+                  const allDay     = [...dayDayCls, ...dayPerson, ...daySched, ...dayClose, ...dayNotes]
                   const label     = allDay[0]?.dayLabel ?? date
                   return (
                     <div key={date}>
@@ -511,6 +533,11 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                                     <span style={{ color: WARM.textFaint }}> · ferme {entry.closingTime}</span>
                                   )}
                                 </span>
+                              </div>
+                            ) : entry.type === 'day_note' ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                                <span className="italic" style={{ color: WARM.textSub }}>{entry.noteText}</span>
                               </div>
                             ) : entry.profile ? (
                               <div className="flex items-center gap-1.5">
