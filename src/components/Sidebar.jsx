@@ -27,6 +27,7 @@ const ROOM_NAMES = {
   1: 'Gastro 4', 2: 'Gastro 5', 3: 'Broncho 7', 4: 'Radio 11',
   5: 'Radio 12', 6: 'Neuro-radio 13', 7: 'Cardio 17', 8: 'Tardif', 9: 'Consultation',
   10: 'Viscérale 10', 11: 'Urg Viscérale 11', 12: 'Viscérale 12', 13: 'Uro 13', 14: 'Viscérale 14',
+  15: 'Consultation', 16: 'Visite J+1', 17: 'Consultation greffe',
 }
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']

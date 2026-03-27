@@ -164,11 +164,11 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17])
 
 const UNIT_ROOMS = {
   'hors-bloc': [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  'julliard':  [10, 11, 12, 13, 14],
+  'julliard':  [10, 11, 12, 13, 14, 15, 16, 17],
 }
 
 const ROOM_NAMES = {
@@ -188,6 +188,9 @@ const ROOM_NAMES = {
   12: 'Viscérale 12',
   13: 'Uro 13',
   14: 'Viscérale 14',
+  15: 'Consultation',
+  16: 'Visite J+1',
+  17: 'Consultation greffe',
 }
 
 // Horaires par défaut — salle 8 (Tardif) : pas d'ouverture, fermeture 19h
@@ -201,12 +204,15 @@ const DEFAULT_SCHEDULES = {
   7:  { opening_time: '07:00', closing_time: '16:00' },
   8:  { opening_time: null,    closing_time: '19:00' },
   9:  { opening_time: '08:00', closing_time: '16:00' },
-  // Julliard — toutes ouvrent à 7h
+  // Julliard
   10: { opening_time: '07:00', closing_time: '16:00' },
   11: { opening_time: '07:00', closing_time: '19:00' },
   12: { opening_time: '07:00', closing_time: '16:00' },
   13: { opening_time: '07:00', closing_time: '17:00' },
   14: { opening_time: '07:00', closing_time: '19:00' },
+  15: { opening_time: '08:00', closing_time: '16:00' },
+  16: { opening_time: '08:00', closing_time: '16:00' },
+  17: { opening_time: '08:00', closing_time: '16:00' },
 }
 
 const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
@@ -243,6 +249,83 @@ function formatDateKey(date) {
 function getCurrentTime() {
   const now = new Date()
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+function SouhaitsCard({ date, unitId, canEdit, theme }) {
+  const T = theme
+  const [note, setNote] = useState(null)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    if (!date || !unitId) return
+    supabase.from('day_notes').select('*').eq('date', date).eq('unit_id', unitId).maybeSingle()
+      .then(({ data }) => setNote(data ?? null))
+  }, [date, unitId])
+
+  async function save() {
+    const { data } = await supabase.from('day_notes').upsert(
+      { date, unit_id: unitId, content: draft },
+      { onConflict: 'date,unit_id' }
+    ).select().maybeSingle()
+    setNote(data)
+    setEditing(false)
+  }
+
+  function startEdit() { setDraft(note?.content ?? ''); setEditing(true) }
+
+  return (
+    <div style={{ background: T.cardBg, borderColor: T.border, boxShadow: '0 2px 12px rgba(180,130,60,0.08)' }}
+      className="rounded-2xl border overflow-hidden flex flex-col">
+      <div style={{ background: T.cardHead, borderColor: T.border }}
+        className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b">
+        <div className="flex items-center gap-2">
+          <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+          <span className="font-bold text-sm" style={{ color: T.text }}>Souhait / Remarque</span>
+        </div>
+        {canEdit && !editing && (
+          <button onClick={startEdit}
+            className="text-xs px-2.5 py-1 rounded-lg font-medium hover:opacity-80 transition-opacity"
+            style={{ background: T.surface, color: T.accent }}>
+            Modifier
+          </button>
+        )}
+      </div>
+      <div className="px-3 py-3 flex-1">
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              rows={4}
+              placeholder="Saisir un souhait ou une remarque..."
+              style={{ background: T.surface, borderColor: T.border, color: T.text }}
+              className="w-full text-sm px-3 py-2 rounded-xl border resize-none focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setEditing(false)}
+                className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                style={{ background: T.surface, color: T.textSub, border: `1px solid ${T.border}` }}>
+                Annuler
+              </button>
+              <button onClick={save}
+                className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white"
+                style={{ background: T.accentBar }}>
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        ) : note?.content ? (
+          <p className="text-sm whitespace-pre-wrap" style={{ color: T.text }}>{note.content}</p>
+        ) : (
+          <p className="text-sm italic" style={{ color: T.textFaint }}>
+            {canEdit ? 'Cliquer sur Modifier pour ajouter une remarque.' : 'Aucune remarque pour ce jour.'}
+          </p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
@@ -764,6 +847,14 @@ export default function Dashboard({ sector, unit, onBack }) {
                 theme={T}
               />
             ))}
+            {unit?.id === 'julliard' && (
+              <SouhaitsCard
+                date={selectedDate}
+                unitId="julliard"
+                canEdit={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
+                theme={T}
+              />
+            )}
           </div>
         )}
       </main>
