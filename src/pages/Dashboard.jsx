@@ -4,7 +4,7 @@ import ImportPlanningModal from '../components/ImportPlanningModal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
-import RoomCard from '../components/RoomCard'
+import RoomCard, { WARM as WARM_THEME, SKY as SKY_THEME } from '../components/RoomCard'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
@@ -22,7 +22,8 @@ const WARM = {
   textFaint: '#9E9489',
 }
 
-function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel }) {
+function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme }) {
+  const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const [supervisor, setSupervisor] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -69,84 +70,84 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel }) {
     !search || p.full_name.toLowerCase().includes(search.toLowerCase()))
 
   return (
-    <div style={{ background: WARM.cardBg, borderColor: WARM.border, boxShadow: '0 2px 12px rgba(180,130,60,0.08)' }}
+    <div style={{ background: T.cardBg, borderColor: T.border, boxShadow: '0 2px 12px rgba(180,130,60,0.08)' }}
       className="rounded-2xl border overflow-visible mb-4 col-span-full">
-      <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+      <div style={{ background: T.cardHead, borderColor: T.border }}
         className="px-4 pt-3 pb-2.5 flex items-center gap-2 border-b">
-        <span style={{ background: WARM.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
-        <ShieldCheck size={14} style={{ color: WARM.accentBar }} />
-        <span className="font-bold text-sm" style={{ color: WARM.text }}>Superviseur {unitLabel}</span>
+        <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+        <ShieldCheck size={14} style={{ color: T.accentBar }} />
+        <span className="font-bold text-sm" style={{ color: T.text }}>Superviseur {unitLabel}</span>
       </div>
 
       <div className="px-4 py-3 flex items-center gap-3">
         {loading ? (
-          <span className="text-sm italic" style={{ color: WARM.textFaint }}>Chargement...</span>
+          <span className="text-sm italic" style={{ color: T.textFaint }}>Chargement...</span>
         ) : supervisor ? (
           <>
-            <div style={{ background: WARM.surface, borderColor: WARM.border }}
+            <div style={{ background: T.surface, borderColor: T.border }}
               className="flex-1 flex items-center gap-2.5 rounded-xl px-3 py-2 border">
-              <div style={{ background: WARM.accentBar }}
+              <div style={{ background: T.accentBar }}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                 {supervisor.full_name.charAt(0)}
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: WARM.text }}>
+                <p className="text-sm font-semibold" style={{ color: T.text }}>
                   Dr. {supervisor.full_name}
                 </p>
-                <p className="text-xs" style={{ color: WARM.textFaint }}>
+                <p className="text-xs" style={{ color: T.textFaint }}>
                   {supervisor.grade === 'adjoint' ? 'Adjoint' : 'Chef de clinique'}
                 </p>
               </div>
             </div>
             {canManage && (
               <button onClick={removeSupervisor}
-                style={{ color: WARM.textFaint }}
+                style={{ color: T.textFaint }}
                 className="p-1.5 hover:text-red-500 transition-colors flex-shrink-0">
                 <X size={16} />
               </button>
             )}
           </>
         ) : (
-          <span className="text-sm italic" style={{ color: WARM.textFaint }}>Aucun superviseur assigné</span>
+          <span className="text-sm italic" style={{ color: T.textFaint }}>Aucun superviseur assigné</span>
         )}
 
         {canManage && (
           <div className="relative flex-shrink-0" ref={dropRef}>
             <button onClick={() => { setOpen(v => !v); setSearch('') }}
-              style={{ background: WARM.accentBar }}
+              style={{ background: T.accentBar }}
               className="flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity">
               {supervisor ? 'Changer' : 'Assigner'}
               <ChevronDown size={14} />
             </button>
 
             {open && (
-              <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+              <div style={{ background: T.cardBg, borderColor: T.border }}
                 className="absolute right-0 top-full mt-2 w-64 border rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="p-2 border-b" style={{ borderColor: WARM.border }}>
+                <div className="p-2 border-b" style={{ borderColor: T.border }}>
                   <input
                     autoFocus
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Rechercher..."
-                    style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
+                    style={{ background: T.surface, borderColor: T.border, color: T.text }}
                     className="w-full text-sm px-3 py-1.5 rounded-lg border focus:outline-none placeholder-gray-400"
                   />
                 </div>
                 <div className="max-h-56 overflow-y-auto py-1">
                   {filtered.length === 0 ? (
-                    <p className="text-xs text-center py-3" style={{ color: WARM.textFaint }}>Aucun résultat</p>
+                    <p className="text-xs text-center py-3" style={{ color: T.textFaint }}>Aucun résultat</p>
                   ) : filtered.map(p => (
                     <button key={p.id} onClick={() => assignSupervisor(p)}
-                      style={{ color: WARM.text }}
+                      style={{ color: T.text }}
                       className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity flex items-center gap-2">
-                      <div style={{ background: WARM.surface }}
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: WARM.accentBar, color: '#fff' }}>
+                      <div style={{ background: T.surface }}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: T.accentBar, color: '#fff' }}>
                         {p.full_name.charAt(0)}
                       </div>
                       <div>
                         <span className="font-medium">Dr. {p.full_name}</span>
-                        <span className="text-xs ml-1.5" style={{ color: WARM.textFaint }}>
+                        <span className="text-xs ml-1.5" style={{ color: T.textFaint }}>
                           {p.grade === 'adjoint' ? 'Adj.' : 'CDC'}
                         </span>
                       </div>
@@ -245,6 +246,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const { profile } = useAuth()
   const ROOMS = UNIT_ROOMS[unit?.id] ?? UNIT_ROOMS['hors-bloc']
   const unitLabel = unit?.name ?? 'HB'
+  const T = unit?.id === 'julliard' ? SKY_THEME : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
   const [roomSchedules, setRoomSchedules] = useState([])
@@ -395,15 +397,15 @@ export default function Dashboard({ sector, unit, onBack }) {
   })
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#EDEAE5' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: T.pageBg }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} selectedDate={selectedDate} />
       <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
 
       {/* Sélecteur semaine/jour */}
-      <div className="border-b px-4 py-3" style={{ background: '#F0EDE8', borderColor: '#CEC8BF' }}>
+      <div className="border-b px-4 py-3" style={{ background: T.cardHead, borderColor: T.border }}>
         <div className="max-w-4xl mx-auto space-y-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: '#6B5F52' }}>
+            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: T.textSub }}>
               <ChevronLeft size={18} />
             </button>
             <div className="flex flex-1 gap-2">
@@ -414,17 +416,17 @@ export default function Dashboard({ sector, unit, onBack }) {
                 return (
                   <button key={i} onClick={() => handleWeekSelect(i)}
                     style={isSelected
-                      ? { background: '#8A7560', color: '#fff' }
+                      ? { background: T.accentBar, color: '#fff' }
                       : containsToday
-                        ? { background: '#EAE7E2', color: '#6B5C48', border: '1px solid #CEC8BF' }
-                        : { background: '#E2DED8', color: '#6B5F52' }}
+                        ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
+                        : { background: T.surface, color: T.textSub }}
                     className="flex-1 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80">
                     S{weekNum}
                   </button>
                 )
               })}
             </div>
-            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: '#6B5F52' }}>
+            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: T.textSub }}>
               <ChevronRight size={18} />
             </button>
           </div>
@@ -438,10 +440,10 @@ export default function Dashboard({ sector, unit, onBack }) {
               return (
                 <button key={i} onClick={() => setSelectedDate(dateStr)}
                   style={isSelected
-                    ? { background: '#8A7560', color: '#fff' }
+                    ? { background: T.accentBar, color: '#fff' }
                     : isToday
-                      ? { background: '#EAE7E2', color: '#6B5C48', border: '1px solid #CEC8BF' }
-                      : { color: isPast ? '#B8B0A4' : '#6B5F52' }}
+                      ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
+                      : { color: isPast ? T.textFaint : T.textSub }}
                   className="flex-1 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80 flex flex-col items-center gap-0.5">
                   <span className="text-xs uppercase tracking-wide">{DAY_NAMES[i]}</span>
                   <span className="text-sm font-bold">{day.getDate()}</span>
@@ -453,19 +455,19 @@ export default function Dashboard({ sector, unit, onBack }) {
       </div>
 
       {/* Barre info */}
-      <div className="border-b px-4 py-2" style={{ background: '#F0EDE8', borderColor: '#CEC8BF' }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: '#6B5F52' }}>
-          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: '#2A2318' }}>{totalAssigned}</span> affecté(s)</span>
+      <div className="border-b px-4 py-2" style={{ background: T.cardHead, borderColor: T.border }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: T.textSub }}>
+          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: T.text }}>{totalAssigned}</span> affecté(s)</span>
           <div className="flex items-center gap-2">
             {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
               <button onClick={() => setShowImport(true)}
                 className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-                style={{ background: '#E2DED8', color: '#6B5C48' }}>
+                style={{ background: T.surface, color: T.accent }}>
                 <FileSpreadsheet size={13} />
                 Import
               </button>
             )}
-            <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: '#6B5C48' }}>
+            <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
               <RefreshCw size={14} />
             </button>
           </div>
@@ -476,7 +478,7 @@ export default function Dashboard({ sector, unit, onBack }) {
       <main className="flex-1 px-3 py-4 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center" style={{ color: '#6B5F52' }}>
+            <div className="text-center" style={{ color: T.textSub }}>
               <RefreshCw size={28} className="mx-auto mb-2 animate-spin" />
               <p className="text-sm">Chargement...</p>
             </div>
@@ -489,6 +491,7 @@ export default function Dashboard({ sector, unit, onBack }) {
               canManage={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
               unitId={unit?.id ?? 'hors-bloc'}
               unitLabel={unitLabel}
+              theme={T}
             />
             {ROOMS.map(roomId => (
               <RoomCard
@@ -508,6 +511,7 @@ export default function Dashboard({ sector, unit, onBack }) {
                 onProfileClick={(p) => setSelectedProfile(p)}
                 onUpdateTime={handleUpdateAssignmentTime}
                 onUpdateRoomSchedule={handleUpdateRoomSchedule}
+                theme={T}
               />
             ))}
           </div>

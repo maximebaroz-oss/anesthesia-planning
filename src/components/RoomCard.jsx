@@ -32,8 +32,7 @@ const STATUS_CONFIG = {
   available:    { dot: 'bg-amber-400',  label: 'Disponible' },
 }
 
-// Palette Hors Bloc — gris chauds sobres
-const WARM = {
+export const WARM = {
   pageBg:    '#EDEAE5',
   cardBg:    '#F5F3F0',
   cardHead:  '#EAE7E2',
@@ -41,26 +40,38 @@ const WARM = {
   borderAlt: '#B8B0A4',
   surface:   '#E2DED8',
   surfaceHov:'#D6D0C8',
-  accent:    '#6B5C48',   // brun-gris foncé
-  accentBar: '#8A7560',   // brun-gris moyen
+  accent:    '#6B5C48',
+  accentBar: '#8A7560',
   text:      '#2A2318',
   textSub:   '#6B5F52',
   textFaint: '#9E9489',
 }
 
-function TimeInput({ value, onSave, placeholder = '--:--', editable = true, large = false }) {
+export const SKY = {
+  pageBg:    '#EFF6FF',
+  cardBg:    '#F0F7FF',
+  cardHead:  '#DBEAFE',
+  border:    '#BFDBFE',
+  borderAlt: '#93C5FD',
+  surface:   '#EFF6FF',
+  surfaceHov:'#DBEAFE',
+  accent:    '#1D4ED8',
+  accentBar: '#3B82F6',
+  text:      '#1E3A5F',
+  textSub:   '#3B6FAD',
+  textFaint: '#7BA3C8',
+}
+
+function TimeInput({ value, onSave, placeholder = '--:--', editable = true, large = false, theme }) {
+  const T = theme ?? WARM
   const [editing, setEditing] = useState(false)
   const [draft,   setDraft]   = useState(value ?? '')
 
-  const cls = large
-    ? 'text-2xl font-bold tracking-tight'
-    : 'text-xs'
-  const style = large
-    ? { color: WARM.text }
-    : { color: WARM.textSub }
+  const cls = large ? 'text-2xl font-bold tracking-tight' : 'text-xs'
+  const style = large ? { color: T.text } : { color: T.textSub }
 
   if (!editable)
-    return <span className={cls} style={style}>{value ?? <span style={{ color: WARM.textFaint }}>{placeholder}</span>}</span>
+    return <span className={cls} style={style}>{value ?? <span style={{ color: T.textFaint }}>{placeholder}</span>}</span>
 
   if (editing)
     return (
@@ -71,7 +82,7 @@ function TimeInput({ value, onSave, placeholder = '--:--', editable = true, larg
           if (e.key === 'Enter') { onSave(draft); setEditing(false) }
           if (e.key === 'Escape') setEditing(false)
         }}
-        style={{ background: WARM.surface, borderColor: WARM.accentBar, color: WARM.text }}
+        style={{ background: T.surface, borderColor: T.accentBar, color: T.text }}
         className={`border rounded px-1 py-0.5 focus:outline-none ${large ? 'w-20 text-xl' : 'w-16 text-xs'}`}
         autoFocus
       />
@@ -80,7 +91,7 @@ function TimeInput({ value, onSave, placeholder = '--:--', editable = true, larg
   return (
     <button onClick={() => { setDraft(value ?? ''); setEditing(true) }}
       className={`hover:opacity-60 transition-opacity ${cls}`} style={style}>
-      {value ?? <span style={{ color: WARM.textFaint }}>{placeholder}</span>}
+      {value ?? <span style={{ color: T.textFaint }}>{placeholder}</span>}
     </button>
   )
 }
@@ -92,10 +103,11 @@ function gradeLabel(grade) {
   return ''
 }
 
-function TypeBadge({ isMedecin }) {
+function TypeBadge({ isMedecin, theme }) {
+  const T = theme ?? WARM
   return (
     <span style={{
-      background: WARM.surface,
+      background: T.surface,
       borderColor: isMedecin ? '#FCA5A5' : '#93C5FD',
       color: isMedecin ? '#DC2626' : '#2563EB',
     }} className="text-xs font-bold px-1.5 py-0.5 rounded border flex-shrink-0">
@@ -104,31 +116,32 @@ function TypeBadge({ isMedecin }) {
   )
 }
 
-function JoinConfirmModal({ onConfirm, onCancel }) {
+function JoinConfirmModal({ onConfirm, onCancel, theme }) {
+  const T = theme ?? WARM
   const [startTime, setStartTime] = useState(getCurrentTime())
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+      <div style={{ background: T.cardBg, borderColor: T.border }}
         className="border rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
-        <div style={{ borderColor: WARM.border, color: WARM.text }} className="px-5 py-4 border-b font-bold">
+        <div style={{ borderColor: T.border, color: T.text }} className="px-5 py-4 border-b font-bold">
           Rejoindre la salle
         </div>
         <div className="px-5 py-4">
-          <label style={{ color: WARM.textSub }} className="text-xs font-semibold uppercase tracking-widest block mb-2">
+          <label style={{ color: T.textSub }} className="text-xs font-semibold uppercase tracking-widest block mb-2">
             Heure de début
           </label>
           <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-            style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
-            className="w-full border rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            style={{ background: T.surface, borderColor: T.border, color: T.text }}
+            className="w-full border rounded-xl px-3 py-2.5 focus:outline-none" />
         </div>
         <div className="px-5 pb-4 flex gap-2">
           <button onClick={onCancel}
-            style={{ background: WARM.surface, color: WARM.textSub }}
+            style={{ background: T.surface, color: T.textSub }}
             className="flex-1 text-sm font-medium py-2.5 rounded-xl hover:opacity-80 transition-opacity">
             Annuler
           </button>
           <button onClick={() => onConfirm(startTime)}
-            style={{ background: WARM.accentBar }}
+            style={{ background: T.accentBar }}
             className="flex-1 text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
             <UserPlus size={14} /> Rejoindre
           </button>
@@ -138,27 +151,28 @@ function JoinConfirmModal({ onConfirm, onCancel }) {
   )
 }
 
-function LeaveConfirmModal({ name, onConfirm, onCancel }) {
+function LeaveConfirmModal({ name, onConfirm, onCancel, theme }) {
+  const T = theme ?? WARM
   const [endTime, setEndTime] = useState(getCurrentTime())
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+      <div style={{ background: T.cardBg, borderColor: T.border }}
         className="border rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
-        <div style={{ borderColor: WARM.border }} className="px-5 py-4 border-b">
-          <p style={{ color: WARM.text }} className="font-bold">Quitter la salle ?</p>
-          {name && <p style={{ color: WARM.textSub }} className="text-xs mt-0.5">{name}</p>}
+        <div style={{ borderColor: T.border }} className="px-5 py-4 border-b">
+          <p style={{ color: T.text }} className="font-bold">Quitter la salle ?</p>
+          {name && <p style={{ color: T.textSub }} className="text-xs mt-0.5">{name}</p>}
         </div>
         <div className="px-5 py-4">
-          <label style={{ color: WARM.textSub }} className="text-xs font-semibold uppercase tracking-widest block mb-2">
+          <label style={{ color: T.textSub }} className="text-xs font-semibold uppercase tracking-widest block mb-2">
             Heure de fin
           </label>
           <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-            style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
-            className="w-full border rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            style={{ background: T.surface, borderColor: T.border, color: T.text }}
+            className="w-full border rounded-xl px-3 py-2.5 focus:outline-none" />
         </div>
         <div className="px-5 pb-4 flex gap-2">
           <button onClick={onCancel}
-            style={{ background: WARM.surface, color: WARM.textSub }}
+            style={{ background: T.surface, color: T.textSub }}
             className="flex-1 text-sm font-medium py-2.5 rounded-xl hover:opacity-80 transition-opacity">
             Annuler
           </button>
@@ -172,7 +186,8 @@ function LeaveConfirmModal({ name, onConfirm, onCancel }) {
   )
 }
 
-function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProfileClick, onMouseEnter, onMouseLeave, onRequestLeave }) {
+function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProfileClick, onMouseEnter, onMouseLeave, onRequestLeave, theme }) {
+  const T = theme ?? WARM
   const endTime      = a.end_time?.slice(0, 5)   ?? null
   const startTime    = a.start_time?.slice(0, 5) ?? null
   const personIsLate = isToday && endTime && isLate(endTime)
@@ -180,32 +195,30 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
   const isMedecin    = a.profiles?.profession === 'medecin'
   const isValidated  = !!startTime
   const isSenior     = ['adjoint', 'chef_clinique'].includes(a.profiles?.grade)
-  const canValidate  = !!currentProfile // n'importe qui de connecté peut valider
+  const canValidate  = !!currentProfile
 
-  // Bordure : verte (médecin) ou bleue (ISA) si validé, neutre sinon
   const borderColor = isValidated
     ? (isMedecin ? '#86EFAC' : '#93C5FD')
-    : WARM.border
+    : T.border
   const borderCls = isValidated && isSenior ? 'border-4' : 'border'
 
   return (
-    <li style={{ background: WARM.surface, borderColor }}
+    <li style={{ background: T.surface, borderColor }}
       className={`rounded-xl px-2.5 py-2 space-y-1 ${borderCls}`}>
       <div className="flex items-center gap-2 min-w-0">
-        <TypeBadge isMedecin={isMedecin} />
+        <TypeBadge isMedecin={isMedecin} theme={theme} />
         <button onClick={() => onProfileClick(a.profiles)}
           onMouseEnter={e => onMouseEnter(a.profiles, e)} onMouseLeave={onMouseLeave}
           className="flex-1 min-w-0 text-left">
           <p className={`text-xs font-semibold ${personIsLate ? 'text-red-500' : ''}`}
-            style={personIsLate ? {} : { color: WARM.text }}>
+            style={personIsLate ? {} : { color: T.text }}>
             {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
           </p>
           {a.profiles?.grade && (
-            <p className="text-xs leading-none" style={{ color: WARM.textFaint }}>{gradeLabel(a.profiles.grade)}</p>
+            <p className="text-xs leading-none" style={{ color: T.textFaint }}>{gradeLabel(a.profiles.grade)}</p>
           )}
         </button>
 
-        {/* Bouton valider présence (si pas encore validé) */}
         {!isValidated && canValidate && (
           <button
             onClick={() => onUpdateTime(a.id, 'start_time', getCurrentTime())}
@@ -218,20 +231,19 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
 
         {(isMine || canManage) && (
           <button onClick={() => onRequestLeave(a)}
-            style={{ color: WARM.textFaint }}
+            style={{ color: T.textFaint }}
             className="p-0.5 hover:text-red-500 transition-colors flex-shrink-0">
             <X size={11} />
           </button>
         )}
       </div>
 
-      {/* Horaires — uniquement si validé */}
       {isValidated && (
         <div className="flex items-center gap-1 pl-8">
-          <Clock size={9} style={{ color: WARM.textFaint }} className="flex-shrink-0" />
-          <TimeInput value={startTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} />
-          <span style={{ color: WARM.textFaint }} className="text-xs">→</span>
-          <TimeInput value={endTime}   placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time',   v)} />
+          <Clock size={9} style={{ color: T.textFaint }} className="flex-shrink-0" />
+          <TimeInput value={startTime} placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'start_time', v)} theme={theme} />
+          <span style={{ color: T.textFaint }} className="text-xs">→</span>
+          <TimeInput value={endTime}   placeholder="--:--" editable={isMine || canManage} onSave={v => onUpdateTime(a.id, 'end_time',   v)} theme={theme} />
           {!personIsLate && (
             <div className="ml-1 w-4 h-4 rounded-full bg-green-100 border border-green-300 flex items-center justify-center flex-shrink-0">
               <span className="text-green-600" style={{ fontSize: '9px' }}>✓</span>
@@ -248,7 +260,10 @@ export default function RoomCard({
   currentProfile, isToday,
   onJoin, onLeave, onClose, onOpen, onAssign, onProfileClick,
   onUpdateTime, onUpdateRoomSchedule,
+  theme,
 }) {
+  const T = theme ?? WARM
+
   const status          = getRoomStatus(roomId, closures, assignments)
   const isClosed        = status === 'closed'
   const roomAssignments = assignments.filter(a => a.room_id === roomId)
@@ -290,73 +305,74 @@ export default function RoomCard({
   return (
     <>
       {tooltip && (
-        <div style={{ background: WARM.cardBg, borderColor: WARM.border, top: tooltip.top, left: tooltip.left, color: WARM.text }}
+        <div style={{ background: T.cardBg, borderColor: T.border, top: tooltip.top, left: tooltip.left, color: T.text }}
           className="fixed z-50 border text-xs rounded-xl px-3 py-1.5 shadow-xl pointer-events-none flex items-center gap-1.5">
-          <Phone size={11} style={{ color: WARM.accentBar }} /> {tooltip.phone}
+          <Phone size={11} style={{ color: T.accentBar }} /> {tooltip.phone}
         </div>
       )}
       {showJoinConfirm && (
         <JoinConfirmModal
+          theme={theme}
           onConfirm={st => { onJoin(roomId, st); setShowJoinConfirm(false) }}
           onCancel={() => setShowJoinConfirm(false)}
         />
       )}
       {leaveTarget && (
-        <LeaveConfirmModal name={leaveTarget.name} onConfirm={handleConfirmLeave} onCancel={() => setLeaveTarget(null)} />
+        <LeaveConfirmModal theme={theme} name={leaveTarget.name} onConfirm={handleConfirmLeave} onCancel={() => setLeaveTarget(null)} />
       )}
 
       <div style={{
-        background: WARM.cardBg,
-        borderColor: roomIsLate ? '#EF4444' : WARM.border,
+        background: T.cardBg,
+        borderColor: roomIsLate ? '#EF4444' : T.border,
         boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
       }} className="rounded-2xl border overflow-hidden flex flex-col">
 
-        {/* ── En-tête ── */}
-        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+        {/* En-tête */}
+        <div style={{ background: T.cardHead, borderColor: T.border }}
           className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b">
           <div className="flex items-center gap-2 min-w-0">
-            <span style={{ background: WARM.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
-            <span className="font-bold text-sm" style={{ color: isClosed ? WARM.textFaint : WARM.text }}>
+            <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+            <span className="font-bold text-sm" style={{ color: isClosed ? T.textFaint : T.text }}>
               {roomSchedule?.activity ?? roomName ?? `Salle ${roomId}`}
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className={`w-3.5 h-3.5 rounded-full ${config.dot}`} />
-            {isClosed && <Lock size={13} style={{ color: WARM.textFaint }} />}
+            {isClosed && <Lock size={13} style={{ color: T.textFaint }} />}
           </div>
         </div>
 
-        {/* ── Horaire salle ── */}
+        {/* Horaire salle */}
         {!isClosed && (
           <div className="px-3 pt-2.5 pb-3">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: WARM.textFaint }}>Horaire</p>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: T.textFaint }}>Horaire</p>
             <div className="flex items-center gap-1.5">
-              <TimeInput value={openingTime} placeholder="--:--" editable={canManage} large
+              <TimeInput value={openingTime} placeholder="--:--" editable={canManage} large theme={theme}
                 onSave={v => onUpdateRoomSchedule(roomId, 'opening_time', v)} />
-              <span className="text-xl font-bold" style={{ color: roomIsLate ? '#EF4444' : WARM.text }}> - </span>
-              <TimeInput value={closingTime} placeholder="--:--" editable={canManage} large
+              <span className="text-xl font-bold" style={{ color: roomIsLate ? '#EF4444' : T.text }}> - </span>
+              <TimeInput value={closingTime} placeholder="--:--" editable={canManage} large theme={theme}
                 onSave={v => onUpdateRoomSchedule(roomId, 'closing_time', v)} />
               {roomIsLate && <span className="text-red-500 text-xs font-bold ml-1">⚠</span>}
             </div>
           </div>
         )}
 
-        {/* ── Séparateur ── */}
-        <div style={{ borderColor: WARM.border }} className="border-t mx-3" />
+        {/* Séparateur */}
+        <div style={{ borderColor: T.border }} className="border-t mx-3" />
 
-        {/* ── Personnel ── */}
+        {/* Personnel */}
         <div className="flex-1 px-3 py-3">
           {isClosed ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
-              <Lock size={24} style={{ color: WARM.textFaint }} className="mb-2" />
-              <p className="text-sm font-medium" style={{ color: WARM.textFaint }}>Salle fermée</p>
+              <Lock size={24} style={{ color: T.textFaint }} className="mb-2" />
+              <p className="text-sm font-medium" style={{ color: T.textFaint }}>Salle fermée</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {/* ── Médecins ── */}
+              {/* Médecins */}
               <div className="space-y-1.5">
                 {medecins.map(a => (
-                  <PersonRow key={a.id} a={a}
+                  <PersonRow key={a.id} a={a} theme={theme}
                     isToday={isToday} currentProfile={currentProfile} canManage={canManage}
                     onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
                     onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
@@ -369,14 +385,14 @@ export default function RoomCard({
                     +
                   </button>
                 ) : medecins.length === 0 ? (
-                  <span className="text-xs italic" style={{ color: WARM.textFaint }}>Aucun médecin</span>
+                  <span className="text-xs italic" style={{ color: T.textFaint }}>Aucun médecin</span>
                 ) : null}
               </div>
 
-              {/* ── ISA ── */}
+              {/* ISA */}
               <div className="space-y-1.5">
                 {infirmiers.map(a => (
-                  <PersonRow key={a.id} a={a}
+                  <PersonRow key={a.id} a={a} theme={theme}
                     isToday={isToday} currentProfile={currentProfile} canManage={canManage}
                     onUpdateTime={onUpdateTime} onProfileClick={onProfileClick}
                     onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
@@ -389,33 +405,33 @@ export default function RoomCard({
                     +
                   </button>
                 ) : infirmiers.length === 0 ? (
-                  <span className="text-xs italic" style={{ color: WARM.textFaint }}>Aucun ISA</span>
+                  <span className="text-xs italic" style={{ color: T.textFaint }}>Aucun ISA</span>
                 ) : null}
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Actions ── */}
-        <div style={{ borderColor: WARM.border }} className="border-t px-3 pt-2.5 pb-3 space-y-2">
+        {/* Actions */}
+        <div style={{ borderColor: T.border }} className="border-t px-3 pt-2.5 pb-3 space-y-2">
           {!isClosed ? (
             <>
               {!isAssigned ? (
                 <button onClick={() => setShowJoinConfirm(true)}
-                  style={{ background: WARM.accentBar }}
+                  style={{ background: T.accentBar }}
                   className="w-full flex items-center justify-center gap-2 text-white text-sm font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity">
                   <UserPlus size={15} /> Rejoindre
                 </button>
               ) : (
                 <button onClick={() => myAssignment && handleRequestLeave(myAssignment)}
-                  style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.textSub }}
+                  style={{ background: T.surface, borderColor: T.border, color: T.textSub }}
                   className="w-full flex items-center justify-center gap-2 border text-sm font-medium py-2.5 rounded-xl hover:opacity-80 transition-opacity">
                   <LogOut size={14} /> Me retirer
                 </button>
               )}
               {isAdmin && (
                 <button onClick={() => onClose(roomId)}
-                  style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.textFaint }}
+                  style={{ background: T.surface, borderColor: T.border, color: T.textFaint }}
                   className="flex items-center justify-center border p-2 rounded-xl hover:opacity-80 transition-opacity">
                   <Lock size={16} />
                 </button>
