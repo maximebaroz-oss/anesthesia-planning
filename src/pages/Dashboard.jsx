@@ -245,26 +245,39 @@ function getCurrentTime() {
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
-function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, theme, onClose }) {
+function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
   const T = theme
-  const unitProfiles = allProfiles.filter(p =>
-    p.profession === 'medecin' || p.profession === 'infirmier'
-  )
-  const medecins  = unitProfiles.filter(p => p.profession === 'medecin')
-  const infirmiers = unitProfiles.filter(p => p.profession === 'infirmier')
+  const [adding, setAdding] = useState(null) // { profession, search, userId, roomId }
+  const medecins   = allProfiles.filter(p => p.profession === 'medecin')
+  const infirmiers = allProfiles.filter(p => p.profession === 'infirmier')
 
-  function getAssignments(userId) {
-    return assignments.filter(a => a.user_id === userId)
+  function getAssignments(userId) { return assignments.filter(a => a.user_id === userId) }
+  function getRoomName(roomId) { return roomNames[roomId] ?? `Salle ${roomId}` }
+
+  async function removeUser(userId) {
+    await supabase.from('assignments').delete().eq('user_id', userId).eq('date', selectedDate)
+    onRefresh()
   }
-  function getRoomName(roomId) {
-    return roomNames[roomId] ?? `Salle ${roomId}`
+
+  async function addAssignment() {
+    if (!adding?.userId || !adding?.roomId) return
+    const { data: existing } = await supabase.from('assignments').select('id')
+      .eq('user_id', adding.userId).eq('room_id', adding.roomId).eq('date', selectedDate).maybeSingle()
+    if (!existing) {
+      await supabase.from('assignments').insert({
+        user_id: adding.userId, room_id: adding.roomId,
+        date: selectedDate, assigned_by: currentProfile?.id,
+      })
+    }
+    setAdding(null)
+    onRefresh()
   }
 
   function PersonLine({ p }) {
     const asgns = getAssignments(p.id)
     const isMed = p.profession === 'medecin'
     return (
-      <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
         style={{ background: T.cardBg, border: `1px solid ${T.border}` }}>
         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
           style={{ background: T.accentBar }}>
@@ -283,6 +296,109 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
               </span>
             ))}
           </div>
+        </div>
+        {canManage && (
+          <button onClick={() => removeUser(p.id)}
+            className="p-1 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+            style={{ color: T.textFaint }}>
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  function AddPanel({ profession }) {
+    const pool = (profession === 'medecin' ? medecins : infirmiers)
+      .filter(p => getAssignments(p.id).length === 0)
+    const search = adding?.search ?? ''
+    const filtered = pool.filter(p => p.full_name.toUpperCase().includes(search.toUpperCase()))
+    const isMed = profession === 'medecin'
+
+    if (adding?.userId) {
+      // Step 2 : choisir la salle
+      const person = allProfiles.find(p => p.id === adding.userId)
+      return (
+        <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: T.border, background: T.surface }}>
+          <p className="text-xs font-semibold" style={{ color: T.text }}>
+            Salle pour {isMed ? `Dr. ${person?.full_name}` : person?.full_name} :
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {rooms.map(roomId => (
+              <button key={roomId} onClick={() => setAdding(a => ({ ...a, roomId }))}
+                className="text-xs px-2 py-1.5 rounded-lg font-medium transition-opacity hover:opacity-80 text-left"
+                style={{
+                  background: adding?.roomId === roomId ? T.accentBar : T.cardBg,
+                  color: adding?.roomId === roomId ? '#fff' : T.text,
+                  border: `1px solid ${T.border}`,
+                }}>
+                {getRoomName(roomId)}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={() => setAdding(a => ({ ...a, userId: null, roomId: null }))}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: T.surface, color: T.textSub, border: `1px solid ${T.border}` }}>
+              ← Retour
+            </button>
+            <button onClick={addAssignment} disabled={!adding?.roomId}
+              className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-40"
+              style={{ background: T.accentBar }}>
+              Affecter
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: T.border, background: T.surface }}>
+        <input autoFocus type="text" placeholder="Rechercher..." value={search}
+          onChange={e => setAdding(a => ({ ...a, search: e.target.value }))}
+          style={{ background: T.cardBg, borderColor: T.border, color: T.text }}
+          className="w-full text-xs px-3 py-1.5 rounded-lg border focus:outline-none" />
+        <div className="max-h-36 overflow-y-auto space-y-1">
+          {filtered.length === 0
+            ? <p className="text-xs italic text-center py-2" style={{ color: T.textFaint }}>Aucun résultat</p>
+            : filtered.map(p => (
+              <button key={p.id} onClick={() => setAdding(a => ({ ...a, userId: p.id }))}
+                className="w-full text-left text-xs px-2 py-1.5 rounded-lg hover:opacity-70 transition-opacity"
+                style={{ color: T.text }}>
+                {isMed ? `Dr. ${p.full_name}` : p.full_name}
+              </button>
+            ))
+          }
+        </div>
+        <button onClick={() => setAdding(null)}
+          className="text-xs w-full text-center" style={{ color: T.textFaint }}>Annuler</button>
+      </div>
+    )
+  }
+
+  function Section({ profession, color, dotColor, label }) {
+    const assigned = (profession === 'medecin' ? medecins : infirmiers)
+      .filter(p => getAssignments(p.id).length > 0)
+    const isAdding = adding?.profession === profession
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color }}>
+            <span className={`w-1.5 h-1.5 rounded-full inline-block ${dotColor}`} />
+            {label} ({assigned.length})
+          </p>
+          {canManage && !isAdding && (
+            <button onClick={() => setAdding({ profession, search: '', userId: null, roomId: null })}
+              className="w-5 h-5 rounded-full border flex items-center justify-center text-sm font-bold hover:opacity-70"
+              style={{ borderColor: color, color }}>+</button>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          {assigned.map(p => <PersonLine key={p.id} p={p} />)}
+          {assigned.length === 0 && !isAdding && (
+            <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun affecté</p>
+          )}
+          {isAdding && <AddPanel profession={profession} />}
         </div>
       </div>
     )
@@ -304,37 +420,9 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, dateLabel, 
             <X size={18} />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-          {/* Médecins */}
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5"
-              style={{ color: '#DC2626' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
-              Médecins ({medecins.filter(p => getAssignments(p.id).length > 0).length})
-            </p>
-            <div className="space-y-1.5">
-              {medecins.filter(p => getAssignments(p.id).length > 0).map(p => <PersonLine key={p.id} p={p} />)}
-              {medecins.filter(p => getAssignments(p.id).length > 0).length === 0 && (
-                <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun médecin affecté</p>
-              )}
-            </div>
-          </div>
-
-          {/* ISA */}
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5"
-              style={{ color: '#2563EB' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
-              ISA ({infirmiers.filter(p => getAssignments(p.id).length > 0).length})
-            </p>
-            <div className="space-y-1.5">
-              {infirmiers.filter(p => getAssignments(p.id).length > 0).map(p => <PersonLine key={p.id} p={p} />)}
-              {infirmiers.filter(p => getAssignments(p.id).length > 0).length === 0 && (
-                <p className="text-sm italic" style={{ color: T.textFaint }}>Aucun ISA affecté</p>
-              )}
-            </div>
-          </div>
+          <Section profession="medecin"   color="#DC2626" dotColor="bg-red-500"  label="Médecins" />
+          <Section profession="infirmier" color="#2563EB" dotColor="bg-blue-500" label="ISA" />
         </div>
       </div>
     </div>
@@ -686,8 +774,12 @@ export default function Dashboard({ sector, unit, onBack }) {
           rooms={ROOMS}
           roomNames={ROOM_NAMES}
           dateLabel={selectedDayLabel}
+          selectedDate={selectedDate}
+          canManage={profile?.is_admin || profile?.grade === 'chef_clinique' || profile?.grade === 'adjoint'}
+          currentProfile={profile}
           theme={T}
           onClose={() => setShowEffectif(false)}
+          onRefresh={fetchData}
         />
       )}
 
