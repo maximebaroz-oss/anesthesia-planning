@@ -87,7 +87,22 @@ function parseHBSheet(rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
-function parseDUSheet(rows, profiles) {
+// Vérifie si la cellule a un fond noir (= salle fermée dans le fichier Julliard)
+function isCellBlack(ws, colIdx, rowIdx) {
+  const cellRef = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx })
+  const cell = ws[cellRef]
+  if (!cell?.s) return false
+  const fill = cell.s.fill ?? cell.s.fgColor
+  if (!fill) return false
+  const rgb = fill.fgColor?.rgb ?? fill.bgColor?.rgb ?? fill.rgb
+  if (!rgb || rgb.length < 6) return false
+  const r = parseInt(rgb.slice(-6, -4), 16)
+  const g = parseInt(rgb.slice(-4, -2), 16)
+  const b = parseInt(rgb.slice(-2), 16)
+  return r < 40 && g < 40 && b < 40
+}
+
+function parseDUSheet(ws, rows, profiles) {
   const headerRow = rows[0] ?? []
   const year = new Date().getFullYear()
   const days = [1, 2, 3, 4, 5].map(colIdx => ({
@@ -112,17 +127,19 @@ function parseDUSheet(rows, profiles) {
     })
   }
 
-  // Room schedule rows — find rows where col A is a number 9-14
-  for (const row of rows) {
+  // Room schedule rows — salles 10-14 uniquement (salle 9 = VVC, ignorée)
+  for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+    const row = rows[rowIdx]
     const roomId = parseInt(String(row[0] ?? '').trim())
-    if (isNaN(roomId) || roomId < 9 || roomId > 14) continue
+    if (isNaN(roomId) || roomId < 10 || roomId > 14) continue
     for (const day of days) {
       const cell = String(row[day.colIdx] ?? '').trim()
-      if (!cell) {
-        // Cellule vide = salle fermée ce jour
+      const black = isCellBlack(ws, day.colIdx, rowIdx)
+      if (!cell || black) {
+        // Cellule vide ou noire = salle fermée ce jour
         entries.push({
           date: day.date, dayLabel: day.header,
-          rowLabel: `Salle ${roomId}`, excelName: '—',
+          rowLabel: `Salle ${roomId}`, excelName: black ? '⬛ fermée' : '—',
           type: 'closure', roomId,
           activity: null, closingTime: null, profile: null,
         })
@@ -160,7 +177,7 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
 
     try {
       const buffer = await file.arrayBuffer()
-      const wb = XLSX.read(buffer, { type: 'array' })
+      const wb = XLSX.read(buffer, { type: 'array', cellStyles: true })
 
       const targetSheet = wb.SheetNames.find(n => n.toUpperCase() === sheetName)
         ?? wb.SheetNames.find(n => n.toUpperCase().includes(sheetName))
@@ -169,10 +186,11 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
         return
       }
 
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[targetSheet], { header: 1, defval: '' })
+      const ws = wb.Sheets[targetSheet]
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
 
       const result = isJulliard
-        ? parseDUSheet(rows, profiles)
+        ? parseDUSheet(ws, rows, profiles)
         : parseHBSheet(rows, profiles)
 
       if (!result) {
