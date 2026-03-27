@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle } from 'lucide-react'
+import { getCurrentTime } from '../config/constants'
+import { WARM, SKY } from '../config/theme'
 
 function isLate(timeStr) {
   if (!timeStr) return false
@@ -8,11 +10,6 @@ function isLate(timeStr) {
   const target = new Date()
   target.setHours(h, m, 0, 0)
   return now > target
-}
-
-function getCurrentTime() {
-  const now = new Date()
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
 function getRoomStatus(roomId, closures, assignments, noISA = false) {
@@ -36,35 +33,6 @@ const STATUS_CONFIG = {
   available:    { dot: 'bg-amber-400',  label: 'Disponible' },
 }
 
-export const WARM = {
-  pageBg:    '#EDEAE5',
-  cardBg:    '#F5F3F0',
-  cardHead:  '#EAE7E2',
-  border:    '#CEC8BF',
-  borderAlt: '#B8B0A4',
-  surface:   '#E2DED8',
-  surfaceHov:'#D6D0C8',
-  accent:    '#6B5C48',
-  accentBar: '#8A7560',
-  text:      '#2A2318',
-  textSub:   '#6B5F52',
-  textFaint: '#9E9489',
-}
-
-export const SKY = {
-  pageBg:    '#EFF6FF',
-  cardBg:    '#F0F7FF',
-  cardHead:  '#DBEAFE',
-  border:    '#BFDBFE',
-  borderAlt: '#93C5FD',
-  surface:   '#EFF6FF',
-  surfaceHov:'#DBEAFE',
-  accent:    '#1D4ED8',
-  accentBar: '#3B82F6',
-  text:      '#1E3A5F',
-  textSub:   '#3B6FAD',
-  textFaint: '#7BA3C8',
-}
 
 function TimeInput({ value, onSave, placeholder = '--:--', editable = true, large = false, theme }) {
   const T = theme ?? WARM

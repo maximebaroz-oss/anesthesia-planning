@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { ROOM_NAMES, GRADE_LABELS, getISOWeek } from '../config/constants'
 
 const WARM = {
   bg: '#FAF7F2',
@@ -15,30 +16,7 @@ const WARM = {
   hover: '#E2DED8',
 }
 
-const GRADE_LABELS = {
-  adjoint: 'Adj.',
-  chef_clinique: 'CDC',
-  interne: 'Int.',
-  consultant: 'Cons.',
-  iade: 'ISA',
-}
-
-const ROOM_NAMES = {
-  1: 'Gastro 4', 2: 'Gastro 5', 3: 'Broncho 7', 4: 'Radio 11',
-  5: 'Radio 12', 6: 'Neuro-radio 13', 7: 'Cardio 17', 8: 'Tardif', 9: 'Consultation',
-  10: 'Viscérale 10', 11: 'Urg Viscérale 11', 12: 'Viscérale 12', 13: 'Uro 13', 14: 'Viscérale 14',
-  15: 'Consultation', 16: 'Visite J+1', 17: 'Consultation greffe',
-}
-
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-
-
-function getISOWeek(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
-  const week1 = new Date(d.getFullYear(), 0, 4)
-  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7)
-}
 
 function getMondayOf(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')

@@ -1,6 +1,7 @@
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { SECTORS } from '../config/sectors'
+import { GRADE_LABELS } from '../config/constants'
 
 // Palette bloc opératoire — pastels cliniques
 const UNIT_STYLES = {
@@ -8,10 +9,6 @@ const UNIT_STYLES = {
   extop:  { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569' },
   unicat: { bg: '#FFF7ED', border: '#FED7AA', dot: '#F97316', text: '#C2410C' },
   bocha:  { bg: '#FAF5FF', border: '#E9D5FF', dot: '#A855F7', text: '#7E22CE' },
-}
-
-const GRADE_LABELS = {
-  adjoint: 'Adjoint', chef_clinique: 'CDC', interne: 'Interne', iade: 'ISA',
 }
 
 export default function SectorSelector({ onSelect }) {

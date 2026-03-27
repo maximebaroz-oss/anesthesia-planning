@@ -2,20 +2,8 @@ import { useState } from 'react'
 import { X, Phone, User, Edit2, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-
-const WARM = {
-  cardBg: '#F5F3F0', cardHead: '#EAE7E2', border: '#CEC8BF',
-  surface: '#E2DED8', accentBar: '#8A7560',
-  text: '#2A2318', textSub: '#6B5F52', textFaint: '#9E9489',
-}
-
-const GRADE_LABELS = {
-  adjoint: 'Adjoint',
-  chef_clinique: 'Chef de clinique',
-  interne: 'Interne',
-  consultant: 'Consultant',
-  iade: 'ISA',
-}
+import { WARM } from '../config/theme'
+import { GRADE_LABELS_FULL as GRADE_LABELS } from '../config/constants'
 
 const PROFESSION_LABELS = {
   medecin: 'Médecin Anesthésiste (Med)',

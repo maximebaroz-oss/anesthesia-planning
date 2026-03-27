@@ -1,19 +1,7 @@
 import { useState } from 'react'
 import { X, Search } from 'lucide-react'
-
-const WARM = {
-  cardBg: '#F5F3F0', cardHead: '#EAE7E2', border: '#CEC8BF',
-  surface: '#E2DED8', accentBar: '#8A7560',
-  text: '#2A2318', textSub: '#6B5F52', textFaint: '#9E9489',
-}
-
-const GRADE_LABELS = {
-  adjoint: 'Adj.',
-  chef_clinique: 'CDC',
-  interne: 'Int.',
-  consultant: 'Cons.',
-  iade: 'ISA',
-}
+import { WARM } from '../config/theme'
+import { GRADE_LABELS } from '../config/constants'
 
 export default function AssignModal({ roomId, roomName, profiles, assignments, today, defaultFilter, onAssign, onClose }) {
   const [search, setSearch] = useState('')

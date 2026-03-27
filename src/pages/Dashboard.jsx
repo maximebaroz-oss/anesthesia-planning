@@ -4,23 +4,14 @@ import ImportPlanningModal from '../components/ImportPlanningModal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
-import RoomCard, { WARM as WARM_THEME, SKY as SKY_THEME } from '../components/RoomCard'
+import RoomCard from '../components/RoomCard'
+import { WARM as WARM_THEME, SKY as SKY_THEME } from '../config/theme'
+import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
 
-const WARM = {
-  cardBg:    '#F5F3F0',
-  cardHead:  '#EAE7E2',
-  border:    '#CEC8BF',
-  borderAlt: '#B8B0A4',
-  surface:   '#E2DED8',
-  accent:    '#6B5C48',
-  accentBar: '#8A7560',
-  text:      '#2A2318',
-  textSub:   '#6B5F52',
-  textFaint: '#9E9489',
-}
+const WARM = WARM_THEME
 
 function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme }) {
   const T = theme ?? WARM
@@ -171,27 +162,6 @@ const UNIT_ROOMS = {
   'julliard':  [10, 11, 12, 13, 14, 15, 16, 17],
 }
 
-const ROOM_NAMES = {
-  // Hors Bloc (HB)
-  1: 'Gastro 4',
-  2: 'Gastro 5',
-  3: 'Broncho 7',
-  4: 'Radio 11',
-  5: 'Radio 12',
-  6: 'Neuro-radio 13',
-  7: 'Cardio 17',
-  8: 'Tardif',
-  9: 'Consultation',
-  // Julliard
-  10: 'Viscérale 10',
-  11: 'Urg Viscérale 11',
-  12: 'Viscérale 12',
-  13: 'Uro 13',
-  14: 'Viscérale 14',
-  15: 'Consultation',
-  16: 'Visite J+1',
-  17: 'Consultation greffe',
-}
 
 // Horaires par défaut — salle 8 (Tardif) : pas d'ouverture, fermeture 19h
 const DEFAULT_SCHEDULES = {
@@ -215,41 +185,7 @@ const DEFAULT_SCHEDULES = {
   17: { opening_time: '08:00', closing_time: '16:00' },
 }
 
-const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 
-function getMonday(date) {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  d.setDate(diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function getISOWeek(date) {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
-  const week1 = new Date(d.getFullYear(), 0, 4)
-  return 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7)
-}
-
-function getWeekDays(monday) {
-  return Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    return d
-  })
-}
-
-function formatDateKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function getCurrentTime() {
-  const now = new Date()
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-}
 
 function SouhaitsCard({ date, unitId, canEdit, theme }) {
   const T = theme

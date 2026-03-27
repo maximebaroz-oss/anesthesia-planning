@@ -1,12 +1,6 @@
 import { LogOut, ArrowLeft, Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-
-const GRADE_LABELS = {
-  adjoint: 'Adjoint',
-  chef_clinique: 'Chef de clinique',
-  interne: 'Interne',
-  iade: 'ISA',
-}
+import { GRADE_LABELS_FULL as GRADE_LABELS } from '../config/constants'
 
 export default function Header({ sector, unit, onBack, onMenuOpen }) {
   const { profile, signOut } = useAuth()

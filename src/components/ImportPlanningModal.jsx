@@ -4,11 +4,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-const WARM = {
-  cardBg: '#F5F3F0', cardHead: '#EAE7E2', border: '#CEC8BF',
-  surface: '#E2DED8', accent: '#6B5C48', accentBar: '#8A7560',
-  text: '#2A2318', textSub: '#6B5F52', textFaint: '#9E9489',
-}
+import { WARM } from '../config/theme'
 
 // HB row index (0-based) → { roomId, label }
 const HB_ROWS = [
