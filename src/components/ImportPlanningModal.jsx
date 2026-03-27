@@ -164,6 +164,7 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
   const [step, setStep] = useState('upload')
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState(null)
+  const [importErrors, setImportErrors] = useState([])
   const inputRef = useRef(null)
 
   const isJulliard = unit?.id === 'julliard'
@@ -270,9 +271,9 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
       } catch (e) { errors.push(e.message) }
     }
 
-    if (errors.length > 0) setError(`${errors.length} erreur(s) : ${errors[0]}`)
+    setImportErrors(errors)
     setStep('done')
-    onImported?.()
+    if (errors.length === 0) onImported?.()
   }
 
   const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure') ?? []
@@ -440,17 +441,36 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
 
           {/* STEP: done */}
           {step === 'done' && (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-14 h-14 rounded-full bg-green-100 border border-green-300 flex items-center justify-center">
-                <Check size={28} className="text-green-600" />
-              </div>
-              <p className="font-semibold" style={{ color: WARM.text }}>Import terminé !</p>
-              <p className="text-sm" style={{ color: WARM.textSub }}>
-                {matchedCount > 0 && `${matchedCount} affectation(s)`}
-                {matchedCount > 0 && scheduleEntries.length > 0 && ' · '}
-                {scheduleEntries.length > 0 && `${scheduleEntries.length} horaire(s)`}
-                {' '}importé(s) sur {dates.length} jour(s).
-              </p>
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              {importErrors.length === 0 ? (
+                <>
+                  <div className="w-14 h-14 rounded-full bg-green-100 border border-green-300 flex items-center justify-center">
+                    <Check size={28} className="text-green-600" />
+                  </div>
+                  <p className="font-semibold" style={{ color: WARM.text }}>Import terminé !</p>
+                  <p className="text-sm" style={{ color: WARM.textSub }}>
+                    {matchedCount > 0 && `${matchedCount} affectation(s)`}
+                    {matchedCount > 0 && scheduleEntries.length > 0 && ' · '}
+                    {scheduleEntries.length > 0 && `${scheduleEntries.length} horaire(s)`}
+                    {' '}importé(s) sur {dates.length} jour(s).
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-14 h-14 rounded-full bg-red-100 border border-red-300 flex items-center justify-center">
+                    <AlertTriangle size={28} className="text-red-600" />
+                  </div>
+                  <p className="font-semibold text-red-600">{importErrors.length} erreur(s) durant l'import</p>
+                  <div className="w-full max-h-56 overflow-y-auto rounded-xl border border-red-200 bg-red-50 divide-y divide-red-100">
+                    {importErrors.map((e, i) => (
+                      <p key={i} className="px-3 py-2 text-xs text-red-700 font-mono break-all">{e}</p>
+                    ))}
+                  </div>
+                  <p className="text-xs text-center" style={{ color: WARM.textFaint }}>
+                    Copiez ces messages pour diagnostiquer le problème Supabase.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
