@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, User, Users, Stethoscope, Phone, Edit2, Check, Clock, MapPin, Search } from 'lucide-react'
+import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -30,80 +30,7 @@ const ROOM_NAMES = {
 }
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-const MONTH_NAMES_FR = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'août', 'sep', 'oct', 'nov', 'déc']
 
-function PresenceHistory() {
-  const { profile: currentProfile } = useAuth()
-  const [history, setHistory] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!currentProfile) return
-    supabase.from('assignments')
-      .select('date, start_time, end_time, room_id')
-      .eq('user_id', currentProfile.id)
-      .order('date', { ascending: false })
-      .limit(60)
-      .not('start_time', 'is', null)
-      .then(({ data }) => { setHistory(data ?? []); setLoading(false) })
-  }, [currentProfile?.id])
-
-  if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: WARM.textFaint }}>Chargement...</p>
-  if (history.length === 0) return <p className="text-sm text-center py-4 italic" style={{ color: WARM.textFaint }}>Aucune présence enregistrée</p>
-
-  const byWeek = {}
-  history.forEach(h => {
-    const d = new Date(h.date + 'T00:00:00')
-    const monday = new Date(d)
-    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-    const key = monday.toISOString().split('T')[0]
-    if (!byWeek[key]) byWeek[key] = []
-    byWeek[key].push(h)
-  })
-
-  return (
-    <div className="space-y-5">
-      {Object.entries(byWeek)
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([weekStart, entries]) => {
-          const monday = new Date(weekStart + 'T00:00:00')
-          const sunday = new Date(monday)
-          sunday.setDate(monday.getDate() + 6)
-          const weekLabel = `${monday.getDate()} ${MONTH_NAMES_FR[monday.getMonth()]} — ${sunday.getDate()} ${MONTH_NAMES_FR[sunday.getMonth()]}`
-
-          return (
-            <div key={weekStart}>
-              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>{weekLabel}</p>
-              <div className="space-y-1.5">
-                {entries.map((h, i) => {
-                  const d = new Date(h.date + 'T00:00:00')
-                  const dayName = DAY_NAMES_FR[d.getDay()]
-                  const dateStr = `${d.getDate()} ${MONTH_NAMES_FR[d.getMonth()]}`
-                  const start = h.start_time?.slice(0, 5) ?? '--:--'
-                  const end = h.end_time?.slice(0, 5) ?? '--:--'
-                  const roomName = ROOM_NAMES[h.room_id] ?? `Salle ${h.room_id}`
-                  return (
-                    <div key={i} className="rounded-lg px-3 py-2 flex items-center justify-between gap-2"
-                      style={{ background: WARM.surface, border: `1px solid ${WARM.border}` }}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold w-8 flex-shrink-0" style={{ color: WARM.text }}>{dayName}</span>
-                        <span className="text-xs" style={{ color: WARM.textMid }}>{dateStr}</span>
-                        <span className="text-xs truncate" style={{ color: WARM.textFaint }}>{roomName}</span>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Clock size={10} style={{ color: WARM.textFaint }} />
-                        <span className="text-xs" style={{ color: WARM.textMid }}>{start} → {end}</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-    </div>
-  )
-}
 
 function getWeekDates(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -266,11 +193,6 @@ function ProfilePanel({ selectedDate }) {
         )}
       </div>
 
-      {/* Historique */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>Historique des présences</p>
-        <PresenceHistory />
-      </div>
     </div>
   )
 }
