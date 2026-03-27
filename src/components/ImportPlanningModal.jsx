@@ -210,6 +210,28 @@ function parseDUSheet(ws, rows, profiles) {
     }
   }
 
+  // Effectif Julliard — toutes les lignes non traitées avec un nom dans les colonnes jours
+  const handledRowIdxs = new Set(DU_ROWS.map(r => r.rowIdx))
+  for (let rowIdx = 1; rowIdx < Math.min(rows.length, 25); rowIdx++) {
+    if (handledRowIdxs.has(rowIdx)) continue
+    const row = rows[rowIdx] ?? []
+    const colA = String(row[0] ?? '').trim()
+    // Ignorer les lignes de salles (col A = numéro de salle)
+    const roomIdA = parseInt(colA)
+    if (!isNaN(roomIdA) && roomIdA >= 9 && roomIdA <= 14) continue
+    for (const day of days) {
+      if (grayedCols.has(day.colIdx)) continue
+      const raw = String(row[day.colIdx] ?? '').trim()
+      if (!raw) continue
+      entries.push({
+        date: day.date, dayLabel: day.header,
+        rowLabel: 'Effectif', excelName: raw,
+        profile: matchProfile(raw, profiles),
+        type: 'presence', roomId: null,
+      })
+    }
+  }
+
   // Room schedule rows — salles 10-14 uniquement
   for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
     const row = rows[rowIdx]
@@ -376,7 +398,18 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
       } catch (e) { errors.push(e.message) }
     }
 
-    // 5. Souhaits / Remarques → day_notes
+    // 5. Présence effectif Julliard (noms sans salle spécifique)
+    for (const entry of preview.entries.filter(e => e.type === 'presence')) {
+      if (!entry.date || !entry.profile) continue
+      try {
+        await supabase.from('unit_presence').upsert(
+          { date: entry.date, unit_id: unit?.id ?? 'julliard', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { onConflict: 'date,unit_id,user_id' }
+        )
+      } catch (e) { /* silencieux - doublons normaux */ }
+    }
+
+    // 6. Souhaits / Remarques → day_notes
     for (const entry of preview.entries.filter(e => e.type === 'day_note')) {
       if (!entry.date || !entry.noteText) continue
       try {
@@ -393,13 +426,16 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
     if (errors.length === 0) onImported?.()
   }
 
-  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure' && e.type !== 'day_closure' && e.type !== 'day_note') ?? []
+  const personEntries   = preview?.entries.filter(e => e.type !== 'schedule' && e.type !== 'closure' && e.type !== 'day_closure' && e.type !== 'day_note' && e.type !== 'presence') ?? []
+  const presenceEntries = preview?.entries.filter(e => e.type === 'presence') ?? []
   const scheduleEntries = preview?.entries.filter(e => e.type === 'schedule') ?? []
   const closureEntries  = preview?.entries.filter(e => e.type === 'closure') ?? []
   const dayClosureEntries = preview?.entries.filter(e => e.type === 'day_closure') ?? []
   const dayNoteEntries  = preview?.entries.filter(e => e.type === 'day_note') ?? []
   const matchedCount    = personEntries.filter(e => e.profile).length
   const unmatchedCount  = personEntries.filter(e => e.excelName && !e.profile && e.type !== 'day_note').length
+  const presenceMatchedCount = presenceEntries.filter(e => e.profile).length
+  const presenceUnmatchedCount = presenceEntries.filter(e => e.excelName && !e.profile).length
   const dates = preview ? [...new Set(preview.entries.map(e => e.date))] : []
 
   return (
@@ -459,13 +495,19 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                 {matchedCount > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{matchedCount} médecin(s)</span>
+                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{matchedCount} affecté(s)</span>
                   </div>
                 )}
-                {unmatchedCount > 0 && (
+                {presenceMatchedCount > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-teal-400" />
+                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{presenceMatchedCount} effectif</span>
+                  </div>
+                )}
+                {(unmatchedCount + presenceUnmatchedCount) > 0 && (
                   <div className="flex items-center gap-1.5">
                     <AlertTriangle size={13} className="text-amber-500" />
-                    <span className="text-sm text-amber-600">{unmatchedCount} non trouvé(s)</span>
+                    <span className="text-sm text-amber-600">{unmatchedCount + presenceUnmatchedCount} non trouvé(s)</span>
                   </div>
                 )}
                 {scheduleEntries.length > 0 && (
@@ -628,7 +670,7 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium hover:opacity-80 transition-opacity">
                   ← Retour
                 </button>
-                <button onClick={handleConfirm} disabled={matchedCount === 0 && scheduleEntries.length === 0}
+                <button onClick={handleConfirm} disabled={matchedCount === 0 && scheduleEntries.length === 0 && presenceMatchedCount === 0}
                   style={{ background: WARM.accentBar }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity disabled:opacity-40">
                   Importer
