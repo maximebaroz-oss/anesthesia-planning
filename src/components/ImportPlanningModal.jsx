@@ -220,7 +220,22 @@ function parseDUSheet(ws, rows, profiles) {
     }
   }
 
-  return { entries, weekLabel: String(headerRow[0] ?? '') }
+  // Debug: lignes inconnues (ni sup row 1, ni salles 10-14)
+  const unknownRows = rows.slice(1, 30).map((row, i) => {
+    const idx = i + 1
+    if (idx === 1) return null // superviseur connu
+    const colA = String(row[0] ?? '').trim()
+    const roomId = parseInt(colA)
+    if (!isNaN(roomId) && roomId >= 10 && roomId <= 14) return null
+    if (!colA) return null
+    const sample = String(row[1] ?? '').trim()
+    return `[${idx}]${colA}${sample ? ':' + sample : ''}`
+  }).filter(Boolean)
+  const weekLabel = unknownRows.length > 0
+    ? `${String(headerRow[0] ?? '')} | ?: ${unknownRows.slice(0, 8).join(', ')}`
+    : String(headerRow[0] ?? '')
+
+  return { entries, weekLabel }
 }
 
 export default function ImportPlanningModal({ profiles, unit, onClose, onImported }) {
