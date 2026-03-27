@@ -32,16 +32,19 @@ const ROOM_NAMES = {
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 
-function getWeekDates(dateStr) {
+function getISOWeek(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
+  const week1 = new Date(d.getFullYear(), 0, 4)
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7)
+}
+
+function getMondayOf(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
   const day = d.getDay()
   const monday = new Date(d)
   monday.setDate(d.getDate() - ((day + 6) % 7))
-  return Array.from({ length: 5 }, (_, i) => {
-    const dd = new Date(monday)
-    dd.setDate(monday.getDate() + i)
-    return `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`
-  })
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
 }
 
 function ProfilePanel({ selectedDate }) {
@@ -50,7 +53,7 @@ function ProfilePanel({ selectedDate }) {
   const [phone, setPhone] = useState(currentProfile?.phone ?? '')
   const [saving, setSaving] = useState(false)
   const [todayRoom, setTodayRoom] = useState(null)
-  const [weekAssignments, setWeekAssignments] = useState([])
+  const [allAssignments, setAllAssignments] = useState([])
 
   const isMed = currentProfile?.profession === 'medecin'
   const accentColor = isMed ? '#DC2626' : '#2563EB'
@@ -58,17 +61,16 @@ function ProfilePanel({ selectedDate }) {
   const accentBorder = isMed ? '#FECACA' : '#BFDBFE'
 
   useEffect(() => {
-    if (!currentProfile || !selectedDate) return
-    const weekDates = getWeekDates(selectedDate)
+    if (!currentProfile) return
+    const monday = getMondayOf(selectedDate)
     Promise.all([
       supabase.from('assignments').select('room_id, start_time, date')
         .eq('user_id', currentProfile.id).eq('date', selectedDate).limit(1),
       supabase.from('assignments').select('room_id, date, start_time')
-        .eq('user_id', currentProfile.id).in('date', weekDates).order('date'),
-    ]).then(([{ data: today }, { data: week }]) => {
-      if (today && today.length > 0) setTodayRoom(today[0])
-      else setTodayRoom(null)
-      setWeekAssignments(week ?? [])
+        .eq('user_id', currentProfile.id).gte('date', monday).order('date'),
+    ]).then(([{ data: today }, { data: all }]) => {
+      setTodayRoom(today?.[0] ?? null)
+      setAllAssignments(all ?? [])
     })
   }, [currentProfile?.id, selectedDate])
 
@@ -110,47 +112,54 @@ function ProfilePanel({ selectedDate }) {
         </div>
       </div>
 
-      {/* Ma semaine */}
+      {/* Mon planning */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>Ma semaine</p>
-        {weekAssignments.length === 0 ? (
-          <p className="text-sm italic" style={{ color: WARM.textFaint }}>Aucune affectation cette semaine</p>
-        ) : (
-          <div className="space-y-1.5">
-            {getWeekDates(selectedDate).map(dateStr => {
-              const asgn = weekAssignments.filter(a => a.date === dateStr)
-              const d = new Date(dateStr + 'T00:00:00')
-              const dayLabel = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][d.getDay()]
-              const dayNum = d.getDate()
-              const isToday = dateStr === selectedDate
-              if (asgn.length === 0) return (
-                <div key={dateStr} className="rounded-lg px-3 py-2 flex items-center gap-2"
-                  style={{ background: WARM.surface, border: `1px solid ${WARM.border}`, opacity: 0.5 }}>
-                  <span className="text-xs font-bold w-7 flex-shrink-0" style={{ color: WARM.textFaint }}>{dayLabel}</span>
-                  <span className="text-xs" style={{ color: WARM.textFaint }}>{dayNum}</span>
-                  <span className="text-xs italic ml-auto" style={{ color: WARM.textFaint }}>—</span>
-                </div>
-              )
-              return asgn.map((a, i) => {
-                const roomName = ROOM_NAMES[a.room_id] ?? `Salle ${a.room_id}`
-                return (
-                  <div key={`${dateStr}-${i}`} className="rounded-lg px-3 py-2 flex items-center gap-2"
-                    style={{
-                      background: isToday ? accentBg : WARM.surface,
-                      border: `1px solid ${isToday ? accentBorder : WARM.border}`,
-                    }}>
-                    <span className="text-xs font-bold w-7 flex-shrink-0" style={{ color: isToday ? accentColor : WARM.textMid }}>{dayLabel}</span>
-                    <span className="text-xs" style={{ color: WARM.textFaint }}>{dayNum}</span>
-                    <span className="text-xs font-medium ml-2 flex-1 truncate" style={{ color: isToday ? accentColor : WARM.text }}>{roomName}</span>
-                    {a.start_time && (
-                      <span className="text-xs flex-shrink-0" style={{ color: WARM.textFaint }}>✓ {a.start_time.slice(0,5)}</span>
-                    )}
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WARM.textFaint }}>Mon planning</p>
+        {allAssignments.length === 0 ? (
+          <p className="text-sm italic" style={{ color: WARM.textFaint }}>Aucune affectation importée</p>
+        ) : (() => {
+          // Grouper par semaine ISO
+          const byWeek = {}
+          allAssignments.forEach(a => {
+            const w = getISOWeek(a.date)
+            if (!byWeek[w]) byWeek[w] = []
+            byWeek[w].push(a)
+          })
+          return (
+            <div className="space-y-4">
+              {Object.entries(byWeek).sort(([a],[b]) => +a - +b).map(([week, entries]) => (
+                <div key={week}>
+                  <p className="text-xs font-bold mb-1.5" style={{ color: WARM.accentBar }}>Semaine {week}</p>
+                  <div className="space-y-1.5">
+                    {entries.map((a, i) => {
+                      const d = new Date(a.date + 'T00:00:00')
+                      const dayLabel = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][d.getDay()]
+                      const dayNum = d.getDate()
+                      const isSelected = a.date === selectedDate
+                      const roomName = ROOM_NAMES[a.room_id] ?? `Salle ${a.room_id}`
+                      return (
+                        <div key={i} className="rounded-lg px-3 py-2 flex items-center gap-2"
+                          style={{
+                            background: isSelected ? accentBg : WARM.surface,
+                            border: `1px solid ${isSelected ? accentBorder : WARM.border}`,
+                          }}>
+                          <span className="text-xs font-bold w-7 flex-shrink-0"
+                            style={{ color: isSelected ? accentColor : WARM.textMid }}>{dayLabel}</span>
+                          <span className="text-xs" style={{ color: WARM.textFaint }}>{dayNum}</span>
+                          <span className="text-xs font-medium ml-2 flex-1 truncate"
+                            style={{ color: isSelected ? accentColor : WARM.text }}>{roomName}</span>
+                          {a.start_time && (
+                            <span className="text-xs flex-shrink-0" style={{ color: WARM.textFaint }}>✓ {a.start_time.slice(0,5)}</span>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })
-            })}
-          </div>
-        )}
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Téléphone */}
