@@ -41,6 +41,12 @@ export const ROOM_NAMES = {
   33: 'NC Tardif',
   34: 'Consultation CVT',
   35: 'Consultation NCh',
+  // BOCHA (AMOPA)
+  38: 'Senior 1',
+  39: 'Senior 2',
+  40: 'Interne 1',
+  41: 'Interne 2',
+  42: 'CDC BOCHA',
 }
 
 // Abréviations (listes, badges)

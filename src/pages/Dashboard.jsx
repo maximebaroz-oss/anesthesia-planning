@@ -155,7 +155,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42])
 
 const SECTOR_ROOMS = {
   'hors-bloc':         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -163,7 +163,7 @@ const SECTOR_ROOMS = {
   'bou':               [18, 19, 20, 21, 22],
   'traumatologie':     [23, 36, 37, 24],
   'prevost':           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
-  'bocha-amopa':       [],
+  'bocha-amopa':       [38, 39, 40, 41, 42],
   'orl-maxfa-plastie': [],
   'antalgie':          [],
 }
@@ -212,6 +212,12 @@ const DEFAULT_SCHEDULES = {
   33: { opening_time: '12:30', closing_time: '19:00' },
   34: { opening_time: '08:00', closing_time: '16:00' },
   35: { opening_time: '08:00', closing_time: '16:00' },
+  // BOCHA (AMOPA)
+  38: { opening_time: '07:30', closing_time: '15:30' },
+  39: { opening_time: '07:30', closing_time: '17:30' },
+  40: { opening_time: '07:00', closing_time: '17:00' },
+  41: { opening_time: '07:00', closing_time: '17:00' },
+  42: { opening_time: '13:30', closing_time: '17:30' },
 }
 
 
