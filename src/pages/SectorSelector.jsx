@@ -19,7 +19,7 @@ const SECTOR_STYLES = {
 }
 
 // Unités supportant l'import global de tous leurs secteurs
-const UNIT_IMPORTS = new Set(['unicat'])
+const UNIT_IMPORTS = new Set(['unicat', 'amopa'])
 
 export default function SectorSelector({ unit, onSelect, onBack }) {
   const s = UNIT_STYLES[unit.id] ?? UNIT_STYLES.unicat

@@ -53,6 +53,34 @@ const PREVOST_ROWS = [
   { rowIdx: 29, type: 'assignment', label: 'Consultation NCh',         roomId: 35 },
 ]
 
+// AMOPA — feuille "semaine", col D-H (indices 3-7) = Lun-Ven, col C ignorée (ISA)
+const AMOPA_ORL_ROWS = [
+  { rowIdx: 1, type: 'assignment', label: 'Senior 1',               roomId: 43, sectorId: 'orl-maxfa-plastie' },
+  { rowIdx: 2, type: 'assignment', label: 'CDC 1',                  roomId: 44, sectorId: 'orl-maxfa-plastie' },
+  { rowIdx: 3, type: 'assignment', label: 'Interne 1',              roomId: 45, sectorId: 'orl-maxfa-plastie' },
+  { rowIdx: 4, type: 'assignment', label: 'Interne 2',              roomId: 46, sectorId: 'orl-maxfa-plastie' },
+  { rowIdx: 5, type: 'assignment', label: 'Interne 3',              roomId: 47, sectorId: 'orl-maxfa-plastie' },
+  { rowIdx: 6, type: 'assignment', label: 'Senior 2',               roomId: 48, sectorId: 'orl-maxfa-plastie' },
+  { rowIdx: 8, type: 'assignment', label: 'Belle-idée CDC',         roomId: 49, sectorId: 'orl-maxfa-plastie' },
+]
+const AMOPA_BOCHA_ROWS = [
+  { rowIdx: 13, type: 'assignment', label: 'Senior 1',  roomId: 38, sectorId: 'bocha-amopa' },
+  { rowIdx: 14, type: 'assignment', label: 'Senior 2',  roomId: 39, sectorId: 'bocha-amopa' },
+  { rowIdx: 15, type: 'assignment', label: 'Interne 1', roomId: 40, sectorId: 'bocha-amopa' },
+  { rowIdx: 16, type: 'assignment', label: 'Interne 2', roomId: 41, sectorId: 'bocha-amopa' },
+  { rowIdx: 17, type: 'assignment', label: 'CDC BOCHA', roomId: 42, sectorId: 'bocha-amopa' },
+]
+const AMOPA_ANTALGIE_ROWS = [
+  { rowIdx: 27, type: 'supervisor', label: 'Superviseur Antalgie',            roomId: null, sectorId: 'antalgie' },
+  { rowIdx: 21, type: 'assignment', label: 'Interne 1',                       roomId: 51,   sectorId: 'antalgie' },
+  { rowIdx: 22, type: 'assignment', label: 'Interne 2',                       roomId: 52,   sectorId: 'antalgie' },
+  { rowIdx: 23, type: 'assignment', label: 'Antalgie chronique box 1',        roomId: 53,   sectorId: 'antalgie' },
+  { rowIdx: 24, type: 'assignment', label: 'Antalgie chronique box 7',        roomId: 54,   sectorId: 'antalgie' },
+  { rowIdx: 25, type: 'assignment', label: 'Antalgie chronique box 8',        roomId: 55,   sectorId: 'antalgie' },
+  { rowIdx: 26, type: 'assignment', label: 'Antalgie chronique box 3/BOCHA 4', roomId: 56, sectorId: 'antalgie' },
+]
+const ALL_AMOPA_ROWS = [...AMOPA_ORL_ROWS, ...AMOPA_BOCHA_ROWS, ...AMOPA_ANTALGIE_ROWS]
+
 // DU (Julliard) row index (0-based) → { roomId, label, type }
 const DU_ROWS = [
   { rowIdx: 1,  type: 'supervisor', label: 'Superviseur Julliard',  roomId: null },
@@ -362,6 +390,60 @@ function parseBOUSheet(wb, feuil1Rows, profiles, sectorId = 'bou') {
   return { entries, weekLabel }
 }
 
+// AMOPA : feuille "semaine", semaine ISO en A0, jours Lun-Ven en cols D-H (indices 3-7)
+function parseAMOPASheet(ws, rows, profiles) {
+  const headerRow = rows[0] ?? []
+  const weekNum = parseInt(String(headerRow[0] ?? '').trim())
+  if (isNaN(weekNum)) return null
+  const year = new Date().getFullYear()
+
+  // Calcul du lundi de la semaine ISO
+  const jan4 = new Date(year, 0, 4)
+  const dow = jan4.getDay() || 7
+  const startW1 = new Date(jan4)
+  startW1.setDate(jan4.getDate() - dow + 1)
+  const monday = new Date(startW1)
+  monday.setDate(startW1.getDate() + (weekNum - 1) * 7)
+
+  // Colonnes Lundi–Vendredi : D=3, E=4, F=5, G=6, H=7
+  const days = [0, 1, 2, 3, 4].map(i => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    const colIdx = i + 3
+    const header = String(headerRow[colIdx] ?? '').trim()
+    const date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    return { colIdx, date, header }
+  }).filter(d => d.header)
+
+  if (days.length === 0) return null
+
+  const AMOPA_SECTORS = ['orl-maxfa-plastie', 'bocha-amopa', 'antalgie']
+  const entries = []
+
+  for (const day of days) {
+    if (isColumnGrayed(ws, day.colIdx)) {
+      // Jour férié pour chaque secteur AMOPA
+      for (const sid of AMOPA_SECTORS) {
+        entries.push({ date: day.date, dayLabel: day.header, rowLabel: 'Journée',
+          excelName: '🔴 Jour férié', type: 'day_closure', roomId: null, profile: null, sectorId: sid })
+      }
+      continue
+    }
+    for (const { rowIdx, type, label, roomId, sectorId } of ALL_AMOPA_ROWS) {
+      const raw = String(rows[rowIdx]?.[day.colIdx] ?? '').trim()
+      if (!raw || raw === '?') continue
+      entries.push({
+        date: day.date, dayLabel: day.header,
+        rowLabel: label, excelName: raw,
+        profile: matchProfile(raw, profiles),
+        type, roomId, sectorId,
+      })
+    }
+  }
+
+  return { entries, weekLabel: `Semaine ${weekNum}` }
+}
+
 export default function ImportPlanningModal({ profiles, sector, unit, theme, onClose, onImported }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
@@ -371,15 +453,20 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
   const [importErrors, setImportErrors] = useState([])
   const inputRef = useRef(null)
 
-  // Mode unité UNICAT : importe BOU + Traumatologie + Prévost en une fois
-  const isUnitImport = unit?.id === 'unicat'
-  const isJulliard   = sector?.id === 'julliard'
-  const isFeuil1     = isUnitImport || ['bou', 'traumatologie', 'prevost'].includes(sector?.id)
-  const sectorLabel  = isUnitImport ? 'UNICAT'
-                     : isJulliard ? 'Julliard'
-                     : isFeuil1 ? (sector?.name ?? 'BOU')
-                     : 'HB'
-  const sheetName    = isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
+  // Modes d'import
+  const isUnitImport  = unit?.id === 'unicat'
+  const isAmopaImport = unit?.id === 'amopa'
+  const isAmopaSector = ['bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id)
+  const isAmopaAny    = isAmopaImport || isAmopaSector
+  const isJulliard    = sector?.id === 'julliard'
+  const isFeuil1      = isUnitImport || ['bou', 'traumatologie', 'prevost'].includes(sector?.id)
+  const sectorLabel   = isUnitImport  ? 'UNICAT'
+                      : isAmopaImport ? 'AMOPA'
+                      : isJulliard    ? 'Julliard'
+                      : isAmopaSector ? (sector?.name ?? 'AMOPA')
+                      : isFeuil1      ? (sector?.name ?? 'BOU')
+                      : 'HB'
+  const sheetName     = isAmopaAny ? 'semaine' : isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
 
   async function handleFile(e) {
     const file = e.target.files[0]
@@ -390,9 +477,14 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
       const buffer = await file.arrayBuffer()
       const wb = XLSX.read(buffer, { type: 'array', cellStyles: true })
 
-      // Pour BOU/Traumato/Prévost : le 2ème onglet (peu importe son nom)
+      // Sélection de l'onglet selon le mode
       let targetSheet
-      if (isFeuil1) {
+      if (isAmopaAny) {
+        // Feuille "semaine" (avec éventuel espace en trop)
+        targetSheet = wb.SheetNames.find(n => n.trim().toUpperCase() === 'SEMAINE')
+          ?? wb.SheetNames.find(n => n.trim().toUpperCase().includes('SEMAINE'))
+      } else if (isFeuil1) {
+        // BOU/Traumato/Prévost : 2ème onglet (peu importe son nom)
         targetSheet = wb.SheetNames[1] ?? wb.SheetNames[0]
       } else {
         targetSheet = wb.SheetNames.find(n => n.toUpperCase() === sheetName.toUpperCase())
@@ -407,7 +499,9 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false })
 
       let result
-      if (isJulliard) {
+      if (isAmopaAny) {
+        result = parseAMOPASheet(ws, rows, profiles)
+      } else if (isJulliard) {
         result = parseDUSheet(ws, rows, profiles)
       } else if (isUnitImport) {
         // Import tout UNICAT : fusionner BOU + Traumatologie + Prévost

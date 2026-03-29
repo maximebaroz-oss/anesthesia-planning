@@ -226,14 +226,11 @@ const DEFAULT_SCHEDULES = {
   47: { opening_time: '07:00', closing_time: '17:00' },
   48: { opening_time: '11:00', closing_time: '19:00' },
   49: { opening_time: '07:30', closing_time: '16:00' },
-  // Antalgie (AMOPA)
+  // Antalgie (AMOPA) — boxes chroniques sans horaire par défaut
   50: { opening_time: '09:00', closing_time: '19:00' },
   51: { opening_time: '09:00', closing_time: '19:00' },
   52: { opening_time: '09:00', closing_time: '19:00' },
-  53: { opening_time: '09:00', closing_time: '17:00' },
-  54: { opening_time: '09:00', closing_time: '17:00' },
-  55: { opening_time: '09:00', closing_time: '17:00' },
-  56: { opening_time: '09:00', closing_time: '17:00' },
+  // rooms 53-56 (Antalgie chronique boxes) : pas d'horaire par défaut → null
 }
 
 
@@ -821,12 +818,12 @@ export default function Dashboard({ unit, sector, onBack }) {
                   <FileSpreadsheet size={13} />
                   Import
                 </button>
-                {unit?.id === 'unicat' && (
+                {['unicat', 'amopa'].includes(unit?.id) && (
                   <button onClick={() => setShowUnitImport(true)}
                     className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                     style={{ background: T.accentBar, color: '#fff' }}>
                     <FileSpreadsheet size={13} />
-                    Import UNICAT
+                    Import {unit?.name}
                   </button>
                 )}
               </>
