@@ -1,4 +1,7 @@
-import { ArrowLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, ChevronRight, FileSpreadsheet } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import ImportPlanningModal from '../components/ImportPlanningModal'
 
 const UNIT_STYLES = {
   duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8' },
@@ -7,26 +10,50 @@ const UNIT_STYLES = {
   bocha:  { bg: '#FAF5FF', border: '#E9D5FF', dot: '#A855F7', text: '#7E22CE' },
 }
 
+// Secteurs supportant l'import global
+const SECTOR_IMPORTS = new Set(['unicat'])
+
 export default function UnitSelector({ sector, onSelect, onBack }) {
   const s = UNIT_STYLES[sector.id] ?? UNIT_STYLES.unicat
+  const [showImport, setShowImport] = useState(false)
+  const [profiles, setProfiles] = useState([])
+
+  async function openSectorImport() {
+    if (profiles.length === 0) {
+      const { data } = await supabase.from('profiles').select('*').eq('profession', 'medecin')
+      setProfiles(data ?? [])
+    }
+    setShowImport(true)
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#F0F4F8' }}>
 
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button onClick={onBack}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full" style={{ background: s.dot }} />
-              <span className="text-xs font-semibold" style={{ color: s.text }}>{sector.name}</span>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ background: s.dot }} />
+                <span className="text-xs font-semibold" style={{ color: s.text }}>{sector.name}</span>
+              </div>
+              <div className="text-slate-700 font-bold text-sm mt-0.5">Choisir un secteur</div>
             </div>
-            <div className="text-slate-700 font-bold text-sm mt-0.5">Choisir un secteur</div>
           </div>
+
+          {SECTOR_IMPORTS.has(sector.id) && (
+            <button onClick={openSectorImport}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white transition-opacity hover:opacity-80"
+              style={{ background: s.dot }}>
+              <FileSpreadsheet size={14} />
+              Import {sector.name}
+            </button>
+          )}
         </div>
       </header>
 
@@ -49,6 +76,15 @@ export default function UnitSelector({ sector, onSelect, onBack }) {
           ))}
         </div>
       </main>
+
+      {showImport && (
+        <ImportPlanningModal
+          profiles={profiles}
+          sector={sector}
+          onClose={() => setShowImport(false)}
+          onImported={() => setShowImport(false)}
+        />
+      )}
     </div>
   )
 }
