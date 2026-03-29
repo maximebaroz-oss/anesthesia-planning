@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Login from './pages/Login'
-import SectorSelector from './pages/SectorSelector'
 import UnitSelector from './pages/UnitSelector'
+import SectorSelector from './pages/SectorSelector'
 import Dashboard from './pages/Dashboard'
 
 export default function App() {
   const { user, loading } = useAuth()
-  const [selectedSector, setSelectedSector] = useState(null)
   const [selectedUnit, setSelectedUnit] = useState(null)
+  const [selectedSector, setSelectedSector] = useState(null)
 
   if (loading) {
     return (
@@ -23,25 +23,25 @@ export default function App() {
 
   if (!user) return <Login />
 
-  if (!selectedSector) {
-    return <SectorSelector onSelect={(sector) => setSelectedSector(sector)} />
+  if (!selectedUnit) {
+    return <UnitSelector onSelect={(unit) => setSelectedUnit(unit)} />
   }
 
-  if (!selectedUnit) {
+  if (!selectedSector) {
     return (
-      <UnitSelector
-        sector={selectedSector}
-        onSelect={(unit) => setSelectedUnit(unit)}
-        onBack={() => setSelectedSector(null)}
+      <SectorSelector
+        unit={selectedUnit}
+        onSelect={(sector) => setSelectedSector(sector)}
+        onBack={() => setSelectedUnit(null)}
       />
     )
   }
 
   return (
     <Dashboard
-      sector={selectedSector}
       unit={selectedUnit}
-      onBack={() => setSelectedUnit(null)}
+      sector={selectedSector}
+      onBack={() => setSelectedSector(null)}
     />
   )
 }

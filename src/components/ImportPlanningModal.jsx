@@ -293,10 +293,10 @@ function parseDUSheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
-function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
-  const UNIT_ROWS = unitId === 'traumatologie' ? TRAUMATO_ROWS
-                 : unitId === 'prevost'        ? PREVOST_ROWS
-                 : BOU_ROWS
+function parseBOUSheet(wb, feuil1Rows, profiles, sectorId = 'bou') {
+  const SECTOR_ROWS = sectorId === 'traumatologie' ? TRAUMATO_ROWS
+                   : sectorId === 'prevost'        ? PREVOST_ROWS
+                   : BOU_ROWS
   // 1. Lire mois/année depuis HEBDO_REMPLI row 0 col 0 = "Semaine du 23 au 29 mars 2026"
   let month = new Date().getMonth() + 1
   let year  = new Date().getFullYear()
@@ -346,7 +346,7 @@ function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
       })
       continue
     }
-    for (const { rowIdx, type, label, roomId } of UNIT_ROWS) {
+    for (const { rowIdx, type, label, roomId } of SECTOR_ROWS) {
       const raw = String(feuil1Rows[rowIdx]?.[day.colIdx] ?? '')
         .trim().replace(/\s*\(.*?\)\s*/g, '').trim() // strip (AM) (PM)
       if (!raw) continue
@@ -354,7 +354,7 @@ function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
         date: day.date, dayLabel: day.header,
         rowLabel: label, excelName: raw,
         profile: matchProfile(raw, profiles),
-        type, roomId, unitId,
+        type, roomId, sectorId,
       })
     }
   }
@@ -362,7 +362,7 @@ function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
   return { entries, weekLabel }
 }
 
-export default function ImportPlanningModal({ profiles, unit, sector, theme, onClose, onImported }) {
+export default function ImportPlanningModal({ profiles, sector, unit, theme, onClose, onImported }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const [step, setStep] = useState('upload')
@@ -371,15 +371,15 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
   const [importErrors, setImportErrors] = useState([])
   const inputRef = useRef(null)
 
-  // Mode secteur UNICAT : importe BOU + Traumatologie + Prévost en une fois
-  const isSectorImport = sector?.id === 'unicat'
-  const isJulliard  = unit?.id === 'julliard'
-  const isFeuil1    = isSectorImport || ['bou', 'traumatologie', 'prevost'].includes(unit?.id)
-  const unitLabel   = isSectorImport ? 'UNICAT'
-                    : isJulliard ? 'Julliard'
-                    : isFeuil1 ? (unit?.name ?? 'BOU')
-                    : 'HB'
-  const sheetName   = isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
+  // Mode unité UNICAT : importe BOU + Traumatologie + Prévost en une fois
+  const isUnitImport = unit?.id === 'unicat'
+  const isJulliard   = sector?.id === 'julliard'
+  const isFeuil1     = isUnitImport || ['bou', 'traumatologie', 'prevost'].includes(sector?.id)
+  const sectorLabel  = isUnitImport ? 'UNICAT'
+                     : isJulliard ? 'Julliard'
+                     : isFeuil1 ? (sector?.name ?? 'BOU')
+                     : 'HB'
+  const sheetName    = isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
 
   async function handleFile(e) {
     const file = e.target.files[0]
@@ -409,7 +409,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
       let result
       if (isJulliard) {
         result = parseDUSheet(ws, rows, profiles)
-      } else if (isSectorImport) {
+      } else if (isUnitImport) {
         // Import tout UNICAT : fusionner BOU + Traumatologie + Prévost
         const bouResult     = parseBOUSheet(wb, rows, profiles, 'bou')
         const traumaResult  = parseBOUSheet(wb, rows, profiles, 'traumatologie')
@@ -423,7 +423,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
           result = { entries: allEntries, weekLabel: bouResult.weekLabel }
         }
       } else if (isFeuil1) {
-        result = parseBOUSheet(wb, rows, profiles, unit?.id)
+        result = parseBOUSheet(wb, rows, profiles, sector?.id)
       } else {
         result = parseHBSheet(ws, rows, profiles)
       }
@@ -452,7 +452,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
       if (!entry.date) continue
       try {
         const { error } = await supabase.from('day_closures').upsert(
-          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.sectorId ?? sector?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: currentProfile?.id },
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Jour férié ${entry.date}: ${error.message}`)
@@ -479,13 +479,13 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
       if (!entry.date || !entry.profile) continue
       try {
         const { error } = await supabase.from('supervisors').upsert(
-          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', user_id: entry.profile.id, assigned_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.sectorId ?? sector?.id ?? 'hors-bloc', user_id: entry.profile.id, assigned_by: currentProfile?.id },
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Superviseur ${entry.date}: ${error.message}`)
         // Aussi marquer comme présent dans l'unité
         await supabase.from('unit_presence').upsert(
-          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.sectorId ?? sector?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
           { onConflict: 'date,unit_id,user_id' }
         )
       } catch (e) { errors.push(e.message) }
@@ -497,7 +497,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
       try {
         // Marquer comme présent dans l'unité
         await supabase.from('unit_presence').upsert(
-          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.sectorId ?? sector?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
           { onConflict: 'date,unit_id,user_id' }
         )
         const { data: existing } = await supabase.from('assignments').select('id')
@@ -534,7 +534,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
       if (!entry.date || !entry.profile) continue
       try {
         await supabase.from('unit_presence').upsert(
-          { date: entry.date, unit_id: unit?.id ?? 'julliard', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { date: entry.date, unit_id: sector?.id ?? 'julliard', user_id: entry.profile.id, added_by: currentProfile?.id },
           { onConflict: 'date,unit_id,user_id' }
         )
       } catch (e) { /* silencieux - doublons normaux */ }
@@ -545,7 +545,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
       if (!entry.date || !entry.noteText) continue
       try {
         const { error } = await supabase.from('day_notes').upsert(
-          { date: entry.date, unit_id: unit?.id ?? 'julliard', content: entry.noteText },
+          { date: entry.date, unit_id: sector?.id ?? 'julliard', content: entry.noteText },
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Souhait/Remarque ${entry.date}: ${error.message}`)
@@ -579,7 +579,7 @@ export default function ImportPlanningModal({ profiles, unit, sector, theme, onC
           className="px-5 py-3.5 border-b flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
             <FileSpreadsheet size={16} style={{ color: T.accentBar }} />
-            <span className="font-bold text-sm" style={{ color: T.text }}>Import planning {unitLabel}</span>
+            <span className="font-bold text-sm" style={{ color: T.text }}>Import planning {sectorLabel}</span>
             {preview && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ background: T.surface, color: T.textSub }}>

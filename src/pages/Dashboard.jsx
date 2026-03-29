@@ -13,7 +13,7 @@ import Sidebar from '../components/Sidebar'
 
 const WARM = WARM_THEME
 
-function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme }) {
+function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, theme }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const [supervisor, setSupervisor] = useState(null)
@@ -26,12 +26,12 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
   useEffect(() => {
     setLoading(true)
     supabase.from('supervisors').select('user_id, profiles!supervisors_user_id_fkey(*)')
-      .eq('date', date).eq('unit_id', unitId).maybeSingle()
+      .eq('date', date).eq('unit_id', sectorId).maybeSingle()
       .then(({ data }) => {
         setSupervisor(data?.profiles ?? null)
         setLoading(false)
       })
-  }, [date, unitId])
+  }, [date, sectorId])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -42,7 +42,7 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
 
   async function assignSupervisor(profile) {
     await supabase.from('supervisors').upsert(
-      { date, unit_id: unitId, user_id: profile.id, assigned_by: currentProfile?.id },
+      { date, unit_id: sectorId, user_id: profile.id, assigned_by: currentProfile?.id },
       { onConflict: 'date,unit_id' }
     )
     setSupervisor(profile)
@@ -51,7 +51,7 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
   }
 
   async function removeSupervisor() {
-    await supabase.from('supervisors').delete().eq('date', date).eq('unit_id', unitId)
+    await supabase.from('supervisors').delete().eq('date', date).eq('unit_id', sectorId)
     setSupervisor(null)
   }
 
@@ -67,7 +67,7 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
         className="px-4 pt-3 pb-2.5 flex items-center gap-2 border-b">
         <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
         <ShieldCheck size={14} style={{ color: T.accentBar }} />
-        <span className="font-bold text-sm" style={{ color: T.text }}>Superviseur {unitLabel}</span>
+        <span className="font-bold text-sm" style={{ color: T.text }}>Superviseur {sectorLabel}</span>
       </div>
 
       <div className="px-4 py-3 flex items-center gap-3">
@@ -157,7 +157,7 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
 // Salles sans ISA
 const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37])
 
-const UNIT_ROOMS = {
+const SECTOR_ROOMS = {
   'hors-bloc':    [1, 2, 3, 4, 5, 6, 7, 8, 9],
   'julliard':     [10, 11, 12, 13, 14, 15, 16, 17],
   'bou':          [18, 19, 20, 21, 22],
@@ -213,21 +213,21 @@ const DEFAULT_SCHEDULES = {
 
 
 
-function SouhaitsCard({ date, unitId, canEdit, theme }) {
+function SouhaitsCard({ date, sectorId, canEdit, theme }) {
   const T = theme
   const [note, setNote] = useState(null)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
 
   useEffect(() => {
-    if (!date || !unitId) return
-    supabase.from('day_notes').select('*').eq('date', date).eq('unit_id', unitId).maybeSingle()
+    if (!date || !sectorId) return
+    supabase.from('day_notes').select('*').eq('date', date).eq('unit_id', sectorId).maybeSingle()
       .then(({ data }) => setNote(data ?? null))
-  }, [date, unitId])
+  }, [date, sectorId])
 
   async function save() {
     const { data } = await supabase.from('day_notes').upsert(
-      { date, unit_id: unitId, content: draft },
+      { date, unit_id: sectorId, content: draft },
       { onConflict: 'date,unit_id' }
     ).select().maybeSingle()
     setNote(data)
@@ -290,19 +290,19 @@ function SouhaitsCard({ date, unitId, canEdit, theme }) {
   )
 }
 
-function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
+function EffectifModal({ assignments, allProfiles, rooms, roomNames, sectorId, dateLabel, selectedDate, canManage, currentProfile, theme, onClose, onRefresh }) {
   const T = theme
   const [adding, setAdding] = useState(null)
   const [presence, setPresence] = useState([])
-  const unitAssignments = assignments.filter(a => rooms.includes(a.room_id))
+  const sectorAssignments = assignments.filter(a => rooms.includes(a.room_id))
   const medecins   = allProfiles.filter(p => p.profession === 'medecin')
   const infirmiers = allProfiles.filter(p => p.profession === 'infirmier')
 
   useEffect(() => {
-    if (!selectedDate || !unitId) return
+    if (!selectedDate || !sectorId) return
     Promise.all([
-      supabase.from('unit_presence').select('user_id').eq('date', selectedDate).eq('unit_id', unitId),
-      supabase.from('supervisors').select('user_id').eq('date', selectedDate).eq('unit_id', unitId),
+      supabase.from('unit_presence').select('user_id').eq('date', selectedDate).eq('unit_id', sectorId),
+      supabase.from('supervisors').select('user_id').eq('date', selectedDate).eq('unit_id', sectorId),
     ]).then(([pres, sup]) => {
       const ids = new Set([
         ...(pres.data?.map(r => r.user_id) ?? []),
@@ -310,9 +310,9 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dat
       ])
       setPresence([...ids])
     })
-  }, [selectedDate, unitId])
+  }, [selectedDate, sectorId])
 
-  function getAssignments(userId) { return unitAssignments.filter(a => a.user_id === userId) }
+  function getAssignments(userId) { return sectorAssignments.filter(a => a.user_id === userId) }
   function isPresent(userId) { return presence.includes(userId) }
   function getRoomName(roomId) { return roomNames[roomId] ?? `Salle ${roomId}` }
 
@@ -320,7 +320,7 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dat
     await supabase.from('assignments').delete()
       .eq('user_id', userId).eq('date', selectedDate).in('room_id', rooms)
     await supabase.from('unit_presence').delete()
-      .eq('user_id', userId).eq('date', selectedDate).eq('unit_id', unitId)
+      .eq('user_id', userId).eq('date', selectedDate).eq('unit_id', sectorId)
     setPresence(p => p.filter(id => id !== userId))
     onRefresh()
   }
@@ -328,7 +328,7 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dat
   async function addPresenceOnly() {
     if (!adding?.userId) return
     await supabase.from('unit_presence').upsert(
-      { date: selectedDate, unit_id: unitId, user_id: adding.userId, added_by: currentProfile?.id },
+      { date: selectedDate, unit_id: sectorId, user_id: adding.userId, added_by: currentProfile?.id },
       { onConflict: 'date,unit_id,user_id' }
     )
     setPresence(p => [...p, adding.userId])
@@ -339,7 +339,7 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dat
   async function addAssignment() {
     if (!adding?.userId || !adding?.roomId) return
     await supabase.from('unit_presence').upsert(
-      { date: selectedDate, unit_id: unitId, user_id: adding.userId, added_by: currentProfile?.id },
+      { date: selectedDate, unit_id: sectorId, user_id: adding.userId, added_by: currentProfile?.id },
       { onConflict: 'date,unit_id,user_id' }
     )
     const { data: existing } = await supabase.from('assignments').select('id')
@@ -519,14 +519,14 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, unitId, dat
   )
 }
 
-export default function Dashboard({ sector, unit, onBack }) {
+export default function Dashboard({ unit, sector, onBack }) {
   const { profile } = useAuth()
-  const ROOMS = UNIT_ROOMS[unit?.id] ?? UNIT_ROOMS['hors-bloc']
-  const unitLabel = unit?.name ?? 'HB'
-  const T = unit?.id === 'julliard'      ? SKY_THEME
-          : unit?.id === 'bou'           ? AMBER_THEME
-          : unit?.id === 'traumatologie' ? SLATE_THEME
-          : unit?.id === 'prevost'       ? BLUSH_THEME
+  const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
+  const sectorLabel = sector?.name ?? 'HB'
+  const T = sector?.id === 'julliard'      ? SKY_THEME
+          : sector?.id === 'bou'           ? AMBER_THEME
+          : sector?.id === 'traumatologie' ? SLATE_THEME
+          : sector?.id === 'prevost'       ? BLUSH_THEME
           : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
@@ -536,7 +536,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const [weekDayClosures, setWeekDayClosures] = useState([]) // dates fermées de la semaine
   const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
   const [showImport, setShowImport] = useState(false)
-  const [showSectorImport, setShowSectorImport] = useState(false)
+  const [showUnitImport, setShowUnitImport] = useState(false)
   const [showEffectif, setShowEffectif] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -579,15 +579,15 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const unitId = unit?.id ?? 'hors-bloc'
+    const sectorId = sector?.id ?? 'hors-bloc'
     const weekDates = selectedWeekDays.map(d => formatDateKey(d))
     const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }] = await Promise.all([
       supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
       supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
-      supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', unitId).maybeSingle(),
-      supabase.from('day_closures').select('date').eq('unit_id', unitId).in('date', weekDates),
+      supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
+      supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
@@ -596,7 +596,7 @@ export default function Dashboard({ sector, unit, onBack }) {
     setDayClosed(!!dayCls)
     setWeekDayClosures((weekCls ?? []).map(r => r.date))
     setLoading(false)
-  }, [selectedDate, selectedWeekDays, unit?.id])
+  }, [selectedDate, selectedWeekDays, sector?.id])
 
   useEffect(() => {
     fetchData()
@@ -637,7 +637,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   async function handleCloseDay() {
     if (!profile?.is_admin && profile?.grade !== 'chef_clinique') return
     await supabase.from('day_closures').upsert(
-      { date: selectedDate, unit_id: unit?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: profile.id },
+      { date: selectedDate, unit_id: sector?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: profile.id },
       { onConflict: 'date,unit_id' }
     )
     await fetchData()
@@ -646,7 +646,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   async function handleOpenDay() {
     if (!profile?.is_admin && profile?.grade !== 'chef_clinique') return
     await supabase.from('day_closures').delete()
-      .eq('date', selectedDate).eq('unit_id', unit?.id ?? 'hors-bloc')
+      .eq('date', selectedDate).eq('unit_id', sector?.id ?? 'hors-bloc')
     await fetchData()
   }
 
@@ -707,7 +707,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: T.pageBg }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} selectedDate={selectedDate} theme={T} />
-      <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} theme={T} />
+      <Header unit={unit} sector={sector} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} theme={T} />
 
       {/* Sélecteur semaine/jour */}
       <div className="border-b px-4 py-3" style={{ background: T.cardHead, borderColor: T.border }}>
@@ -793,8 +793,8 @@ export default function Dashboard({ sector, unit, onBack }) {
                   <FileSpreadsheet size={13} />
                   Import
                 </button>
-                {sector?.id === 'unicat' && (
-                  <button onClick={() => setShowSectorImport(true)}
+                {unit?.id === 'unicat' && (
+                  <button onClick={() => setShowUnitImport(true)}
                     className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                     style={{ background: T.accentBar, color: '#fff' }}>
                     <FileSpreadsheet size={13} />
@@ -842,8 +842,8 @@ export default function Dashboard({ sector, unit, onBack }) {
               date={selectedDate}
               allProfiles={allProfiles}
               canManage={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
-              unitId={unit?.id ?? 'hors-bloc'}
-              unitLabel={unitLabel}
+              sectorId={sector?.id ?? 'hors-bloc'}
+              sectorLabel={sectorLabel}
               theme={T}
             />
             {ROOMS.map(roomId => (
@@ -868,10 +868,10 @@ export default function Dashboard({ sector, unit, onBack }) {
                 theme={T}
               />
             ))}
-            {['julliard', 'bou', 'traumatologie', 'prevost'].includes(unit?.id) && (
+            {['julliard', 'bou', 'traumatologie', 'prevost'].includes(sector?.id) && (
               <SouhaitsCard
                 date={selectedDate}
-                unitId={unit.id}
+                sectorId={sector.id}
                 canEdit={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
                 theme={T}
               />
@@ -886,7 +886,7 @@ export default function Dashboard({ sector, unit, onBack }) {
           allProfiles={allProfiles}
           rooms={ROOMS}
           roomNames={ROOM_NAMES}
-          unitId={unit?.id ?? 'hors-bloc'}
+          sectorId={sector?.id ?? 'hors-bloc'}
           dateLabel={selectedDayLabel}
           selectedDate={selectedDate}
           canManage={profile?.is_admin || profile?.grade === 'chef_clinique' || profile?.grade === 'adjoint'}
@@ -904,20 +904,20 @@ export default function Dashboard({ sector, unit, onBack }) {
       {showImport && (
         <ImportPlanningModal
           profiles={allProfiles}
-          unit={unit}
+          sector={sector}
           theme={T}
           onClose={() => setShowImport(false)}
           onImported={() => { fetchData(); setShowImport(false) }}
         />
       )}
 
-      {showSectorImport && (
+      {showUnitImport && (
         <ImportPlanningModal
           profiles={allProfiles}
-          sector={sector}
+          unit={unit}
           theme={T}
-          onClose={() => setShowSectorImport(false)}
-          onImported={() => { fetchData(); setShowSectorImport(false) }}
+          onClose={() => setShowUnitImport(false)}
+          onImported={() => { fetchData(); setShowUnitImport(false) }}
         />
       )}
 

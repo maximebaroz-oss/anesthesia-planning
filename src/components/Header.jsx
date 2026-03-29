@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { GRADE_LABELS_FULL as GRADE_LABELS } from '../config/constants'
 import { WARM } from '../config/theme'
 
-export default function Header({ sector, unit, onBack, onMenuOpen, theme }) {
+export default function Header({ unit, sector, onBack, onMenuOpen, theme }) {
   const T = theme ?? WARM
   const { profile, signOut } = useAuth()
 
@@ -33,10 +33,10 @@ export default function Header({ sector, unit, onBack, onMenuOpen, theme }) {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-sm tracking-wide" style={{ color: T.text }}>Planning Bloc</span>
-              {sector && <span style={{ color: T.textFaint }} className="text-xs"> · </span>}
-              {sector && <span className="text-xs" style={{ color: T.textSub }}>{sector.name}</span>}
-              {unit   && <span style={{ color: T.textFaint }} className="text-xs"> › </span>}
-              {unit   && <span className="text-xs font-semibold" style={{ color: T.text }}>{unit.name}</span>}
+              {unit   && <span style={{ color: T.textFaint }} className="text-xs"> · </span>}
+              {unit   && <span className="text-xs" style={{ color: T.textSub }}>{unit.name}</span>}
+              {sector && <span style={{ color: T.textFaint }} className="text-xs"> › </span>}
+              {sector && <span className="text-xs font-semibold" style={{ color: T.text }}>{sector.name}</span>}
             </div>
             <div className="text-xs capitalize" style={{ color: T.textFaint }}>{today}</div>
           </div>
