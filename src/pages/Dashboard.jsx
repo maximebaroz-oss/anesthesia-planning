@@ -155,7 +155,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56])
 
 const SECTOR_ROOMS = {
   'hors-bloc':         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -165,7 +165,7 @@ const SECTOR_ROOMS = {
   'prevost':           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
   'bocha-amopa':       [38, 39, 40, 41, 42],
   'orl-maxfa-plastie': [43, 44, 45, 46, 47, 48, 49],
-  'antalgie':          [],
+  'antalgie':          [50, 51, 52, 53, 54, 55, 56],
 }
 
 
@@ -226,6 +226,14 @@ const DEFAULT_SCHEDULES = {
   47: { opening_time: '07:00', closing_time: '17:00' },
   48: { opening_time: '11:00', closing_time: '19:00' },
   49: { opening_time: '07:30', closing_time: '16:00' },
+  // Antalgie (AMOPA)
+  50: { opening_time: '09:00', closing_time: '19:00' },
+  51: { opening_time: '09:00', closing_time: '19:00' },
+  52: { opening_time: '09:00', closing_time: '19:00' },
+  53: { opening_time: '09:00', closing_time: '17:00' },
+  54: { opening_time: '09:00', closing_time: '17:00' },
+  55: { opening_time: '09:00', closing_time: '17:00' },
+  56: { opening_time: '09:00', closing_time: '17:00' },
 }
 
 
@@ -888,7 +896,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                 theme={T}
               />
             ))}
-            {['julliard', 'bou', 'traumatologie', 'prevost'].includes(sector?.id) && (
+            {['julliard', 'bou', 'traumatologie', 'prevost', 'bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id) && (
               <SouhaitsCard
                 date={selectedDate}
                 sectorId={sector.id}

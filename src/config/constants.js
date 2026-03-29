@@ -55,6 +55,14 @@ export const ROOM_NAMES = {
   47: 'Interne 3',
   48: 'Senior 2',
   49: 'Belle-idée CDC',
+  // Antalgie (AMOPA)
+  50: 'Antalgie',
+  51: 'Interne 1',
+  52: 'Interne 2',
+  53: 'Antalgie chronique box 1',
+  54: 'Antalgie chronique box 7',
+  55: 'Antalgie chronique box 8',
+  56: 'Antalgie chronique box 3/BOCHA 4',
 }
 
 // Abréviations (listes, badges)
