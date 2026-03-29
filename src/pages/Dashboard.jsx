@@ -864,6 +864,7 @@ export default function Dashboard({ sector, unit, onBack }) {
         <ImportPlanningModal
           profiles={allProfiles}
           unit={unit}
+          theme={T}
           onClose={() => setShowImport(false)}
           onImported={() => { fetchData(); setShowImport(false) }}
         />
@@ -877,6 +878,7 @@ export default function Dashboard({ sector, unit, onBack }) {
           assignments={assignments}
           today={selectedDate}
           defaultFilter={assignModal.profession}
+          theme={T}
           onAssign={handleAssign}
           onClose={() => setAssignModal(null)}
         />

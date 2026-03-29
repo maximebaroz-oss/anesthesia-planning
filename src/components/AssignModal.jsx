@@ -3,7 +3,8 @@ import { X, Search } from 'lucide-react'
 import { WARM } from '../config/theme'
 import { GRADE_LABELS } from '../config/constants'
 
-export default function AssignModal({ roomId, roomName, profiles, assignments, today, defaultFilter, onAssign, onClose }) {
+export default function AssignModal({ roomId, roomName, profiles, assignments, today, defaultFilter, theme, onAssign, onClose }) {
+  const T = theme ?? WARM
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState(defaultFilter ?? 'all')
 
@@ -34,17 +35,17 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+      <div style={{ background: T.cardBg, borderColor: T.border }}
         className="border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
 
         {/* Header */}
-        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+        <div style={{ background: T.cardHead, borderColor: T.border }}
           className="px-4 pt-3 pb-2.5 border-b flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="font-bold text-sm" style={{ color: WARM.text }}>{title}</h2>
-            <p className="text-xs" style={{ color: WARM.textFaint }}>{roomName ?? `Salle ${roomId}`}</p>
+            <h2 className="font-bold text-sm" style={{ color: T.text }}>{title}</h2>
+            <p className="text-xs" style={{ color: T.textFaint }}>{roomName ?? `Salle ${roomId}`}</p>
           </div>
-          <button onClick={onClose} style={{ color: WARM.textFaint }} className="p-1.5 rounded-full hover:opacity-70 transition-opacity">
+          <button onClick={onClose} style={{ color: T.textFaint }} className="p-1.5 rounded-full hover:opacity-70 transition-opacity">
             <X size={18} />
           </button>
         </div>
@@ -52,10 +53,10 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
         {/* Search + filter */}
         <div className="px-3 py-2 space-y-2 flex-shrink-0">
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: WARM.textFaint }} />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: T.textFaint }} />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher..." autoFocus
-              style={{ background: WARM.surface, borderColor: WARM.border, color: WARM.text }}
+              style={{ background: T.surface, borderColor: T.border, color: T.text }}
               className="w-full border rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none placeholder-stone-400"
             />
           </div>
@@ -64,8 +65,8 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
               {[{ value: 'all', label: 'Tous' }, { value: 'medecin', label: 'Med' }, { value: 'infirmier', label: 'ISA' }].map(opt => (
                 <button key={opt.value} onClick={() => setFilter(opt.value)}
                   style={filter === opt.value
-                    ? { background: WARM.accentBar, color: '#fff' }
-                    : { background: WARM.surface, color: WARM.textSub }}
+                    ? { background: T.accentBar, color: '#fff' }
+                    : { background: T.surface, color: T.textSub }}
                   className="flex-1 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80">
                   {opt.label}
                 </button>
@@ -77,20 +78,20 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
         {/* List */}
         <div className="overflow-y-auto flex-1 px-3 pb-3">
           {filtered.length === 0 ? (
-            <p className="text-sm py-6 text-center" style={{ color: WARM.textFaint }}>Aucun personnel disponible</p>
+            <p className="text-sm py-6 text-center" style={{ color: T.textFaint }}>Aucun personnel disponible</p>
           ) : (
             <div className="space-y-3">
               {(filter === 'all' || filter === 'medecin') && medSections.map(section => (
                 <div key={section.label}>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-1 px-1" style={{ color: WARM.accentBar }}>{section.label}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-1 px-1" style={{ color: T.accentBar }}>{section.label}</p>
                   <div>
                     {section.list.map(p => (
                       <button key={p.id} onClick={() => onAssign(p.id)}
                         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-opacity hover:opacity-70 text-left"
-                        style={{ color: WARM.text }}>
+                        style={{ color: T.text }}>
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                         <span className="text-sm truncate flex-1">Dr. {p.full_name}</span>
-                        <span className="text-xs flex-shrink-0" style={{ color: WARM.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
+                        <span className="text-xs flex-shrink-0" style={{ color: T.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
                       </button>
                     ))}
                   </div>
@@ -98,12 +99,12 @@ export default function AssignModal({ roomId, roomName, profiles, assignments, t
               ))}
               {infirmiers.length > 0 && (filter === 'all' || filter === 'infirmier') && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-1 px-1" style={{ color: WARM.accentBar }}>ISA</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-1 px-1" style={{ color: T.accentBar }}>ISA</p>
                   <div>
                     {infirmiers.map(p => (
                       <button key={p.id} onClick={() => onAssign(p.id)}
                         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-opacity hover:opacity-70 text-left"
-                        style={{ color: WARM.text }}>
+                        style={{ color: T.text }}>
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
                         <span className="text-sm truncate">{p.full_name}</span>
                       </button>

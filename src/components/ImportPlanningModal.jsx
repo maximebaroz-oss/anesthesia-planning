@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-import { WARM } from '../config/theme'
+import { WARM, SKY } from '../config/theme'
 
 // HB row index (0-based) → { roomId, label }
 const HB_ROWS = [
@@ -258,7 +258,8 @@ function parseDUSheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
-export default function ImportPlanningModal({ profiles, unit, onClose, onImported }) {
+export default function ImportPlanningModal({ profiles, unit, theme, onClose, onImported }) {
+  const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const [step, setStep] = useState('upload')
   const [preview, setPreview] = useState(null)
@@ -436,23 +437,23 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+      <div style={{ background: T.cardBg, borderColor: T.border }}
         className="border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+        <div style={{ background: T.cardHead, borderColor: T.border }}
           className="px-5 py-3.5 border-b flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet size={16} style={{ color: WARM.accentBar }} />
-            <span className="font-bold text-sm" style={{ color: WARM.text }}>Import planning {unitLabel}</span>
+            <FileSpreadsheet size={16} style={{ color: T.accentBar }} />
+            <span className="font-bold text-sm" style={{ color: T.text }}>Import planning {unitLabel}</span>
             {preview && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: WARM.surface, color: WARM.textSub }}>
+                style={{ background: T.surface, color: T.textSub }}>
                 {preview.weekLabel}
               </span>
             )}
           </div>
-          <button onClick={onClose} style={{ color: WARM.textFaint }} className="hover:opacity-70 transition-opacity">
+          <button onClick={onClose} style={{ color: T.textFaint }} className="hover:opacity-70 transition-opacity">
             <X size={18} />
           </button>
         </div>
@@ -463,19 +464,19 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
           {/* STEP: upload */}
           {step === 'upload' && (
             <div className="flex flex-col items-center justify-center py-10 gap-4">
-              <div style={{ background: WARM.surface, borderColor: WARM.border }}
+              <div style={{ background: T.surface, borderColor: T.border }}
                 className="w-20 h-20 rounded-2xl border-2 flex items-center justify-center">
-                <Upload size={32} style={{ color: WARM.accentBar }} />
+                <Upload size={32} style={{ color: T.accentBar }} />
               </div>
               <div className="text-center">
-                <p className="font-semibold" style={{ color: WARM.text }}>Sélectionner le planning Excel</p>
-                <p className="text-sm mt-1" style={{ color: WARM.textFaint }}>
+                <p className="font-semibold" style={{ color: T.text }}>Sélectionner le planning Excel</p>
+                <p className="text-sm mt-1" style={{ color: T.textFaint }}>
                   Fichier .xlsx avec un onglet «&nbsp;{sheetName}&nbsp;»
                 </p>
               </div>
               <input ref={inputRef} type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
               <button onClick={() => inputRef.current?.click()}
-                style={{ background: WARM.accentBar }}
+                style={{ background: T.accentBar }}
                 className="text-white font-semibold px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2">
                 <Upload size={15} /> Choisir un fichier
               </button>
@@ -487,17 +488,17 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
           {step === 'preview' && preview && (
             <div className="space-y-5">
               {/* Summary bar */}
-              <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: WARM.surface }}>
+              <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: T.surface }}>
                 {matchedCount > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{matchedCount} affecté(s)</span>
+                    <span className="text-sm font-semibold" style={{ color: T.text }}>{matchedCount} affecté(s)</span>
                   </div>
                 )}
                 {presenceMatchedCount > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-teal-400" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{presenceMatchedCount} effectif</span>
+                    <span className="text-sm font-semibold" style={{ color: T.text }}>{presenceMatchedCount} effectif</span>
                   </div>
                 )}
                 {(unmatchedCount + presenceUnmatchedCount) > 0 && (
@@ -509,28 +510,28 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                 {scheduleEntries.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-blue-400" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{scheduleEntries.length} horaire(s)</span>
+                    <span className="text-sm font-semibold" style={{ color: T.text }}>{scheduleEntries.length} horaire(s)</span>
                   </div>
                 )}
                 {closureEntries.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-red-400" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{closureEntries.length} fermeture(s)</span>
+                    <span className="text-sm font-semibold" style={{ color: T.text }}>{closureEntries.length} fermeture(s)</span>
                   </div>
                 )}
                 {dayClosureEntries.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-orange-400" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{dayClosureEntries.length} jour(s) férié(s)</span>
+                    <span className="text-sm font-semibold" style={{ color: T.text }}>{dayClosureEntries.length} jour(s) férié(s)</span>
                   </div>
                 )}
                 {dayNoteEntries.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-purple-400" />
-                    <span className="text-sm font-semibold" style={{ color: WARM.text }}>{dayNoteEntries.length} remarque(s)</span>
+                    <span className="text-sm font-semibold" style={{ color: T.text }}>{dayNoteEntries.length} remarque(s)</span>
                   </div>
                 )}
-                <span className="text-xs ml-auto" style={{ color: WARM.textFaint }}>{dates.length} jour(s)</span>
+                <span className="text-xs ml-auto" style={{ color: T.textFaint }}>{dates.length} jour(s)</span>
               </div>
 
               {/* Per-day tables */}
@@ -546,22 +547,22 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                   return (
                     <div key={date}>
                       <p className="text-xs font-bold uppercase tracking-wider mb-1.5 px-0.5"
-                        style={{ color: WARM.accent }}>{label}</p>
-                      <div className="rounded-xl border overflow-hidden" style={{ borderColor: WARM.border }}>
+                        style={{ color: T.accent }}>{label}</p>
+                      <div className="rounded-xl border overflow-hidden" style={{ borderColor: T.border }}>
                         {allDay.map((entry, i) => (
                           <div key={i}
                             style={{
-                              borderColor: WARM.border,
-                              background: i % 2 === 0 ? WARM.cardBg : WARM.surface,
+                              borderColor: T.border,
+                              background: i % 2 === 0 ? T.cardBg : T.surface,
                             }}
                             className={`flex items-center gap-3 px-3 py-2 text-xs ${i > 0 ? 'border-t' : ''}`}>
-                            <span className="w-24 flex-shrink-0 font-medium" style={{ color: WARM.textFaint }}>
+                            <span className="w-24 flex-shrink-0 font-medium" style={{ color: T.textFaint }}>
                               {entry.rowLabel}
                             </span>
-                            <span className="w-28 flex-shrink-0 font-mono" style={{ color: WARM.textSub }}>
+                            <span className="w-28 flex-shrink-0 font-mono" style={{ color: T.textSub }}>
                               {entry.excelName}
                             </span>
-                            <span style={{ color: WARM.textFaint }} className="flex-shrink-0">→</span>
+                            <span style={{ color: T.textFaint }} className="flex-shrink-0">→</span>
                             {entry.type === 'day_closure' ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
@@ -575,22 +576,22 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                             ) : entry.type === 'schedule' ? (
                               <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-                                <span style={{ color: WARM.text }}>
+                                <span style={{ color: T.text }}>
                                   {entry.activity}
                                   {entry.closingTime && (
-                                    <span style={{ color: WARM.textFaint }}> · ferme {entry.closingTime}</span>
+                                    <span style={{ color: T.textFaint }}> · ferme {entry.closingTime}</span>
                                   )}
                                 </span>
                               </div>
                             ) : entry.type === 'day_note' ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
-                                <span className="italic" style={{ color: WARM.textSub }}>{entry.noteText}</span>
+                                <span className="italic" style={{ color: T.textSub }}>{entry.noteText}</span>
                               </div>
                             ) : entry.profile ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                                <span className="font-medium" style={{ color: WARM.text }}>
+                                <span className="font-medium" style={{ color: T.text }}>
                                   Dr. {entry.profile.full_name}
                                 </span>
                               </div>
@@ -615,8 +616,8 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
           {step === 'importing' && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className="w-10 h-10 border-4 rounded-full animate-spin"
-                style={{ borderColor: WARM.surface, borderTopColor: WARM.accentBar }} />
-              <p className="text-sm" style={{ color: WARM.textSub }}>Import en cours...</p>
+                style={{ borderColor: T.surface, borderTopColor: T.accentBar }} />
+              <p className="text-sm" style={{ color: T.textSub }}>Import en cours...</p>
             </div>
           )}
 
@@ -628,8 +629,8 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                   <div className="w-14 h-14 rounded-full bg-green-100 border border-green-300 flex items-center justify-center">
                     <Check size={28} className="text-green-600" />
                   </div>
-                  <p className="font-semibold" style={{ color: WARM.text }}>Import terminé !</p>
-                  <p className="text-sm" style={{ color: WARM.textSub }}>
+                  <p className="font-semibold" style={{ color: T.text }}>Import terminé !</p>
+                  <p className="text-sm" style={{ color: T.textSub }}>
                     {matchedCount > 0 && `${matchedCount} affectation(s)`}
                     {matchedCount > 0 && scheduleEntries.length > 0 && ' · '}
                     {scheduleEntries.length > 0 && `${scheduleEntries.length} horaire(s)`}
@@ -647,7 +648,7 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
                       <p key={i} className="px-3 py-2 text-xs text-red-700 font-mono break-all">{e}</p>
                     ))}
                   </div>
-                  <p className="text-xs text-center" style={{ color: WARM.textFaint }}>
+                  <p className="text-xs text-center" style={{ color: T.textFaint }}>
                     Copiez ces messages pour diagnostiquer le problème Supabase.
                   </p>
                 </>
@@ -658,23 +659,23 @@ export default function ImportPlanningModal({ profiles, unit, onClose, onImporte
 
         {/* Footer */}
         {(step === 'preview' || step === 'done') && (
-          <div className="px-5 pb-4 pt-3 border-t flex gap-2 flex-shrink-0" style={{ borderColor: WARM.border }}>
+          <div className="px-5 pb-4 pt-3 border-t flex gap-2 flex-shrink-0" style={{ borderColor: T.border }}>
             {step === 'preview' ? (
               <>
                 <button onClick={() => { setStep('upload'); setPreview(null); setError(null) }}
-                  style={{ background: WARM.surface, color: WARM.textSub }}
+                  style={{ background: T.surface, color: T.textSub }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium hover:opacity-80 transition-opacity">
                   ← Retour
                 </button>
                 <button onClick={handleConfirm} disabled={matchedCount === 0 && scheduleEntries.length === 0 && presenceMatchedCount === 0}
-                  style={{ background: WARM.accentBar }}
+                  style={{ background: T.accentBar }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity disabled:opacity-40">
                   Importer
                 </button>
               </>
             ) : (
               <button onClick={onClose}
-                style={{ background: WARM.accentBar }}
+                style={{ background: T.accentBar }}
                 className="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity">
                 Fermer
               </button>
