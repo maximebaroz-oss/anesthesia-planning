@@ -24,6 +24,21 @@ export const ROOM_NAMES = {
   20: 'BOU 1 (33500)',
   21: 'BOU 3 (32737)',
   22: 'Poly B Prévost',
+  // Traumatologie (UNICAT)
+  23: 'CDC Traumato (33510)',
+  24: 'Tardif Traumato',
+  // Prévost (UNICAT)
+  25: 'NCH GIBOR',
+  26: 'NCH Salle 4 (hybride)',
+  27: 'NCH Salle 1',
+  28: 'CV Salle 5 (hybride)',
+  29: 'CV Salle 1',
+  30: 'THO Salle 2',
+  31: 'Cardio struct salle 5',
+  32: 'CVT Tardif',
+  33: 'NC Tardif',
+  34: 'Consultation CVT',
+  35: 'Consultation NCh',
 }
 
 // Abréviations (listes, badges)

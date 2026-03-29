@@ -20,12 +20,37 @@ const HB_ROWS = [
 
 // BOU (Feuil1) row index (0-based) → { roomId, label, type }
 const BOU_ROWS = [
-  { rowIdx: 2, type: 'supervisor', label: 'Superviseur BOU-Traumato', roomId: null },
-  { rowIdx: 4, type: 'assignment', label: 'BOU 1 (33501)',            roomId: 18 },
-  { rowIdx: 5, type: 'assignment', label: 'BOU 2 (33501)',            roomId: 19 },
-  { rowIdx: 6, type: 'assignment', label: 'BOU 1 (33500)',            roomId: 20 },
-  { rowIdx: 7, type: 'assignment', label: 'BOU 3 (32737)',            roomId: 21 },
-  { rowIdx: 8, type: 'assignment', label: 'Poly B Prévost',           roomId: 22 },
+  { rowIdx: 2,  type: 'supervisor', label: 'Superviseur BOU-Traumato', roomId: null },
+  { rowIdx: 4,  type: 'assignment', label: 'BOU 1 (33501)',            roomId: 18 },
+  { rowIdx: 5,  type: 'assignment', label: 'BOU 2 (33501)',            roomId: 19 },
+  { rowIdx: 6,  type: 'assignment', label: 'BOU 1 (33500)',            roomId: 20 },
+  { rowIdx: 7,  type: 'assignment', label: 'BOU 3 (32737)',            roomId: 21 },
+  { rowIdx: 8,  type: 'assignment', label: 'Poly B Prévost',           roomId: 22 },
+]
+
+// Traumatologie (Feuil1) row index (0-based)
+const TRAUMATO_ROWS = [
+  { rowIdx: 2,  type: 'supervisor', label: 'Superviseur BOU-Traumato', roomId: null },
+  { rowIdx: 10, type: 'assignment', label: 'CDC Traumato (33510)',     roomId: 23 },
+  { rowIdx: 11, type: 'assignment', label: 'CDC Traumato (33510)',     roomId: 23 },
+  { rowIdx: 12, type: 'assignment', label: 'CDC Traumato (33510)',     roomId: 23 },
+  { rowIdx: 13, type: 'assignment', label: 'Tardif Traumato',          roomId: 24 },
+]
+
+// Prévost (Feuil1) row index (0-based)
+const PREVOST_ROWS = [
+  { rowIdx: 18, type: 'supervisor', label: 'Superviseur Prévost',      roomId: null },
+  { rowIdx: 19, type: 'assignment', label: 'CVT Tardif',               roomId: 32 },
+  { rowIdx: 20, type: 'assignment', label: 'NC Tardif',                roomId: 33 },
+  { rowIdx: 21, type: 'assignment', label: 'NCH GIBOR',                roomId: 25 },
+  { rowIdx: 22, type: 'assignment', label: 'NCH Salle 4 (hybride)',    roomId: 26 },
+  { rowIdx: 23, type: 'assignment', label: 'NCH Salle 1',              roomId: 27 },
+  { rowIdx: 24, type: 'assignment', label: 'CV Salle 5 (hybride)',     roomId: 28 },
+  { rowIdx: 25, type: 'assignment', label: 'CV Salle 1',               roomId: 29 },
+  { rowIdx: 26, type: 'assignment', label: 'THO Salle 2',              roomId: 30 },
+  { rowIdx: 27, type: 'assignment', label: 'Cardio struct salle 5',    roomId: 31 },
+  { rowIdx: 28, type: 'assignment', label: 'Consultation CVT',         roomId: 34 },
+  { rowIdx: 29, type: 'assignment', label: 'Consultation NCh',         roomId: 35 },
 ]
 
 // DU (Julliard) row index (0-based) → { roomId, label, type }
@@ -268,7 +293,10 @@ function parseDUSheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
-function parseBOUSheet(wb, feuil1Rows, profiles) {
+function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
+  const UNIT_ROWS = unitId === 'traumatologie' ? TRAUMATO_ROWS
+                 : unitId === 'prevost'        ? PREVOST_ROWS
+                 : BOU_ROWS
   // 1. Lire mois/année depuis HEBDO_REMPLI row 0 col 0 = "Semaine du 23 au 29 mars 2026"
   let month = new Date().getMonth() + 1
   let year  = new Date().getFullYear()
@@ -318,7 +346,7 @@ function parseBOUSheet(wb, feuil1Rows, profiles) {
       })
       continue
     }
-    for (const { rowIdx, type, label, roomId } of BOU_ROWS) {
+    for (const { rowIdx, type, label, roomId } of UNIT_ROWS) {
       const raw = String(feuil1Rows[rowIdx]?.[day.colIdx] ?? '')
         .trim().replace(/\s*\(.*?\)\s*/g, '').trim() // strip (AM) (PM)
       if (!raw) continue
@@ -343,10 +371,10 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
   const [importErrors, setImportErrors] = useState([])
   const inputRef = useRef(null)
 
-  const isJulliard = unit?.id === 'julliard'
-  const isBOU = unit?.id === 'bou'
-  const unitLabel = isJulliard ? 'Julliard' : isBOU ? 'BOU' : 'HB'
-  const sheetName = isJulliard ? 'DU' : isBOU ? 'Feuil1' : 'HB'
+  const isJulliard  = unit?.id === 'julliard'
+  const isFeuil1    = ['bou', 'traumatologie', 'prevost'].includes(unit?.id)
+  const unitLabel   = isJulliard ? 'Julliard' : isFeuil1 ? (unit?.name ?? 'BOU') : 'HB'
+  const sheetName   = isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
 
   async function handleFile(e) {
     const file = e.target.files[0]
@@ -357,9 +385,9 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
       const buffer = await file.arrayBuffer()
       const wb = XLSX.read(buffer, { type: 'array', cellStyles: true })
 
-      // Pour BOU : le 2ème onglet (peu importe son nom), sinon chercher par nom
+      // Pour BOU/Traumato/Prévost : le 2ème onglet (peu importe son nom)
       let targetSheet
-      if (isBOU) {
+      if (isFeuil1) {
         targetSheet = wb.SheetNames[1] ?? wb.SheetNames[0]
       } else {
         targetSheet = wb.SheetNames.find(n => n.toUpperCase() === sheetName.toUpperCase())
@@ -375,8 +403,8 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
 
       const result = isJulliard
         ? parseDUSheet(ws, rows, profiles)
-        : isBOU
-          ? parseBOUSheet(wb, rows, profiles)
+        : isFeuil1
+          ? parseBOUSheet(wb, rows, profiles, unit?.id)
           : parseHBSheet(ws, rows, profiles)
 
       if (!result) {

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
-import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME } from '../config/theme'
+import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
@@ -155,12 +155,14 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35])
 
 const UNIT_ROOMS = {
-  'hors-bloc': [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  'julliard':  [10, 11, 12, 13, 14, 15, 16, 17],
-  'bou':       [18, 19, 20, 21, 22],
+  'hors-bloc':    [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  'julliard':     [10, 11, 12, 13, 14, 15, 16, 17],
+  'bou':          [18, 19, 20, 21, 22],
+  'traumatologie':[23, 24],
+  'prevost':      [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
 }
 
 
@@ -190,6 +192,21 @@ const DEFAULT_SCHEDULES = {
   20: { opening_time: '07:00', closing_time: '17:00' },
   21: { opening_time: '09:30', closing_time: '19:30' },
   22: { opening_time: '07:00', closing_time: '17:00' },
+  // Traumatologie
+  23: { opening_time: '07:00', closing_time: '17:00' },
+  24: { opening_time: '10:30', closing_time: '19:00' },
+  // Prévost
+  25: { opening_time: '07:00', closing_time: '17:00' },
+  26: { opening_time: '07:00', closing_time: '17:00' },
+  27: { opening_time: '07:00', closing_time: '17:00' },
+  28: { opening_time: '07:00', closing_time: '17:00' },
+  29: { opening_time: '07:00', closing_time: '17:00' },
+  30: { opening_time: '07:00', closing_time: '17:00' },
+  31: { opening_time: '07:00', closing_time: '17:00' },
+  32: { opening_time: '12:30', closing_time: '19:00' },
+  33: { opening_time: '12:30', closing_time: '19:00' },
+  34: { opening_time: '08:00', closing_time: '16:00' },
+  35: { opening_time: '08:00', closing_time: '16:00' },
 }
 
 
@@ -504,8 +521,10 @@ export default function Dashboard({ sector, unit, onBack }) {
   const { profile } = useAuth()
   const ROOMS = UNIT_ROOMS[unit?.id] ?? UNIT_ROOMS['hors-bloc']
   const unitLabel = unit?.name ?? 'HB'
-  const T = unit?.id === 'julliard' ? SKY_THEME
-          : unit?.id === 'bou'      ? AMBER_THEME
+  const T = unit?.id === 'julliard'      ? SKY_THEME
+          : unit?.id === 'bou'           ? AMBER_THEME
+          : unit?.id === 'traumatologie' ? SLATE_THEME
+          : unit?.id === 'prevost'       ? BLUSH_THEME
           : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
@@ -836,7 +855,7 @@ export default function Dashboard({ sector, unit, onBack }) {
                 theme={T}
               />
             ))}
-            {(unit?.id === 'julliard' || unit?.id === 'bou') && (
+            {['julliard', 'bou', 'traumatologie', 'prevost'].includes(unit?.id) && (
               <SouhaitsCard
                 date={selectedDate}
                 unitId={unit.id}

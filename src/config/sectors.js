@@ -19,7 +19,9 @@ export const SECTORS = [
     name: 'UNICAT',
     color: 'emerald',
     units: [
-      { id: 'bou', name: 'BOU' },
+      { id: 'bou',          name: 'BOU' },
+      { id: 'traumatologie', name: 'Traumatologie' },
+      { id: 'prevost',      name: 'Prévost' },
     ],
   },
   {

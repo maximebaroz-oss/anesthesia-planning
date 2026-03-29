@@ -28,6 +28,36 @@ export const AMBER = {
   textFaint:  '#B45309',
 }
 
+export const SLATE = {
+  pageBg:     '#F4F2F8',
+  cardBg:     '#F8F6FC',
+  cardHead:   '#EDE8F5',
+  border:     '#D0C8E8',
+  borderAlt:  '#B8AEDD',
+  surface:    '#E8E3F2',
+  surfaceHov: '#D8D0EA',
+  accent:     '#4C3D7A',
+  accentBar:  '#7C6BAE',
+  text:       '#1A1525',
+  textSub:    '#4C3D7A',
+  textFaint:  '#8B7BAF',
+}
+
+export const BLUSH = {
+  pageBg:     '#FAF4F6',
+  cardBg:     '#FDF8FA',
+  cardHead:   '#F2E4EA',
+  border:     '#E2C8D4',
+  borderAlt:  '#D4A8BB',
+  surface:    '#F0E4EA',
+  surfaceHov: '#E4CEDB',
+  accent:     '#7A3048',
+  accentBar:  '#B85C78',
+  text:       '#1F0A12',
+  textSub:    '#6B2C44',
+  textFaint:  '#A87090',
+}
+
 export const SKY = {
   pageBg:     '#EFF6FF',
   cardBg:     '#F0F7FF',
