@@ -47,6 +47,14 @@ export const ROOM_NAMES = {
   40: 'Interne 1',
   41: 'Interne 2',
   42: 'CDC BOCHA',
+  // ORL/MAX-FA/Plastie (AMOPA)
+  43: 'Senior 1',
+  44: 'CDC 1',
+  45: 'Interne 1',
+  46: 'Interne 2',
+  47: 'Interne 3',
+  48: 'Senior 2',
+  49: 'Belle-idée CDC',
 }
 
 // Abréviations (listes, badges)
