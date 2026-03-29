@@ -34,7 +34,11 @@ export const UNITS = [
     id: 'maternite',
     name: 'Maternité',
     color: 'lime',
-    sectors: [],
+    sectors: [
+      { id: 'gyneco',      name: 'Gynéco' },
+      { id: 'obstetrique', name: 'Obstétrique' },
+      { id: 'ophtalmo',    name: 'Ophtalmo' },
+    ],
   },
   {
     id: 'pediatrie',
