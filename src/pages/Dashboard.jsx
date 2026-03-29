@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
-import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME } from '../config/theme'
+import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME, SOFTGREEN as SOFTGREEN_THEME, GRAY as GRAY_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
@@ -557,9 +557,9 @@ export default function Dashboard({ unit, sector, onBack }) {
           : sector?.id === 'bocha-amopa'      ? PURPLE_THEME
           : sector?.id === 'orl-maxfa-plastie'? HOTPINK_THEME
           : sector?.id === 'antalgie'         ? ROSEWOOD_THEME
-          : sector?.id === 'gyneco'           ? LIME_THEME
+          : sector?.id === 'gyneco'           ? SOFTGREEN_THEME
           : sector?.id === 'obstetrique'      ? MAUVE_THEME
-          : sector?.id === 'ophtalmo'         ? LIME_THEME
+          : sector?.id === 'ophtalmo'         ? GRAY_THEME
           : unit?.id    === 'sinpi'           ? SALMON_THEME
           : unit?.id    === 'pediatrie'       ? YELLOW_THEME
           : WARM_THEME

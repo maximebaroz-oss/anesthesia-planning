@@ -58,6 +58,36 @@ export const BLUSH = {
   textFaint:  '#A87090',
 }
 
+export const SOFTGREEN = {
+  pageBg:     '#F0FAF0',
+  cardBg:     '#F5FCF5',
+  cardHead:   '#C8EEC8',
+  border:     '#9AD89A',
+  borderAlt:  '#70C470',
+  surface:    '#DCF2DC',
+  surfaceHov: '#C4E8C4',
+  accent:     '#2A7A2A',
+  accentBar:  '#55AA55',
+  text:       '#082008',
+  textSub:    '#2A7A2A',
+  textFaint:  '#4A9A4A',
+}
+
+export const GRAY = {
+  pageBg:     '#F4F4F6',
+  cardBg:     '#F9F9FB',
+  cardHead:   '#E4E4E8',
+  border:     '#C8C8CE',
+  borderAlt:  '#AAAAB2',
+  surface:    '#EBEBEE',
+  surfaceHov: '#DCDCE0',
+  accent:     '#444450',
+  accentBar:  '#777788',
+  text:       '#101018',
+  textSub:    '#444450',
+  textFaint:  '#888898',
+}
+
 export const MAUVE = {
   pageBg:     '#F5F0FA',
   cardBg:     '#FAF5FD',

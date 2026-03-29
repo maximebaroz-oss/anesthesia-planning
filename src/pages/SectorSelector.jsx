@@ -16,7 +16,9 @@ const UNIT_STYLES = {
 
 // Couleurs spécifiques par secteur (remplace la couleur de l'unité si défini)
 const SECTOR_STYLES = {
+  'gyneco':            { bg: '#F0FAF0', border: '#9AD89A', dot: '#55AA55', text: '#2A7A2A' },
   'obstetrique':       { bg: '#F5F0FA', border: '#CEB0E8', dot: '#A078CC', text: '#6040A0' },
+  'ophtalmo':          { bg: '#F4F4F6', border: '#C8C8CE', dot: '#777788', text: '#444450' },
   'bocha-amopa':       { bg: '#F7EEFF', border: '#D8AAFF', dot: '#B040FF', text: '#7A00CC' },
   'orl-maxfa-plastie': { bg: '#FFF0F8', border: '#FFB0DD', dot: '#FF3399', text: '#AA005A' },
   'antalgie':          { bg: '#FAF0F0', border: '#E0B8C0', dot: '#C87888', text: '#88404C' },
