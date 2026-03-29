@@ -357,10 +357,16 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
       const buffer = await file.arrayBuffer()
       const wb = XLSX.read(buffer, { type: 'array', cellStyles: true })
 
-      const targetSheet = wb.SheetNames.find(n => n.toUpperCase() === sheetName)
-        ?? wb.SheetNames.find(n => n.toUpperCase().includes(sheetName))
+      // Pour BOU : le 2ème onglet (peu importe son nom), sinon chercher par nom
+      let targetSheet
+      if (isBOU) {
+        targetSheet = wb.SheetNames[1] ?? wb.SheetNames[0]
+      } else {
+        targetSheet = wb.SheetNames.find(n => n.toUpperCase() === sheetName.toUpperCase())
+          ?? wb.SheetNames.find(n => n.toUpperCase().includes(sheetName.toUpperCase()))
+      }
       if (!targetSheet) {
-        setError(`Onglet "${sheetName}" introuvable dans ce fichier.`)
+        setError(`Onglet "${sheetName}" introuvable dans ce fichier. Onglets disponibles : ${wb.SheetNames.join(', ')}`)
         return
       }
 
