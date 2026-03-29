@@ -58,6 +58,51 @@ export const BLUSH = {
   textFaint:  '#A87090',
 }
 
+export const PURPLE = {
+  pageBg:     '#F7EEFF',
+  cardBg:     '#FBF5FF',
+  cardHead:   '#EDD8FF',
+  border:     '#D8AAFF',
+  borderAlt:  '#C080FF',
+  surface:    '#F0E0FF',
+  surfaceHov: '#E4CCFF',
+  accent:     '#7A00CC',
+  accentBar:  '#B040FF',
+  text:       '#180028',
+  textSub:    '#7A00CC',
+  textFaint:  '#A040D0',
+}
+
+export const HOTPINK = {
+  pageBg:     '#FFF0F8',
+  cardBg:     '#FFF5FB',
+  cardHead:   '#FFD0EC',
+  border:     '#FFB0DD',
+  borderAlt:  '#FF80CC',
+  surface:    '#FFE4F4',
+  surfaceHov: '#FFD0EC',
+  accent:     '#AA005A',
+  accentBar:  '#FF3399',
+  text:       '#220011',
+  textSub:    '#AA005A',
+  textFaint:  '#CC3388',
+}
+
+export const ROSEWOOD = {
+  pageBg:     '#FAF0F0',
+  cardBg:     '#FDF6F6',
+  cardHead:   '#F0D8DC',
+  border:     '#E0B8C0',
+  borderAlt:  '#CC9AA4',
+  surface:    '#F4E4E8',
+  surfaceHov: '#EAD0D8',
+  accent:     '#88404C',
+  accentBar:  '#C87888',
+  text:       '#200810',
+  textSub:    '#88404C',
+  textFaint:  '#AA6878',
+}
+
 export const FUCHSIA = {
   pageBg:     '#FDF0FF',
   cardBg:     '#FEF5FF',

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
-import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME } from '../config/theme'
+import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
@@ -552,9 +552,9 @@ export default function Dashboard({ unit, sector, onBack }) {
           : sector?.id === 'bou'              ? AMBER_THEME
           : sector?.id === 'traumatologie'    ? SLATE_THEME
           : sector?.id === 'prevost'          ? BLUSH_THEME
-          : sector?.id === 'bocha-amopa'      ? FUCHSIA_THEME
-          : sector?.id === 'orl-maxfa-plastie'? FUCHSIA_THEME
-          : sector?.id === 'antalgie'         ? FUCHSIA_THEME
+          : sector?.id === 'bocha-amopa'      ? PURPLE_THEME
+          : sector?.id === 'orl-maxfa-plastie'? HOTPINK_THEME
+          : sector?.id === 'antalgie'         ? ROSEWOOD_THEME
           : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])

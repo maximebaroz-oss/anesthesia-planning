@@ -8,7 +8,7 @@ const UNIT_STYLES = {
   duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8' },
   extop:  { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569' },
   unicat: { bg: '#FFF7ED', border: '#FED7AA', dot: '#F97316', text: '#C2410C' },
-  bocha:  { bg: '#FAF5FF', border: '#E9D5FF', dot: '#A855F7', text: '#7E22CE' },
+  bocha:  { bg: '#F7EEFF', border: '#D8AAFF', dot: '#B040FF', text: '#7A00CC' },
   amopa:  { bg: '#FDF0FF', border: '#E490F0', dot: '#CC00CC', text: '#7A0090' },
 }
 
