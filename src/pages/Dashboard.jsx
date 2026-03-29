@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
-import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME } from '../config/theme'
+import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
@@ -163,6 +163,11 @@ const SECTOR_ROOMS = {
   'bou':               [18, 19, 20, 21, 22],
   'traumatologie':     [23, 36, 37, 24],
   'prevost':           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+  // Maternité
+  'gyneco':            [],
+  'obstetrique':       [],
+  'ophtalmo':          [],
+  // BOCHA (AMOPA)
   'bocha-amopa':       [38, 39, 40, 41, 42],
   'orl-maxfa-plastie': [43, 44, 45, 46, 47, 48, 49],
   'antalgie':          [50, 51, 52, 53, 54, 55, 56],
@@ -552,6 +557,11 @@ export default function Dashboard({ unit, sector, onBack }) {
           : sector?.id === 'bocha-amopa'      ? PURPLE_THEME
           : sector?.id === 'orl-maxfa-plastie'? HOTPINK_THEME
           : sector?.id === 'antalgie'         ? ROSEWOOD_THEME
+          : sector?.id === 'gyneco'           ? LIME_THEME
+          : sector?.id === 'obstetrique'      ? LIME_THEME
+          : sector?.id === 'ophtalmo'         ? LIME_THEME
+          : unit?.id    === 'sinpi'           ? SALMON_THEME
+          : unit?.id    === 'pediatrie'       ? YELLOW_THEME
           : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
