@@ -17,7 +17,7 @@ const UNIT_STYLES = {
 // Couleurs spécifiques par secteur (remplace la couleur de l'unité si défini)
 const SECTOR_STYLES = {
   'gyneco':            { bg: '#F0FAF0', border: '#9AD89A', dot: '#55AA55', text: '#2A7A2A' },
-  'obstetrique':       { bg: '#F5F0FA', border: '#CEB0E8', dot: '#A078CC', text: '#6040A0' },
+  'obstetrique':       { bg: '#F5F0FA', border: '#C0B0D0', dot: '#A078CC', text: '#6040A0', gradient: 'linear-gradient(135deg, #FFD6E8 0%, #D6E8FF 100%)' },
   'ophtalmo':          { bg: '#F4F4F6', border: '#C8C8CE', dot: '#777788', text: '#444450' },
   'bocha-amopa':       { bg: '#F7EEFF', border: '#D8AAFF', dot: '#B040FF', text: '#7A00CC' },
   'orl-maxfa-plastie': { bg: '#FFF0F8', border: '#FFB0DD', dot: '#FF3399', text: '#AA005A' },
@@ -25,7 +25,7 @@ const SECTOR_STYLES = {
 }
 
 // Unités supportant l'import global de tous leurs secteurs
-const UNIT_IMPORTS = new Set(['unicat', 'amopa'])
+const UNIT_IMPORTS = new Set(['duhb', 'unicat', 'amopa'])
 
 export default function SectorSelector({ unit, onSelect, onBack }) {
   const s = UNIT_STYLES[unit.id] ?? UNIT_STYLES.unicat
@@ -81,7 +81,7 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
             const sc = SECTOR_STYLES[sector.id] ?? s
             return (
               <button key={sector.id} onClick={() => onSelect(sector)}
-                style={{ background: sc.bg, borderColor: sc.border }}
+                style={{ background: sc.gradient ?? sc.bg, borderColor: sc.border }}
                 className="w-full border-2 rounded-2xl px-5 py-4 text-left flex items-center justify-between transition-all hover:shadow-md active:scale-98 hover:brightness-95">
                 <div>
                   <div className="font-bold text-base text-slate-800">{sector.name}</div>

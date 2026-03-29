@@ -454,13 +454,15 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
   const inputRef = useRef(null)
 
   // Modes d'import
+  const isDuhbImport  = unit?.id === 'duhb'
   const isUnitImport  = unit?.id === 'unicat'
   const isAmopaImport = unit?.id === 'amopa'
   const isAmopaSector = ['bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id)
   const isAmopaAny    = isAmopaImport || isAmopaSector
   const isJulliard    = sector?.id === 'julliard'
   const isFeuil1      = isUnitImport || ['bou', 'traumatologie', 'prevost'].includes(sector?.id)
-  const sectorLabel   = isUnitImport  ? 'UNICAT'
+  const sectorLabel   = isDuhbImport  ? 'DUHB'
+                      : isUnitImport  ? 'UNICAT'
                       : isAmopaImport ? 'AMOPA'
                       : isJulliard    ? 'Julliard'
                       : isAmopaSector ? (sector?.name ?? 'AMOPA')
@@ -503,6 +505,21 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
         result = parseAMOPASheet(ws, rows, profiles)
       } else if (isJulliard) {
         result = parseDUSheet(ws, rows, profiles)
+      } else if (isDuhbImport) {
+        // Import tout DUHB : HB (onglet courant) + Julliard (onglet DU)
+        const hbResult = parseHBSheet(ws, rows, profiles)
+        const hbEntries = (hbResult?.entries ?? []).map(e => ({ ...e, sectorId: 'hors-bloc' }))
+        const duSheetName = wb.SheetNames.find(n => n.toUpperCase() === 'DU')
+          ?? wb.SheetNames.find(n => n.toUpperCase().includes('DU'))
+        const duEntries = []
+        if (duSheetName) {
+          const duWs = wb.Sheets[duSheetName]
+          const duRows = XLSX.utils.sheet_to_json(duWs, { header: 1, defval: '', raw: false })
+          const duResult = parseDUSheet(duWs, duRows, profiles)
+          if (duResult) duEntries.push(...duResult.entries.map(e => ({ ...e, sectorId: 'julliard' })))
+        }
+        const allEntries = [...hbEntries, ...duEntries]
+        result = allEntries.length > 0 ? { entries: allEntries, weekLabel: hbResult?.weekLabel ?? 'DUHB' } : null
       } else if (isUnitImport) {
         // Import tout UNICAT : fusionner BOU + Traumatologie + Prévost
         const bouResult     = parseBOUSheet(wb, rows, profiles, 'bou')
@@ -628,7 +645,7 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
       if (!entry.date || !entry.profile) continue
       try {
         await supabase.from('unit_presence').upsert(
-          { date: entry.date, unit_id: sector?.id ?? 'julliard', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.sectorId ?? sector?.id ?? 'julliard', user_id: entry.profile.id, added_by: currentProfile?.id },
           { onConflict: 'date,unit_id,user_id' }
         )
       } catch (e) { /* silencieux - doublons normaux */ }
@@ -639,7 +656,7 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
       if (!entry.date || !entry.noteText) continue
       try {
         const { error } = await supabase.from('day_notes').upsert(
-          { date: entry.date, unit_id: sector?.id ?? 'julliard', content: entry.noteText },
+          { date: entry.date, unit_id: entry.sectorId ?? sector?.id ?? 'julliard', content: entry.noteText },
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Souhait/Remarque ${entry.date}: ${error.message}`)
