@@ -11,6 +11,13 @@ const UNIT_STYLES = {
   amopa:  { bg: '#FDF0FF', border: '#E490F0', dot: '#CC00CC', text: '#7A0090' },
 }
 
+// Couleurs spécifiques par secteur (remplace la couleur de l'unité si défini)
+const SECTOR_STYLES = {
+  'bocha-amopa':       { bg: '#F7EEFF', border: '#D8AAFF', dot: '#B040FF', text: '#7A00CC' },
+  'orl-maxfa-plastie': { bg: '#FFF0F8', border: '#FFB0DD', dot: '#FF3399', text: '#AA005A' },
+  'antalgie':          { bg: '#FAF0F0', border: '#E0B8C0', dot: '#C87888', text: '#88404C' },
+}
+
 // Unités supportant l'import global de tous leurs secteurs
 const UNIT_IMPORTS = new Set(['unicat'])
 
@@ -64,17 +71,20 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
         <p className="text-slate-400 text-sm mb-6">Sélectionnez un secteur</p>
 
         <div className="space-y-3">
-          {unit.sectors.map(sector => (
-            <button key={sector.id} onClick={() => onSelect(sector)}
-              style={{ background: s.bg, borderColor: s.border }}
-              className="w-full border-2 rounded-2xl px-5 py-4 text-left flex items-center justify-between transition-all hover:shadow-md active:scale-98 hover:brightness-95">
-              <div>
-                <div className="font-bold text-base text-slate-800">{sector.name}</div>
-                <div className="text-xs mt-0.5 font-medium" style={{ color: s.text }}>{unit.name}</div>
-              </div>
-              <ChevronRight size={20} style={{ color: s.dot }} />
-            </button>
-          ))}
+          {unit.sectors.map(sector => {
+            const sc = SECTOR_STYLES[sector.id] ?? s
+            return (
+              <button key={sector.id} onClick={() => onSelect(sector)}
+                style={{ background: sc.bg, borderColor: sc.border }}
+                className="w-full border-2 rounded-2xl px-5 py-4 text-left flex items-center justify-between transition-all hover:shadow-md active:scale-98 hover:brightness-95">
+                <div>
+                  <div className="font-bold text-base text-slate-800">{sector.name}</div>
+                  <div className="text-xs mt-0.5 font-medium" style={{ color: sc.text }}>{unit.name}</div>
+                </div>
+                <ChevronRight size={20} style={{ color: sc.dot }} />
+              </button>
+            )
+          })}
         </div>
       </main>
 
