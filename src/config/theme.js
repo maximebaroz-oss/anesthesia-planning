@@ -58,6 +58,21 @@ export const BLUSH = {
   textFaint:  '#A87090',
 }
 
+export const FUCHSIA = {
+  pageBg:     '#FDF0FF',
+  cardBg:     '#FEF5FF',
+  cardHead:   '#F5D0FF',
+  border:     '#E490F0',
+  borderAlt:  '#D060DC',
+  surface:    '#F5E0FA',
+  surfaceHov: '#EBC8F5',
+  accent:     '#7A0090',
+  accentBar:  '#CC00CC',
+  text:       '#1A0020',
+  textSub:    '#7A0090',
+  textFaint:  '#B040B8',
+}
+
 export const SKY = {
   pageBg:     '#EFF6FF',
   cardBg:     '#F0F7FF',

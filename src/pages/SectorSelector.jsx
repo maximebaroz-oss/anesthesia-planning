@@ -8,6 +8,7 @@ const UNIT_STYLES = {
   extop:  { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#475569' },
   unicat: { bg: '#FFF7ED', border: '#FED7AA', dot: '#F97316', text: '#C2410C' },
   bocha:  { bg: '#FAF5FF', border: '#E9D5FF', dot: '#A855F7', text: '#7E22CE' },
+  amopa:  { bg: '#FDF0FF', border: '#E490F0', dot: '#CC00CC', text: '#7A0090' },
 }
 
 // Unités supportant l'import global de tous leurs secteurs

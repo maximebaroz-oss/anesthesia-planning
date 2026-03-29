@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
-import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME } from '../config/theme'
+import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
@@ -158,11 +158,14 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
 const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37])
 
 const SECTOR_ROOMS = {
-  'hors-bloc':    [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  'julliard':     [10, 11, 12, 13, 14, 15, 16, 17],
-  'bou':          [18, 19, 20, 21, 22],
-  'traumatologie':[23, 36, 37, 24],
-  'prevost':      [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+  'hors-bloc':         [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  'julliard':          [10, 11, 12, 13, 14, 15, 16, 17],
+  'bou':               [18, 19, 20, 21, 22],
+  'traumatologie':     [23, 36, 37, 24],
+  'prevost':           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+  'bocha-amopa':       [],
+  'orl-maxfa-plastie': [],
+  'antalgie':          [],
 }
 
 
@@ -523,10 +526,13 @@ export default function Dashboard({ unit, sector, onBack }) {
   const { profile } = useAuth()
   const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
   const sectorLabel = sector?.name ?? 'HB'
-  const T = sector?.id === 'julliard'      ? SKY_THEME
-          : sector?.id === 'bou'           ? AMBER_THEME
-          : sector?.id === 'traumatologie' ? SLATE_THEME
-          : sector?.id === 'prevost'       ? BLUSH_THEME
+  const T = sector?.id === 'julliard'         ? SKY_THEME
+          : sector?.id === 'bou'              ? AMBER_THEME
+          : sector?.id === 'traumatologie'    ? SLATE_THEME
+          : sector?.id === 'prevost'          ? BLUSH_THEME
+          : sector?.id === 'bocha-amopa'      ? FUCHSIA_THEME
+          : sector?.id === 'orl-maxfa-plastie'? FUCHSIA_THEME
+          : sector?.id === 'antalgie'         ? FUCHSIA_THEME
           : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
