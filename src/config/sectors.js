@@ -25,6 +25,24 @@ export const UNITS = [
     ],
   },
   {
+    id: 'sinpi',
+    name: 'SINPI',
+    color: 'salmon',
+    sectors: [],
+  },
+  {
+    id: 'maternite',
+    name: 'Maternité',
+    color: 'lime',
+    sectors: [],
+  },
+  {
+    id: 'pediatrie',
+    name: 'Pédiatrie',
+    color: 'yellow',
+    sectors: [],
+  },
+  {
     id: 'amopa',
     name: 'AMOPA',
     color: 'fuchsia',

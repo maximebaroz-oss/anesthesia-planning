@@ -58,6 +58,51 @@ export const BLUSH = {
   textFaint:  '#A87090',
 }
 
+export const SALMON = {
+  pageBg:     '#FAF0EF',
+  cardBg:     '#FDF5F5',
+  cardHead:   '#F2D8D8',
+  border:     '#E0B0B0',
+  borderAlt:  '#CC9090',
+  surface:    '#F5E4E4',
+  surfaceHov: '#EAD0D0',
+  accent:     '#904040',
+  accentBar:  '#D08888',
+  text:       '#220808',
+  textSub:    '#904040',
+  textFaint:  '#B06868',
+}
+
+export const YELLOW = {
+  pageBg:     '#FFFDE0',
+  cardBg:     '#FFFFE8',
+  cardHead:   '#FFF8A0',
+  border:     '#FFE840',
+  borderAlt:  '#FFD800',
+  surface:    '#FFFBD0',
+  surfaceHov: '#FFF5A0',
+  accent:     '#806000',
+  accentBar:  '#CCA800',
+  text:       '#201400',
+  textSub:    '#806000',
+  textFaint:  '#AA8800',
+}
+
+export const LIME = {
+  pageBg:     '#EFFFEF',
+  cardBg:     '#F5FFF5',
+  cardHead:   '#CCFFCC',
+  border:     '#88EE88',
+  borderAlt:  '#44DD44',
+  surface:    '#DDFFDD',
+  surfaceHov: '#BBFFBB',
+  accent:     '#006600',
+  accentBar:  '#22CC44',
+  text:       '#001800',
+  textSub:    '#006600',
+  textFaint:  '#228844',
+}
+
 export const PURPLE = {
   pageBg:     '#F7EEFF',
   cardBg:     '#FBF5FF',
