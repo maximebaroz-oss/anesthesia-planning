@@ -21,7 +21,7 @@ export const ROOM_NAMES = {
   // BOU (UNICAT)
   18: 'BOU 1 (33501)',
   19: 'BOU 2 (33501)',
-  20: 'BOU 3 (33500)',
+  20: 'BOU 1 (33500)',
   21: 'BOU 3 (32737)',
   22: 'Poly B Prévost',
 }
