@@ -155,13 +155,13 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37])
 
 const UNIT_ROOMS = {
   'hors-bloc':    [1, 2, 3, 4, 5, 6, 7, 8, 9],
   'julliard':     [10, 11, 12, 13, 14, 15, 16, 17],
   'bou':          [18, 19, 20, 21, 22],
-  'traumatologie':[23, 24],
+  'traumatologie':[23, 36, 37, 24],
   'prevost':      [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
 }
 
@@ -195,6 +195,8 @@ const DEFAULT_SCHEDULES = {
   // Traumatologie
   23: { opening_time: '07:00', closing_time: '17:00' },
   24: { opening_time: '10:30', closing_time: '19:00' },
+  36: { opening_time: '07:00', closing_time: '17:30' },
+  37: { opening_time: '07:00', closing_time: '17:30' },
   // Prévost
   25: { opening_time: '07:00', closing_time: '17:00' },
   26: { opening_time: '07:00', closing_time: '17:00' },
@@ -534,6 +536,7 @@ export default function Dashboard({ sector, unit, onBack }) {
   const [weekDayClosures, setWeekDayClosures] = useState([]) // dates fermées de la semaine
   const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
   const [showImport, setShowImport] = useState(false)
+  const [showSectorImport, setShowSectorImport] = useState(false)
   const [showEffectif, setShowEffectif] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -783,12 +786,22 @@ export default function Dashboard({ sector, unit, onBack }) {
               </button>
             )}
             {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
-              <button onClick={() => setShowImport(true)}
-                className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-                style={{ background: T.surface, color: T.accent }}>
-                <FileSpreadsheet size={13} />
-                Import
-              </button>
+              <>
+                <button onClick={() => setShowImport(true)}
+                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                  style={{ background: T.surface, color: T.accent }}>
+                  <FileSpreadsheet size={13} />
+                  Import
+                </button>
+                {sector?.id === 'unicat' && (
+                  <button onClick={() => setShowSectorImport(true)}
+                    className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                    style={{ background: T.accentBar, color: '#fff' }}>
+                    <FileSpreadsheet size={13} />
+                    Import UNICAT
+                  </button>
+                )}
+              </>
             )}
             <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
               <RefreshCw size={14} />
@@ -895,6 +908,16 @@ export default function Dashboard({ sector, unit, onBack }) {
           theme={T}
           onClose={() => setShowImport(false)}
           onImported={() => { fetchData(); setShowImport(false) }}
+        />
+      )}
+
+      {showSectorImport && (
+        <ImportPlanningModal
+          profiles={allProfiles}
+          sector={sector}
+          theme={T}
+          onClose={() => setShowSectorImport(false)}
+          onImported={() => { fetchData(); setShowSectorImport(false) }}
         />
       )}
 

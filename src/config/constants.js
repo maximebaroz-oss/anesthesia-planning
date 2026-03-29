@@ -27,6 +27,8 @@ export const ROOM_NAMES = {
   // Traumatologie (UNICAT)
   23: 'CDC Traumato (33510)',
   24: 'Tardif Traumato',
+  36: 'Interne Salle 7',
+  37: 'Interne Salle 8',
   // Prévost (UNICAT)
   25: 'NCH GIBOR',
   26: 'NCH Salle 4 (hybride)',

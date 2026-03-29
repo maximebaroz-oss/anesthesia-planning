@@ -32,8 +32,8 @@ const BOU_ROWS = [
 const TRAUMATO_ROWS = [
   { rowIdx: 2,  type: 'supervisor', label: 'Superviseur BOU-Traumato', roomId: null },
   { rowIdx: 10, type: 'assignment', label: 'CDC Traumato (33510)',     roomId: 23 },
-  { rowIdx: 11, type: 'assignment', label: 'CDC Traumato (33510)',     roomId: 23 },
-  { rowIdx: 12, type: 'assignment', label: 'CDC Traumato (33510)',     roomId: 23 },
+  { rowIdx: 11, type: 'assignment', label: 'Interne Salle 7',          roomId: 36 },
+  { rowIdx: 12, type: 'assignment', label: 'Interne Salle 8',          roomId: 37 },
   { rowIdx: 13, type: 'assignment', label: 'Tardif Traumato',          roomId: 24 },
 ]
 
@@ -354,7 +354,7 @@ function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
         date: day.date, dayLabel: day.header,
         rowLabel: label, excelName: raw,
         profile: matchProfile(raw, profiles),
-        type, roomId,
+        type, roomId, unitId,
       })
     }
   }
@@ -362,7 +362,7 @@ function parseBOUSheet(wb, feuil1Rows, profiles, unitId = 'bou') {
   return { entries, weekLabel }
 }
 
-export default function ImportPlanningModal({ profiles, unit, theme, onClose, onImported }) {
+export default function ImportPlanningModal({ profiles, unit, sector, theme, onClose, onImported }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const [step, setStep] = useState('upload')
@@ -371,9 +371,14 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
   const [importErrors, setImportErrors] = useState([])
   const inputRef = useRef(null)
 
+  // Mode secteur UNICAT : importe BOU + Traumatologie + Prévost en une fois
+  const isSectorImport = sector?.id === 'unicat'
   const isJulliard  = unit?.id === 'julliard'
-  const isFeuil1    = ['bou', 'traumatologie', 'prevost'].includes(unit?.id)
-  const unitLabel   = isJulliard ? 'Julliard' : isFeuil1 ? (unit?.name ?? 'BOU') : 'HB'
+  const isFeuil1    = isSectorImport || ['bou', 'traumatologie', 'prevost'].includes(unit?.id)
+  const unitLabel   = isSectorImport ? 'UNICAT'
+                    : isJulliard ? 'Julliard'
+                    : isFeuil1 ? (unit?.name ?? 'BOU')
+                    : 'HB'
   const sheetName   = isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
 
   async function handleFile(e) {
@@ -401,11 +406,27 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
       const ws = wb.Sheets[targetSheet]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false })
 
-      const result = isJulliard
-        ? parseDUSheet(ws, rows, profiles)
-        : isFeuil1
-          ? parseBOUSheet(wb, rows, profiles, unit?.id)
-          : parseHBSheet(ws, rows, profiles)
+      let result
+      if (isJulliard) {
+        result = parseDUSheet(ws, rows, profiles)
+      } else if (isSectorImport) {
+        // Import tout UNICAT : fusionner BOU + Traumatologie + Prévost
+        const bouResult     = parseBOUSheet(wb, rows, profiles, 'bou')
+        const traumaResult  = parseBOUSheet(wb, rows, profiles, 'traumatologie')
+        const prevostResult = parseBOUSheet(wb, rows, profiles, 'prevost')
+        if (!bouResult) { result = null } else {
+          const allEntries = [
+            ...bouResult.entries,
+            ...traumaResult?.entries ?? [],
+            ...prevostResult?.entries ?? [],
+          ]
+          result = { entries: allEntries, weekLabel: bouResult.weekLabel }
+        }
+      } else if (isFeuil1) {
+        result = parseBOUSheet(wb, rows, profiles, unit?.id)
+      } else {
+        result = parseHBSheet(ws, rows, profiles)
+      }
 
       if (!result) {
         const headerRow = rows[0] ?? []
@@ -431,7 +452,7 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
       if (!entry.date) continue
       try {
         const { error } = await supabase.from('day_closures').upsert(
-          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', label: 'Jour férié', closed_by: currentProfile?.id },
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Jour férié ${entry.date}: ${error.message}`)
@@ -458,13 +479,13 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
       if (!entry.date || !entry.profile) continue
       try {
         const { error } = await supabase.from('supervisors').upsert(
-          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, assigned_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', user_id: entry.profile.id, assigned_by: currentProfile?.id },
           { onConflict: 'date,unit_id' }
         )
         if (error) errors.push(`Superviseur ${entry.date}: ${error.message}`)
         // Aussi marquer comme présent dans l'unité
         await supabase.from('unit_presence').upsert(
-          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
           { onConflict: 'date,unit_id,user_id' }
         )
       } catch (e) { errors.push(e.message) }
@@ -476,7 +497,7 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
       try {
         // Marquer comme présent dans l'unité
         await supabase.from('unit_presence').upsert(
-          { date: entry.date, unit_id: unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
+          { date: entry.date, unit_id: entry.unitId ?? unit?.id ?? 'hors-bloc', user_id: entry.profile.id, added_by: currentProfile?.id },
           { onConflict: 'date,unit_id,user_id' }
         )
         const { data: existing } = await supabase.from('assignments').select('id')
