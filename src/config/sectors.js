@@ -25,12 +25,6 @@ export const UNITS = [
     ],
   },
   {
-    id: 'bocha',
-    name: 'BOCHA',
-    color: 'orange',
-    sectors: [],
-  },
-  {
     id: 'amopa',
     name: 'AMOPA',
     color: 'fuchsia',
