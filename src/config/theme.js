@@ -58,6 +58,21 @@ export const BLUSH = {
   textFaint:  '#A87090',
 }
 
+export const MAUVE = {
+  pageBg:     '#F5F0FA',
+  cardBg:     '#FAF5FD',
+  cardHead:   '#E8D8F5',
+  border:     '#CEB0E8',
+  borderAlt:  '#B090D8',
+  surface:    '#EEE0F8',
+  surfaceHov: '#E0CCF0',
+  accent:     '#6040A0',
+  accentBar:  '#A078CC',
+  text:       '#180828',
+  textSub:    '#6040A0',
+  textFaint:  '#9068BB',
+}
+
 export const SALMON = {
   pageBg:     '#FAF0EF',
   cardBg:     '#FDF5F5',

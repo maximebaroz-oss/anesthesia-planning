@@ -16,6 +16,7 @@ const UNIT_STYLES = {
 
 // Couleurs spécifiques par secteur (remplace la couleur de l'unité si défini)
 const SECTOR_STYLES = {
+  'obstetrique':       { bg: '#F5F0FA', border: '#CEB0E8', dot: '#A078CC', text: '#6040A0' },
   'bocha-amopa':       { bg: '#F7EEFF', border: '#D8AAFF', dot: '#B040FF', text: '#7A00CC' },
   'orl-maxfa-plastie': { bg: '#FFF0F8', border: '#FFB0DD', dot: '#FF3399', text: '#AA005A' },
   'antalgie':          { bg: '#FAF0F0', border: '#E0B8C0', dot: '#C87888', text: '#88404C' },
