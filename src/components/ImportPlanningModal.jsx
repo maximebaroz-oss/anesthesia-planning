@@ -18,6 +18,16 @@ const HB_ROWS = [
   { rowIdx: 9, type: 'assignment', label: 'Consultation',   roomId: 9 },
 ]
 
+// BOU (Feuil1) row index (0-based) → { roomId, label, type }
+const BOU_ROWS = [
+  { rowIdx: 2, type: 'supervisor', label: 'Superviseur BOU-Traumato', roomId: null },
+  { rowIdx: 4, type: 'assignment', label: 'BOU 1 (33501)',            roomId: 18 },
+  { rowIdx: 5, type: 'assignment', label: 'BOU 2 (33501)',            roomId: 19 },
+  { rowIdx: 6, type: 'assignment', label: 'BOU 1 (33500)',            roomId: 20 },
+  { rowIdx: 7, type: 'assignment', label: 'BOU 3 (32737)',            roomId: 21 },
+  { rowIdx: 8, type: 'assignment', label: 'Poly B Prévost',           roomId: 22 },
+]
+
 // DU (Julliard) row index (0-based) → { roomId, label, type }
 const DU_ROWS = [
   { rowIdx: 1,  type: 'supervisor', label: 'Superviseur Julliard',  roomId: null },
@@ -258,6 +268,72 @@ function parseDUSheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
+function parseBOUSheet(wb, feuil1Rows, profiles) {
+  // 1. Lire mois/année depuis HEBDO_REMPLI row 0 col 0 = "Semaine du 23 au 29 mars 2026"
+  let month = new Date().getMonth() + 1
+  let year  = new Date().getFullYear()
+  let weekLabel = 'BOU'
+  const hebdoWs = wb.Sheets['HEBDO_REMPLI']
+  if (hebdoWs) {
+    const hebdoRows = XLSX.utils.sheet_to_json(hebdoWs, { header: 1, defval: '', raw: false })
+    const cell = String(hebdoRows[0]?.[0] ?? '')
+    weekLabel = cell
+    const lower = cell.toLowerCase()
+    const yearMatch = lower.match(/(\d{4})/)
+    if (yearMatch) year = parseInt(yearMatch[1])
+    // Trouver le/les mois mentionnés (prendre le dernier = fin de semaine)
+    let lastPos = -1
+    for (const [name, num] of Object.entries(FR_MONTHS)) {
+      const pos = lower.indexOf(name.toLowerCase())
+      if (pos > lastPos) { lastPos = pos; month = num }
+    }
+  }
+
+  // 2. Parser les jours depuis Feuil1 row 0 cols 1-5 (B-F) = "Lundi 23", "Mardi 24"…
+  const headerRow = feuil1Rows[0] ?? []
+  const days = []
+  for (let colIdx = 1; colIdx <= 5; colIdx++) {
+    const header = String(headerRow[colIdx] ?? '').trim()
+    if (!header) continue
+    const dayMatch = header.match(/(\d+)/)
+    if (!dayMatch) continue
+    const day = parseInt(dayMatch[1])
+    // Pour les semaines chevauchant deux mois : si day est très petit, c'est le mois suivant
+    const m = (days.length > 0 && day < days[days.length - 1].dayNum) ? (month % 12) + 1 : month
+    const date = `${year}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+    days.push({ colIdx, header, date, dayNum: day })
+  }
+  if (days.length === 0) return null
+
+  const feuil1Ws = wb.Sheets['Feuil1'] ?? wb.Sheets[Object.keys(wb.Sheets)[1]]
+  const entries = []
+  const grayedCols = new Set(days.filter(d => isColumnGrayed(feuil1Ws, d.colIdx)).map(d => d.colIdx))
+
+  for (const day of days) {
+    if (grayedCols.has(day.colIdx)) {
+      entries.push({
+        date: day.date, dayLabel: day.header,
+        rowLabel: 'Journée', excelName: '🔴 Jour férié',
+        type: 'day_closure', roomId: null, profile: null,
+      })
+      continue
+    }
+    for (const { rowIdx, type, label, roomId } of BOU_ROWS) {
+      const raw = String(feuil1Rows[rowIdx]?.[day.colIdx] ?? '')
+        .trim().replace(/\s*\(.*?\)\s*/g, '').trim() // strip (AM) (PM)
+      if (!raw) continue
+      entries.push({
+        date: day.date, dayLabel: day.header,
+        rowLabel: label, excelName: raw,
+        profile: matchProfile(raw, profiles),
+        type, roomId,
+      })
+    }
+  }
+
+  return { entries, weekLabel }
+}
+
 export default function ImportPlanningModal({ profiles, unit, theme, onClose, onImported }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
@@ -268,8 +344,9 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
   const inputRef = useRef(null)
 
   const isJulliard = unit?.id === 'julliard'
-  const unitLabel = isJulliard ? 'Julliard' : 'HB'
-  const sheetName = isJulliard ? 'DU' : 'HB'
+  const isBOU = unit?.id === 'bou'
+  const unitLabel = isJulliard ? 'Julliard' : isBOU ? 'BOU' : 'HB'
+  const sheetName = isJulliard ? 'DU' : isBOU ? 'Feuil1' : 'HB'
 
   async function handleFile(e) {
     const file = e.target.files[0]
@@ -292,7 +369,9 @@ export default function ImportPlanningModal({ profiles, unit, theme, onClose, on
 
       const result = isJulliard
         ? parseDUSheet(ws, rows, profiles)
-        : parseHBSheet(ws, rows, profiles)
+        : isBOU
+          ? parseBOUSheet(wb, rows, profiles)
+          : parseHBSheet(ws, rows, profiles)
 
       if (!result) {
         const headerRow = rows[0] ?? []
