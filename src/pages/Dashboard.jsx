@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
-import { WARM as WARM_THEME, SKY as SKY_THEME } from '../config/theme'
+import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
@@ -155,11 +155,12 @@ function SupervisorCard({ date, allProfiles, canManage, unitId, unitLabel, theme
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9, 15, 16, 17])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22])
 
 const UNIT_ROOMS = {
   'hors-bloc': [1, 2, 3, 4, 5, 6, 7, 8, 9],
   'julliard':  [10, 11, 12, 13, 14, 15, 16, 17],
+  'bou':       [18, 19, 20, 21, 22],
 }
 
 
@@ -183,6 +184,12 @@ const DEFAULT_SCHEDULES = {
   15: { opening_time: '08:00', closing_time: '16:00' },
   16: { opening_time: '08:00', closing_time: '16:00' },
   17: { opening_time: '08:00', closing_time: '16:00' },
+  // BOU
+  18: { opening_time: '07:00', closing_time: '15:00' },
+  19: { opening_time: '12:00', closing_time: '20:00' },
+  20: { opening_time: '07:00', closing_time: '17:00' },
+  21: { opening_time: '09:30', closing_time: '19:30' },
+  22: { opening_time: '07:00', closing_time: '17:00' },
 }
 
 
@@ -497,7 +504,9 @@ export default function Dashboard({ sector, unit, onBack }) {
   const { profile } = useAuth()
   const ROOMS = UNIT_ROOMS[unit?.id] ?? UNIT_ROOMS['hors-bloc']
   const unitLabel = unit?.name ?? 'HB'
-  const T = unit?.id === 'julliard' ? SKY_THEME : WARM_THEME
+  const T = unit?.id === 'julliard' ? SKY_THEME
+          : unit?.id === 'bou'      ? AMBER_THEME
+          : WARM_THEME
   const [assignments, setAssignments] = useState([])
   const [closures, setClosures] = useState([])
   const [roomSchedules, setRoomSchedules] = useState([])
@@ -827,10 +836,10 @@ export default function Dashboard({ sector, unit, onBack }) {
                 theme={T}
               />
             ))}
-            {unit?.id === 'julliard' && (
+            {(unit?.id === 'julliard' || unit?.id === 'bou') && (
               <SouhaitsCard
                 date={selectedDate}
-                unitId="julliard"
+                unitId={unit.id}
                 canEdit={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
                 theme={T}
               />

@@ -13,6 +13,21 @@ export const WARM = {
   textFaint:  '#9E9489',
 }
 
+export const AMBER = {
+  pageBg:     '#FFFBEB',
+  cardBg:     '#FFFDE7',
+  cardHead:   '#FEF9C3',
+  border:     '#FDE68A',
+  borderAlt:  '#FCD34D',
+  surface:    '#FEF3C7',
+  surfaceHov: '#FDE68A',
+  accent:     '#92400E',
+  accentBar:  '#D97706',
+  text:       '#1C1917',
+  textSub:    '#78350F',
+  textFaint:  '#B45309',
+}
+
 export const SKY = {
   pageBg:     '#EFF6FF',
   cardBg:     '#F0F7FF',

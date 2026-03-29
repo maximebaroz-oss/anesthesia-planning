@@ -18,7 +18,9 @@ export const SECTORS = [
     id: 'unicat',
     name: 'UNICAT',
     color: 'emerald',
-    units: [],
+    units: [
+      { id: 'bou', name: 'BOU' },
+    ],
   },
   {
     id: 'bocha',
