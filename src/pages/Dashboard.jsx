@@ -675,8 +675,8 @@ export default function Dashboard({ sector, unit, onBack }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: T.pageBg }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} selectedDate={selectedDate} />
-      <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} selectedDate={selectedDate} theme={T} />
+      <Header sector={sector} unit={unit} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} theme={T} />
 
       {/* Sélecteur semaine/jour */}
       <div className="border-b px-4 py-3" style={{ background: T.cardHead, borderColor: T.border }}>
