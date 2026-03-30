@@ -209,40 +209,43 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
         <span className="text-xs flex-shrink-0" style={{ color: T.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
         <button
           onClick={() => { setShowPhone(v => !v); setEditing(false) }}
-          className="p-0.5 rounded transition-colors flex-shrink-0"
+          className="p-2 -mr-1 rounded-lg transition-colors flex-shrink-0 touch-manipulation"
           style={{ color: phone ? T.accentBar : T.textFaint }}
         >
-          <Phone size={11} />
+          <Phone size={14} />
         </button>
       </div>
 
       {showPhone && (
         <div className="px-4 pb-1">
           {editing ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                 placeholder="06 12 34 56 78" autoFocus
                 style={{ background: T.surface, borderColor: T.border, color: T.text }}
-                className="flex-1 border rounded-md px-2 py-1 text-xs focus:outline-none"
+                className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none"
               />
               <button onClick={savePhone} disabled={saving}
                 style={{ background: T.accentBar }}
-                className="text-white rounded-md p-1 transition-colors">
-                <Check size={11} />
+                className="text-white rounded-lg p-2 transition-colors touch-manipulation flex-shrink-0">
+                <Check size={14} />
               </button>
-              <button onClick={() => setEditing(false)} style={{ color: T.textFaint }} className="rounded-md p-1">
-                <X size={11} />
+              <button onClick={() => setEditing(false)} style={{ color: T.textFaint }}
+                className="rounded-lg p-2 transition-colors touch-manipulation flex-shrink-0">
+                <X size={14} />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between rounded-md px-2 py-1" style={{ background: T.surface }}>
+            <div className="flex items-center justify-between rounded-lg px-3 py-2.5" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
               {phone
-                ? <span className="text-xs" style={{ color: T.textSub }}>{phone}</span>
-                : <span className="text-xs italic" style={{ color: T.textFaint }}>Non renseigné</span>
+                ? <span className="text-sm font-medium" style={{ color: T.text }}>{phone}</span>
+                : <span className="text-sm italic" style={{ color: T.textFaint }}>Non renseigné</span>
               }
               {canEdit && (
-                <button onClick={() => setEditing(true)} className="ml-2" style={{ color: T.textFaint }}>
-                  <Edit2 size={11} />
+                <button onClick={() => setEditing(true)}
+                  className="ml-3 p-1.5 rounded-md touch-manipulation flex-shrink-0"
+                  style={{ color: T.textFaint }}>
+                  <Edit2 size={14} />
                 </button>
               )}
             </div>

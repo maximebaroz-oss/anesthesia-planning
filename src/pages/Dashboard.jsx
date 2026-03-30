@@ -828,7 +828,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                   <FileSpreadsheet size={13} />
                   Import
                 </button>
-                {['unicat', 'amopa'].includes(unit?.id) && (
+                {['duhb', 'unicat', 'amopa'].includes(unit?.id) && (
                   <button onClick={() => setShowUnitImport(true)}
                     className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                     style={{ background: T.accentBar, color: '#fff' }}>

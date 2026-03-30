@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { ArrowLeft, ChevronRight, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, ChevronRight, FileSpreadsheet, Menu } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ImportPlanningModal from '../components/ImportPlanningModal'
+import Sidebar from '../components/Sidebar'
+import { WARM } from '../config/theme'
 
 const UNIT_STYLES = {
   duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8' },
@@ -31,6 +33,8 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
   const s = UNIT_STYLES[unit.id] ?? UNIT_STYLES.unicat
   const [showImport, setShowImport] = useState(false)
   const [profiles, setProfiles] = useState([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const todayKey = new Date().toISOString().slice(0, 10)
 
   async function openUnitImport() {
     if (profiles.length === 0) {
@@ -60,14 +64,20 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
             </div>
           </div>
 
-          {UNIT_IMPORTS.has(unit.id) && (
-            <button onClick={openUnitImport}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white transition-opacity hover:opacity-80"
-              style={{ background: s.dot }}>
-              <FileSpreadsheet size={14} />
-              Import {unit.name}
+          <div className="flex items-center gap-2">
+            {UNIT_IMPORTS.has(unit.id) && (
+              <button onClick={openUnitImport}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white transition-opacity hover:opacity-80 touch-manipulation"
+                style={{ background: s.dot }}>
+                <FileSpreadsheet size={14} />
+                Import {unit.name}
+              </button>
+            )}
+            <button onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
+              <Menu size={22} />
             </button>
-          )}
+          </div>
         </div>
       </header>
 
@@ -93,6 +103,9 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
           })}
         </div>
       </main>
+
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)}
+        selectedDate={todayKey} theme={WARM} />
 
       {showImport && (
         <ImportPlanningModal

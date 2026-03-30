@@ -1,7 +1,10 @@
-import { LogOut } from 'lucide-react'
+import { useState } from 'react'
+import { Menu } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
+import Sidebar from '../components/Sidebar'
+import { WARM } from '../config/theme'
 
 // Palette bloc opératoire — pastels cliniques
 const UNIT_STYLES = {
@@ -16,11 +19,13 @@ const UNIT_STYLES = {
 }
 
 export default function UnitSelector({ onSelect }) {
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
+  const todayKey = new Date().toISOString().slice(0, 10)
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#F0F4F8' }}>
@@ -37,22 +42,15 @@ export default function UnitSelector({ onSelect }) {
               <div className="text-slate-400 text-xs capitalize">{today}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {profile && (
-              <div className="text-right">
-                <div className="text-sm font-medium text-slate-700">
-                  {profile.profession === 'medecin' ? `Dr. ${profile.full_name}` : profile.full_name}
-                </div>
-                <div className="text-xs text-slate-400">{GRADE_LABELS[profile.grade] ?? profile.grade}</div>
-              </div>
-            )}
-            <button onClick={signOut}
-              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-              <LogOut size={18} />
-            </button>
-          </div>
+          <button onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
+            <Menu size={22} />
+          </button>
         </div>
       </header>
+
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)}
+        selectedDate={todayKey} theme={WARM} />
 
       {/* Content */}
       <main className="flex-1 px-4 py-8 max-w-4xl mx-auto w-full">
