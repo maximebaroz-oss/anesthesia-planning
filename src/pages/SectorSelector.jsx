@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, ChevronRight, FileSpreadsheet, Menu, BookOpen, Flame } from 'lucide-react'
+import { ArrowLeft, ChevronRight, FileSpreadsheet, Menu } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ImportPlanningModal from '../components/ImportPlanningModal'
-import DocumentsModal from '../components/DocumentsModal'
 import Sidebar from '../components/Sidebar'
 import { WARM } from '../config/theme'
 
@@ -35,7 +34,6 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
   const [showImport, setShowImport] = useState(false)
   const [profiles, setProfiles] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [showDocs, setShowDocs] = useState(null) // 'protocols' | 'hot_topics'
   const todayKey = new Date().toISOString().slice(0, 10)
 
   async function openUnitImport() {
@@ -88,21 +86,6 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
         <h2 className="text-slate-700 text-xl font-bold mb-1">{unit.name}</h2>
         <p className="text-slate-400 text-sm mb-4">Sélectionnez un secteur</p>
 
-        {/* Boutons documents */}
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setShowDocs('protocols')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:shadow-sm touch-manipulation"
-            style={{ background: '#EFF6FF', border: '1.5px solid #BFDBFE', color: '#1D4ED8' }}>
-            <BookOpen size={15} />
-            Protocoles / Guidelines
-          </button>
-          <button onClick={() => setShowDocs('hot_topics')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:shadow-sm touch-manipulation"
-            style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#DC2626' }}>
-            <Flame size={15} />
-            Hot Topics
-          </button>
-        </div>
 
         <div className="space-y-3">
           {unit.sectors.map(sector => {
@@ -125,10 +108,6 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)}
         selectedDate={todayKey} theme={WARM} />
 
-      {showDocs && (
-        <DocumentsModal unit={unit} theme={WARM} onClose={() => setShowDocs(null)}
-          initialTab={showDocs} />
-      )}
 
       {showImport && (
         <ImportPlanningModal

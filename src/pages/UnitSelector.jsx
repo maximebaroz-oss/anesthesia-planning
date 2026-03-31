@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, Flame } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
 import Sidebar from '../components/Sidebar'
+import DocumentsModal from '../components/DocumentsModal'
 import { WARM } from '../config/theme'
 
 // Palette bloc opératoire — pastels cliniques
@@ -21,6 +22,7 @@ const UNIT_STYLES = {
 export default function UnitSelector({ onSelect }) {
   const { profile } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [hotTopicsUnit, setHotTopicsUnit] = useState(null)
 
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -62,41 +64,56 @@ export default function UnitSelector({ onSelect }) {
             const s = UNIT_STYLES[unit.id] ?? UNIT_STYLES.unicat
             const hasSectors = unit.sectors.length > 0
             return (
-              <button
-                key={unit.id}
-                onClick={() => hasSectors && onSelect(unit)}
-                disabled={!hasSectors}
-                style={hasSectors
-                  ? { background: s.bg, borderColor: s.border }
-                  : { background: '#F8FAFC', borderColor: '#E2E8F0' }}
-                className={`border-2 rounded-2xl p-5 text-left transition-all ${
-                  hasSectors
-                    ? 'hover:shadow-md active:scale-95 cursor-pointer hover:brightness-95'
-                    : 'opacity-40 cursor-not-allowed'
-                }`}
-              >
-                {/* Indicateur couleur */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ background: hasSectors ? s.dot : '#CBD5E1' }} />
-                  <span className="text-xs font-semibold" style={{ color: hasSectors ? s.text : '#94A3B8' }}>
+              <div key={unit.id} className="relative">
+                <button
+                  onClick={() => hasSectors && onSelect(unit)}
+                  disabled={!hasSectors}
+                  style={hasSectors
+                    ? { background: s.bg, borderColor: s.border }
+                    : { background: '#F8FAFC', borderColor: '#E2E8F0' }}
+                  className={`w-full border-2 rounded-2xl p-5 text-left transition-all ${
+                    hasSectors
+                      ? 'hover:shadow-md active:scale-95 cursor-pointer hover:brightness-95'
+                      : 'opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ background: hasSectors ? s.dot : '#CBD5E1' }} />
+                    <span className="text-xs font-semibold" style={{ color: hasSectors ? s.text : '#94A3B8' }}>
+                      {unit.name}
+                    </span>
+                  </div>
+                  <div className="font-bold text-lg" style={{ color: hasSectors ? '#1E293B' : '#94A3B8' }}>
                     {unit.name}
-                  </span>
-                </div>
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: hasSectors ? s.text : '#94A3B8' }}>
+                    {hasSectors
+                      ? `${unit.sectors.length} secteur${unit.sectors.length > 1 ? 's' : ''}`
+                      : 'À venir'}
+                  </div>
+                </button>
 
-                <div className="font-bold text-lg" style={{ color: hasSectors ? '#1E293B' : '#94A3B8' }}>
-                  {unit.name}
-                </div>
-                <div className="text-xs mt-1" style={{ color: hasSectors ? s.text : '#94A3B8' }}>
-                  {hasSectors
-                    ? `${unit.sectors.length} secteur${unit.sectors.length > 1 ? 's' : ''}`
-                    : 'À venir'}
-                </div>
-              </button>
+                {/* Bouton Hot Topics */}
+                {hasSectors && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setHotTopicsUnit(unit) }}
+                    className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
+                    style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                    <Flame size={11} />
+                    Hot Topics
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>
       </main>
+
+      {hotTopicsUnit && (
+        <DocumentsModal unit={hotTopicsUnit} theme={WARM} initialTab="hot_topics"
+          onClose={() => setHotTopicsUnit(null)} />
+      )}
     </div>
   )
 }

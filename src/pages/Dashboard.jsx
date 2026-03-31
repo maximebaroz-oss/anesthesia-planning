@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen } from 'lucide-react'
 import ImportPlanningModal from '../components/ImportPlanningModal'
+import DocumentsModal from '../components/DocumentsModal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
@@ -573,6 +574,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [showImport, setShowImport] = useState(false)
   const [showUnitImport, setShowUnitImport] = useState(false)
   const [showEffectif, setShowEffectif] = useState(false)
+  const [showProtocols, setShowProtocols] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -812,6 +814,12 @@ export default function Dashboard({ unit, sector, onBack }) {
               <Users size={13} />
               Effectif
             </button>
+            <button onClick={() => setShowProtocols(true)}
+              className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+              style={{ background: '#EFF6FF', color: '#1D4ED8' }}>
+              <BookOpen size={13} />
+              Protocoles
+            </button>
             {(profile?.is_admin || profile?.grade === 'chef_clinique') && (
               <button onClick={dayClosed ? handleOpenDay : handleCloseDay}
                 className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
@@ -953,6 +961,15 @@ export default function Dashboard({ unit, sector, onBack }) {
           theme={T}
           onClose={() => setShowUnitImport(false)}
           onImported={() => { fetchData(); setShowUnitImport(false) }}
+        />
+      )}
+
+      {showProtocols && (
+        <DocumentsModal
+          unit={unit}
+          theme={T}
+          initialTab="protocols"
+          onClose={() => setShowProtocols(false)}
         />
       )}
 
