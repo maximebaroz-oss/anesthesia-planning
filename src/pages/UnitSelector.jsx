@@ -44,10 +44,18 @@ export default function UnitSelector({ onSelect }) {
               <div className="text-slate-400 text-xs capitalize">{today}</div>
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
-            <Menu size={22} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setHotTopicsUnit({ id: 'global', name: 'Hot Topics' })}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
+              style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#DC2626' }}>
+              <Flame size={13} />
+              Hot Topics
+            </button>
+            <button onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
+              <Menu size={22} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -64,7 +72,7 @@ export default function UnitSelector({ onSelect }) {
             const s = UNIT_STYLES[unit.id] ?? UNIT_STYLES.unicat
             const hasSectors = unit.sectors.length > 0
             return (
-              <div key={unit.id} className="relative">
+              <div key={unit.id}>
                 <button
                   onClick={() => hasSectors && onSelect(unit)}
                   disabled={!hasSectors}
@@ -94,16 +102,6 @@ export default function UnitSelector({ onSelect }) {
                   </div>
                 </button>
 
-                {/* Bouton Hot Topics */}
-                {hasSectors && (
-                  <button
-                    onClick={e => { e.stopPropagation(); setHotTopicsUnit(unit) }}
-                    className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
-                    style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>
-                    <Flame size={11} />
-                    Hot Topics
-                  </button>
-                )}
               </div>
             )
           })}
