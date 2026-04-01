@@ -4,6 +4,20 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { ROOM_NAMES, GRADE_LABELS, getISOWeek } from '../config/constants'
 import { WARM } from '../config/theme'
+import ContactsModal, { CONTACTS } from './ContactsModal'
+
+// Cherche un numéro GSM dans l'annuaire par correspondance sur le nom de famille
+function findGsmPhone(fullName) {
+  if (!fullName) return null
+  const parts = fullName.toUpperCase().split(' ')
+  for (const section of CONTACTS) {
+    for (const entry of section.entries) {
+      const entryUp = entry.name.toUpperCase()
+      if (parts.some(p => p.length > 2 && entryUp.startsWith(p))) return entry.phone
+    }
+  }
+  return null
+}
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
@@ -177,6 +191,7 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
   const [editing, setEditing] = useState(false)
   const [phone, setPhone] = useState(p.phone ?? '')
   const [saving, setSaving] = useState(false)
+  const gsmPhone = !phone ? findGsmPhone(p.full_name) : null
 
   async function savePhone() {
     setSaving(true)
@@ -237,10 +252,13 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
             </div>
           ) : (
             <div className="flex items-center justify-between rounded-lg px-3 py-2.5" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-              {phone
-                ? <span className="text-sm font-medium" style={{ color: T.text }}>{phone}</span>
-                : <span className="text-sm italic" style={{ color: T.textFaint }}>Non renseigné</span>
-              }
+              {phone ? (
+                <a href={`tel:${phone.replace(/\s/g,'')}`} className="text-sm font-medium" style={{ color: T.accentBar }}>{phone}</a>
+              ) : gsmPhone ? (
+                <a href={`tel:${gsmPhone.replace(/\s/g,'')}`} className="text-sm font-medium" style={{ color: T.accentBar }}>{gsmPhone} <span className="text-xs font-normal opacity-60">annuaire</span></a>
+              ) : (
+                <span className="text-sm italic" style={{ color: T.textFaint }}>Non renseigné</span>
+              )}
               {canEdit && (
                 <button onClick={() => setEditing(true)}
                   className="ml-3 p-1.5 rounded-md touch-manipulation flex-shrink-0"
@@ -466,14 +484,6 @@ function SearchPanel({ selectedDate, T }) {
       )}
     </div>
   )
-}
-
-// ─── Annuaire GSM ────────────────────────────────────────────────────────────
-function tel(raw) {
-  if (!raw) return null
-  // Prendre le premier numéro si plusieurs séparés par / ou -
-  const first = String(raw).split(/[\/\-]/)[0].trim()
-  return first.replace(/[\s.]/g, '')
 }
 
 const CONTACTS = [
@@ -757,63 +767,6 @@ const CONTACTS = [
   ]},
 ]
 
-function ContactsPanel({ T }) {
-  const [query, setQuery] = useState('')
-  const q = query.trim().toLowerCase()
-
-  const filtered = q.length < 2
-    ? CONTACTS
-    : CONTACTS.map(s => ({
-        ...s,
-        entries: s.entries.filter(e => e.name.toLowerCase().includes(q) || e.phone?.replace(/\s/g,'').includes(q))
-      })).filter(s => s.entries.length > 0)
-
-  return (
-    <div className="space-y-3">
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: T.textFaint }} />
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Rechercher un nom ou numéro..."
-          style={{ background: T.surface, borderColor: T.border, color: T.text }}
-          className="w-full border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none"
-        />
-      </div>
-
-      {filtered.map(section => (
-        <div key={section.section}>
-          <p className="text-xs font-bold uppercase tracking-wide mb-1.5 sticky top-0 py-1"
-            style={{ color: T.accentBar, background: T.pageBg }}>
-            {section.section}
-          </p>
-          <div className="space-y-0.5">
-            {section.entries.map((e, i) => {
-              const cleaned = tel(e.phone)
-              return (
-                <div key={i} className="flex items-center justify-between rounded-lg px-2 py-1.5"
-                  style={{ background: T.surface }}>
-                  <span className="text-xs flex-1 truncate pr-2" style={{ color: T.text }}>{e.name}</span>
-                  {cleaned ? (
-                    <a href={`tel:${cleaned}`}
-                      className="flex items-center gap-1 text-xs font-mono font-medium flex-shrink-0 px-2 py-1 rounded-lg touch-manipulation"
-                      style={{ color: T.accentBar, background: T.cardHead }}>
-                      <Phone size={10} />
-                      {e.phone}
-                    </a>
-                  ) : (
-                    <span className="text-xs italic flex-shrink-0" style={{ color: T.textFaint }}>—</span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 const MENU_ITEMS = [
   { id: 'profil',    label: 'Mon profil',   icon: User },
@@ -826,6 +779,7 @@ const MENU_ITEMS = [
 export default function Sidebar({ open, onClose, selectedDate, theme }) {
   const T = theme ?? WARM
   const [activeItem, setActiveItem] = useState('profil')
+  const [showContacts, setShowContacts] = useState(false)
 
   return (
     <>
@@ -854,7 +808,7 @@ export default function Sidebar({ open, onClose, selectedDate, theme }) {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveItem(item.id)}
+                onClick={() => item.id === 'contacts' ? setShowContacts(true) : setActiveItem(item.id)}
                 style={isActive
                   ? { color: T.text, borderBottomColor: T.accentBar, background: T.surface }
                   : { color: T.textFaint }}
@@ -875,9 +829,12 @@ export default function Sidebar({ open, onClose, selectedDate, theme }) {
           {activeItem === 'recherche' && <SearchPanel  selectedDate={selectedDate} T={T} />}
           {activeItem === 'medecins'  && <StaffList profession="medecin"    T={T} />}
           {activeItem === 'isa'       && <StaffList profession="infirmier"  T={T} />}
-          {activeItem === 'contacts'  && <ContactsPanel T={T} />}
         </div>
       </div>
+
+      {showContacts && (
+        <ContactsModal theme={T} onClose={() => setShowContacts(false)} />
+      )}
     </>
   )
 }
