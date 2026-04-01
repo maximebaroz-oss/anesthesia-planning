@@ -133,7 +133,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
                     <button key={p.id} onClick={() => assignSupervisor(p)}
                       style={{ color: T.text }}
                       className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity flex items-center gap-2">
-                      <div style={{ background: T.surface }}
+                      <div
                         className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: T.accentBar, color: '#fff' }}>
                         {p.full_name.charAt(0)}
                       </div>
