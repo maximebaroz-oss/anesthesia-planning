@@ -579,7 +579,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
-  const [weekAssignmentCounts, setWeekAssignmentCounts] = useState({})
+  const [weekAssignments, setWeekAssignments] = useState([])
 
   const todayStr = formatDateKey(new Date())
 
@@ -629,7 +629,7 @@ export default function Dashboard({ unit, sector, onBack }) {
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
-      supabase.from('assignments').select('user_id, date, room_id').in('date', weekDates),
+      supabase.from('assignments').select('user_id, date, room_id, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
@@ -637,12 +637,7 @@ export default function Dashboard({ unit, sector, onBack }) {
     setRoomSchedules(scheds ?? [])
     setDayClosed(!!dayCls)
     setWeekDayClosures((weekCls ?? []).map(r => r.date))
-    const counts = {}
-    for (const date of weekDates) {
-      const users = new Set((weekAsgn ?? []).filter(a => a.date === date && ROOMS.includes(a.room_id)).map(a => a.user_id))
-      counts[date] = users.size
-    }
-    setWeekAssignmentCounts(counts)
+    setWeekAssignments((weekAsgn ?? []).filter(a => ROOMS.includes(a.room_id)))
     setLoading(false)
   }, [selectedDate, selectedWeekDays, sector?.id])
 
@@ -896,7 +891,16 @@ export default function Dashboard({ unit, sector, onBack }) {
               const dateStr = formatDateKey(day)
               const isToday = dateStr === todayStr
               const isDayClosed = weekDayClosures.includes(dateStr)
-              const assignCount = weekAssignmentCounts[dateStr] ?? 0
+              const dayAsgn = weekAssignments.filter(a => a.date === dateStr)
+              // Grouper par salle
+              const byRoom = {}
+              for (const a of dayAsgn) {
+                if (!byRoom[a.room_id]) byRoom[a.room_id] = { med: [], isa: [] }
+                if (a.profiles?.profession === 'medecin') byRoom[a.room_id].med.push(a)
+                else byRoom[a.room_id].isa.push(a)
+              }
+              const roomEntries = Object.entries(byRoom)
+              const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
               return (
                 <button key={i}
                   onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}
@@ -905,25 +909,50 @@ export default function Dashboard({ unit, sector, onBack }) {
                     borderColor: isToday ? T.accentBar : T.border,
                     boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
                   }}
-                  className="rounded-2xl border p-5 text-left hover:opacity-80 transition-opacity">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>
-                      {DAY_NAMES[i]}
-                    </span>
+                  className="rounded-2xl border p-4 text-left hover:opacity-80 transition-opacity">
+                  {/* Header jour */}
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_NAMES[i]}</span>
+                      <span className="text-xl font-bold" style={{ color: T.text }}>{day.getDate()}</span>
+                    </div>
                     {isDayClosed
                       ? <span className="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Fermé</span>
                       : isToday
                         ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: T.accentBar, color: '#fff' }}>Aujourd'hui</span>
-                        : null}
+                        : totalPeople > 0
+                          ? <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: T.surface, color: T.textSub }}>{totalPeople} pers.</span>
+                          : null}
                   </div>
-                  <p className="text-3xl font-bold mb-4" style={{ color: T.text }}>{day.getDate()}</p>
+                  {/* Aperçu salles */}
                   {isDayClosed ? (
-                    <p className="text-sm italic" style={{ color: T.textFaint }}>Journée fermée</p>
+                    <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
+                  ) : roomEntries.length === 0 ? (
+                    <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
                   ) : (
-                    <div className="flex items-center gap-1.5">
-                      <Users size={14} style={{ color: T.textSub }} />
-                      <span className="text-sm font-bold" style={{ color: T.text }}>{assignCount}</span>
-                      <span className="text-xs" style={{ color: T.textFaint }}>affecté(s)</span>
+                    <div className="mt-2 space-y-1">
+                      {roomEntries.slice(0, 7).map(([roomId, group]) => (
+                        <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
+                          <span className="flex-shrink-0 font-medium truncate" style={{ color: T.textFaint, maxWidth: '70px' }}>
+                            {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
+                          </span>
+                          <div className="flex flex-wrap gap-x-1.5 min-w-0">
+                            {group.med.map(a => (
+                              <span key={a.user_id} className="font-semibold truncate" style={{ color: T.text }}>
+                                {a.profiles?.full_name?.split(' ')[0]}
+                              </span>
+                            ))}
+                            {group.isa.map(a => (
+                              <span key={a.user_id} className="truncate" style={{ color: T.textSub }}>
+                                {a.profiles?.full_name?.split(' ')[0]}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {roomEntries.length > 7 && (
+                        <p className="text-xs" style={{ color: T.textFaint }}>+{roomEntries.length - 7} salles…</p>
+                      )}
                     </div>
                   )}
                 </button>
