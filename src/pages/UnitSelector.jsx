@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Menu, Flame, FileSpreadsheet, X } from 'lucide-react'
+import { Menu, Flame, FileSpreadsheet, X, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
@@ -91,7 +91,7 @@ const UNIT_STYLES = {
 }
 
 export default function UnitSelector({ onSelect }) {
-  const { profile } = useAuth()
+  const { profile, signOut } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [hotTopicsUnit, setHotTopicsUnit] = useState(null)
   const [showGlobalImport, setShowGlobalImport] = useState(false)
@@ -132,6 +132,11 @@ export default function UnitSelector({ onSelect }) {
               style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#DC2626' }}>
               <Flame size={13} />
               Hot Topics
+            </button>
+            <button onClick={signOut}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
+              title="Déconnexion">
+              <LogOut size={20} />
             </button>
             <button onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
