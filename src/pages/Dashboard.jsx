@@ -565,17 +565,19 @@ function QuickAssignModal({ date, dateLabel, allProfiles, rooms, roomNames, them
     setSaving(true)
     const { data: existing } = await supabase.from('assignments').select('id')
       .eq('user_id', selectedDoctor.id).eq('room_id', selectedRoom).eq('date', date).maybeSingle()
+    let insertedId = null
     if (!existing) {
-      await supabase.from('assignments').insert({
+      const { data: ins } = await supabase.from('assignments').insert({
         user_id: selectedDoctor.id,
         room_id: selectedRoom,
         date,
         assigned_by: currentProfile?.id,
         start_time: null,
-      })
+      }).select('id').maybeSingle()
+      insertedId = ins?.id ?? null
     }
     setSaving(false)
-    onDone()
+    onDone(insertedId)
   }
 
   return (
@@ -693,6 +695,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
   const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation (vue semaine)
   const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
+  const [undoAction, setUndoAction] = useState(null) // { type: 'insert'|'delete', id?, data? }
+  const undoTimer = useRef(null)
 
   const todayStr = formatDateKey(new Date())
 
@@ -854,8 +858,27 @@ export default function Dashboard({ unit, sector, onBack }) {
     await fetchData()
   }
 
-  async function handleDeleteWeekAssignment(assignmentId) {
-    await supabase.from('assignments').delete().eq('id', assignmentId)
+  function triggerUndo(action) {
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    setUndoAction(action)
+    undoTimer.current = setTimeout(() => setUndoAction(null), 8000)
+  }
+
+  async function handleUndo() {
+    if (!undoAction) return
+    clearTimeout(undoTimer.current)
+    if (undoAction.type === 'insert' && undoAction.id) {
+      await supabase.from('assignments').delete().eq('id', undoAction.id)
+    } else if (undoAction.type === 'delete' && undoAction.data) {
+      await supabase.from('assignments').insert(undoAction.data)
+    }
+    setUndoAction(null)
+    await fetchData()
+  }
+
+  async function handleDeleteWeekAssignment(assignment) {
+    triggerUndo({ type: 'delete', data: { user_id: assignment.user_id, room_id: assignment.room_id, date: assignment.date } })
+    await supabase.from('assignments').delete().eq('id', assignment.id)
     await fetchData()
   }
 
@@ -1070,7 +1093,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                                     {a.profiles?.full_name?.split(' ')[0]}
                                   </span>
                                   {canManage && a.id && (
-                                    <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a.id) }}
+                                    <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }}
                                       className="flex-shrink-0 hover:text-red-500 transition-colors"
                                       style={{ color: T.textFaint }}>
                                       <X size={9} />
@@ -1179,6 +1202,26 @@ export default function Dashboard({ unit, sector, onBack }) {
         )}
       </main>
 
+      {/* Toast Undo */}
+      {undoAction && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border"
+          style={{ background: T.cardBg, borderColor: T.border }}>
+          <span className="text-sm" style={{ color: T.text }}>
+            {undoAction.type === 'delete' ? 'Affectation supprimée' : 'Affectation ajoutée'}
+          </span>
+          <button onClick={handleUndo}
+            style={{ background: T.accentBar, color: '#fff' }}
+            className="text-sm font-bold px-3 py-1.5 rounded-xl hover:opacity-90 transition-opacity whitespace-nowrap">
+            ↩ Annuler
+          </button>
+          <button onClick={() => { clearTimeout(undoTimer.current); setUndoAction(null) }}
+            style={{ color: T.textFaint }}
+            className="hover:opacity-70 transition-opacity">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {quickAssign && (
         <QuickAssignModal
           date={quickAssign.date}
@@ -1188,7 +1231,7 @@ export default function Dashboard({ unit, sector, onBack }) {
           roomNames={ROOM_NAMES}
           theme={T}
           onClose={() => setQuickAssign(null)}
-          onDone={() => { setQuickAssign(null); fetchData() }}
+          onDone={(insertedId) => { setQuickAssign(null); if (insertedId) triggerUndo({ type: 'insert', id: insertedId }); fetchData() }}
         />
       )}
 
