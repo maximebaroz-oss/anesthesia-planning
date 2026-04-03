@@ -868,23 +868,6 @@ export default function Dashboard({ unit, sector, onBack }) {
               <p className="text-sm">Chargement...</p>
             </div>
           </div>
-        ) : dayClosed ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: '#FEE2E2' }}>
-              <CalendarOff size={36} className="text-red-400" />
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-lg" style={{ color: T.text }}>Journée fermée</p>
-              <p className="text-sm mt-1" style={{ color: T.textFaint }}>Jour férié — aucune salle active</p>
-            </div>
-            {(profile?.is_admin || profile?.grade === 'chef_clinique') && (
-              <button onClick={handleOpenDay}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{ background: T.surface, color: T.accent }}>
-                <CalendarCheck size={15} /> Réouvrir cette journée
-              </button>
-            )}
-          </div>
         ) : viewMode === 'week' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
             {selectedWeekDays.map((day, i) => {
@@ -958,6 +941,23 @@ export default function Dashboard({ unit, sector, onBack }) {
                 </button>
               )
             })}
+          </div>
+        ) : dayClosed ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: '#FEE2E2' }}>
+              <CalendarOff size={36} className="text-red-400" />
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-lg" style={{ color: T.text }}>Journée fermée</p>
+              <p className="text-sm mt-1" style={{ color: T.textFaint }}>Jour férié — aucune salle active</p>
+            </div>
+            {(profile?.is_admin || profile?.grade === 'chef_clinique') && (
+              <button onClick={handleOpenDay}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ background: T.surface, color: T.accent }}>
+                <CalendarCheck size={15} /> Réouvrir cette journée
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
