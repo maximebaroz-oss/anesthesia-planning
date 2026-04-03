@@ -691,6 +691,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
   const [weekAssignments, setWeekAssignments] = useState([])
   const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
+  const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation
 
   const todayStr = formatDateKey(new Date())
 
@@ -740,7 +741,7 @@ export default function Dashboard({ unit, sector, onBack }) {
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
-      supabase.from('assignments').select('user_id, date, room_id, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
+      supabase.from('assignments').select('id, user_id, date, room_id, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
@@ -849,6 +850,17 @@ export default function Dashboard({ unit, sector, onBack }) {
       date: selectedDate,
       [field]: value,
     }, { onConflict: 'room_id,date' })
+    await fetchData()
+  }
+
+  async function handleDeleteWeekAssignment(assignmentId) {
+    await supabase.from('assignments').delete().eq('id', assignmentId)
+    await fetchData()
+  }
+
+  async function handleResetDay(dateStr) {
+    await supabase.from('assignments').delete().eq('date', dateStr).in('room_id', ROOMS)
+    setResetConfirm(null)
     await fetchData()
   }
 
@@ -1034,14 +1046,19 @@ export default function Dashboard({ unit, sector, onBack }) {
                               {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                             </span>
                             <div className="flex flex-wrap gap-x-1.5 min-w-0">
-                              {group.med.map(a => (
-                                <span key={a.user_id} className="font-semibold truncate" style={{ color: T.text }}>
-                                  {a.profiles?.full_name?.split(' ')[0]}
-                                </span>
-                              ))}
-                              {group.isa.map(a => (
-                                <span key={a.user_id} className="truncate" style={{ color: T.textSub }}>
-                                  {a.profiles?.full_name?.split(' ')[0]}
+                              {[...group.med, ...group.isa].map(a => (
+                                <span key={a.id ?? a.user_id} className="flex items-center gap-0.5">
+                                  <span className={`truncate ${a.profiles?.profession === 'medecin' ? 'font-semibold' : ''}`}
+                                    style={{ color: a.profiles?.profession === 'medecin' ? T.text : T.textSub }}>
+                                    {a.profiles?.full_name?.split(' ')[0]}
+                                  </span>
+                                  {canManage && a.id && (
+                                    <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a.id) }}
+                                      className="flex-shrink-0 hover:text-red-500 transition-colors"
+                                      style={{ color: T.textFaint }}>
+                                      <X size={9} />
+                                    </button>
+                                  )}
                                 </span>
                               ))}
                             </div>
@@ -1053,14 +1070,32 @@ export default function Dashboard({ unit, sector, onBack }) {
                       </div>
                     )}
                   </div>
-                  {/* Bouton + */}
+                  {/* Boutons action */}
                   {canManage && !isDayClosed && (
-                    <button
-                      onClick={e => { e.stopPropagation(); setQuickAssign({ date: dateStr, dateLabel: dayLabel }) }}
-                      style={{ background: T.surface, borderColor: T.border, color: T.accentBar }}
-                      className="mt-3 w-full border rounded-xl py-1.5 text-xs font-bold hover:opacity-80 transition-opacity flex items-center justify-center gap-1">
-                      + Ajouter un médecin
-                    </button>
+                    <div className="mt-3 flex gap-1.5">
+                      <button
+                        onClick={e => { e.stopPropagation(); setQuickAssign({ date: dateStr, dateLabel: dayLabel }) }}
+                        style={{ background: T.surface, borderColor: T.border, color: T.accentBar }}
+                        className="flex-1 border rounded-xl py-1.5 text-xs font-bold hover:opacity-80 transition-opacity flex items-center justify-center gap-1">
+                        + Ajouter
+                      </button>
+                      {resetConfirm === dateStr ? (
+                        <button
+                          onClick={e => { e.stopPropagation(); handleResetDay(dateStr) }}
+                          className="flex-shrink-0 border rounded-xl px-2.5 py-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
+                          style={{ background: '#FEE2E2', borderColor: '#FECACA', color: '#DC2626' }}>
+                          Confirmer ?
+                        </button>
+                      ) : (
+                        <button
+                          onClick={e => { e.stopPropagation(); setResetConfirm(dateStr) }}
+                          title="Vider la journée"
+                          style={{ background: T.surface, borderColor: T.border, color: T.textFaint }}
+                          className="flex-shrink-0 border rounded-xl px-2.5 py-1.5 text-xs hover:opacity-80 transition-opacity">
+                          🗑
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )
