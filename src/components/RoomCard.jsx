@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle, ChevronDown } from 'lucide-react'
 import { getCurrentTime } from '../config/constants'
 import { WARM, SKY } from '../config/theme'
 
@@ -251,6 +251,13 @@ export default function RoomCard({
   const openingTime = roomSchedule?.opening_time?.slice(0, 5) ?? null
   const roomIsLate  = isToday && closingTime && isLate(closingTime) && roomAssignments.length > 0 && !isClosed
 
+  const hasMedecin = medecins.length > 0
+  const [collapsed, setCollapsed] = useState(!hasMedecin && !isClosed)
+
+  useEffect(() => {
+    if (hasMedecin) setCollapsed(false)
+  }, [hasMedecin])
+
   const [tooltip,         setTooltip]         = useState(null)
   const timerRef                              = useRef(null)
   const [leaveTarget,     setLeaveTarget]     = useState(null)
@@ -302,7 +309,8 @@ export default function RoomCard({
 
         {/* En-tête */}
         <div style={{ background: T.cardHead, borderColor: T.border }}
-          className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b">
+          className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b cursor-pointer select-none"
+          onClick={() => setCollapsed(v => !v)}>
           <div className="flex items-center gap-2 min-w-0">
             <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
             <span className="font-bold text-sm" style={{ color: isClosed ? T.textFaint : T.text }}>
@@ -312,9 +320,11 @@ export default function RoomCard({
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className={`w-3.5 h-3.5 rounded-full ${config.dot}`} />
             {isClosed && <Lock size={13} style={{ color: T.textFaint }} />}
+            <ChevronDown size={14} style={{ color: T.textFaint, transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
           </div>
         </div>
 
+        {!collapsed && (<>
         {/* Horaire salle */}
         {!isClosed && (
           <div className="px-3 pt-2.5 pb-3">
@@ -421,6 +431,7 @@ export default function RoomCard({
             )
           )}
         </div>
+        </>)}
       </div>
     </>
   )

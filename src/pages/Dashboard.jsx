@@ -578,6 +578,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
+  const [weekAssignmentCounts, setWeekAssignmentCounts] = useState({})
 
   const todayStr = formatDateKey(new Date())
 
@@ -602,6 +604,7 @@ export default function Dashboard({ unit, sector, onBack }) {
     const days = getWeekDays(weeks[index])
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
+    setViewMode('week')
   }
 
   function shiftWindow(direction) {
@@ -612,19 +615,21 @@ export default function Dashboard({ unit, sector, onBack }) {
     const days = getWeekDays(newStart)
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
+    setViewMode('week')
   }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     const sectorId = sector?.id ?? 'hors-bloc'
     const weekDates = selectedWeekDays.map(d => formatDateKey(d))
-    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }] = await Promise.all([
+    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }, { data: weekAsgn }] = await Promise.all([
       supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
       supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
+      supabase.from('assignments').select('user_id, date, room_id').in('date', weekDates),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
@@ -632,6 +637,12 @@ export default function Dashboard({ unit, sector, onBack }) {
     setRoomSchedules(scheds ?? [])
     setDayClosed(!!dayCls)
     setWeekDayClosures((weekCls ?? []).map(r => r.date))
+    const counts = {}
+    for (const date of weekDates) {
+      const users = new Set((weekAsgn ?? []).filter(a => a.date === date && ROOMS.includes(a.room_id)).map(a => a.user_id))
+      counts[date] = users.size
+    }
+    setWeekAssignmentCounts(counts)
     setLoading(false)
   }, [selectedDate, selectedWeekDays, sector?.id])
 
@@ -784,7 +795,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               const isPast = dateStr < todayStr
               const isDayClosed = weekDayClosures.includes(dateStr)
               return (
-                <button key={i} onClick={() => setSelectedDate(dateStr)}
+                <button key={i} onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}
                   style={isSelected
                     ? { background: T.accentBar, color: '#fff' }
                     : isToday
@@ -878,6 +889,46 @@ export default function Dashboard({ unit, sector, onBack }) {
                 <CalendarCheck size={15} /> Réouvrir cette journée
               </button>
             )}
+          </div>
+        ) : viewMode === 'week' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {selectedWeekDays.map((day, i) => {
+              const dateStr = formatDateKey(day)
+              const isToday = dateStr === todayStr
+              const isDayClosed = weekDayClosures.includes(dateStr)
+              const assignCount = weekAssignmentCounts[dateStr] ?? 0
+              return (
+                <button key={i}
+                  onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}
+                  style={{
+                    background: T.cardBg,
+                    borderColor: isToday ? T.accentBar : T.border,
+                    boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
+                  }}
+                  className="rounded-2xl border p-5 text-left hover:opacity-80 transition-opacity">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>
+                      {DAY_NAMES[i]}
+                    </span>
+                    {isDayClosed
+                      ? <span className="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Fermé</span>
+                      : isToday
+                        ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: T.accentBar, color: '#fff' }}>Aujourd'hui</span>
+                        : null}
+                  </div>
+                  <p className="text-3xl font-bold mb-4" style={{ color: T.text }}>{day.getDate()}</p>
+                  {isDayClosed ? (
+                    <p className="text-sm italic" style={{ color: T.textFaint }}>Journée fermée</p>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <Users size={14} style={{ color: T.textSub }} />
+                      <span className="text-sm font-bold" style={{ color: T.text }}>{assignCount}</span>
+                      <span className="text-xs" style={{ color: T.textFaint }}>affecté(s)</span>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
