@@ -1,20 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { ROOM_NAMES, GRADE_LABELS, getISOWeek } from '../config/constants'
+import { ROOM_NAMES, GRADE_LABELS, getISOWeek, getMonday, formatDateKey } from '../config/constants'
 import { WARM } from '../config/theme'
 import ContactsModal, { findGsmPhone } from './ContactsModal'
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-
-function getMondayOf(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const day = d.getDay()
-  const monday = new Date(d)
-  monday.setDate(d.getDate() - ((day + 6) % 7))
-  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
-}
 
 function ProfilePanel({ selectedDate, T }) {
   const { profile: currentProfile } = useAuth()
@@ -31,7 +23,7 @@ function ProfilePanel({ selectedDate, T }) {
 
   useEffect(() => {
     if (!currentProfile) return
-    const monday = getMondayOf(selectedDate)
+    const monday = formatDateKey(getMonday(new Date(selectedDate + 'T00:00:00')))
     Promise.all([
       supabase.from('assignments').select('room_id, start_time, date')
         .eq('user_id', currentProfile.id).eq('date', selectedDate).limit(1),
@@ -311,12 +303,14 @@ function StaffList({ profession, T }) {
     )
   }
 
-  const knownGrades = MED_SECTIONS.map(s => s.grade)
-  const autres = staff.filter(p => !knownGrades.includes(p.grade))
-  const allSections = [
-    ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
-    ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
-  ].filter(s => s.list.length > 0)
+  const allSections = useMemo(() => {
+    const knownGrades = MED_SECTIONS.map(s => s.grade)
+    const autres = staff.filter(p => !knownGrades.includes(p.grade))
+    return [
+      ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
+      ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
+    ].filter(s => s.list.length > 0)
+  }, [staff])
 
   const sections = search
     ? allSections.map(s => ({ ...s, list: s.list.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) })).filter(s => s.list.length > 0)
@@ -346,161 +340,6 @@ function StaffList({ profession, T }) {
   )
 }
 
-function SearchPanel({ selectedDate, T }) {
-  const [query, setQuery] = useState('')
-  const [allProfiles, setAllProfiles] = useState([])
-  const [selected, setSelected] = useState(null)
-  const [weekAssignments, setWeekAssignments] = useState([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    supabase.from('profiles').select('id, full_name, profession, grade').order('full_name')
-      .then(({ data }) => setAllProfiles(data ?? []))
-  }, [])
-
-  const filtered = query.length >= 2
-    ? allProfiles.filter(p => p.full_name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
-    : []
-
-  function getWeekDays() {
-    const base = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date()
-    const monday = new Date(base)
-    monday.setDate(base.getDate() - ((base.getDay() + 6) % 7))
-    return Array.from({ length: 5 }, (_, i) => {
-      const day = new Date(monday)
-      day.setDate(monday.getDate() + i)
-      return `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`
-    })
-  }
-
-  useEffect(() => {
-    if (!selected) return
-    const days = getWeekDays()
-    setLoading(true)
-    supabase.from('assignments')
-      .select('date, room_id, start_time')
-      .eq('user_id', selected.id)
-      .gte('date', days[0])
-      .lte('date', days[4])
-      .order('date')
-      .then(({ data }) => { setWeekAssignments(data ?? []); setLoading(false) })
-  }, [selected?.id, selectedDate])
-
-  function selectProfile(p) {
-    setSelected(p)
-    setQuery(p.full_name)
-  }
-
-  const isMed = selected?.profession === 'medecin'
-  const accentColor = isMed ? '#DC2626' : '#2563EB'
-  const accentBg = isMed ? '#FEF2F2' : '#EFF6FF'
-  const accentBorder = isMed ? '#FECACA' : '#BFDBFE'
-  const weekDays = getWeekDays()
-  const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
-
-  return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: T.textFaint }} />
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); setSelected(null); setWeekAssignments([]) }}
-          placeholder="Nom du médecin ou ISA..."
-          style={{ background: T.surface, borderColor: T.border, color: T.text }}
-          className="w-full border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none"
-        />
-      </div>
-
-      {!selected && filtered.length > 0 && (
-        <div className="rounded-xl overflow-hidden border" style={{ borderColor: T.border }}>
-          {filtered.map(p => {
-            const isMedP = p.profession === 'medecin'
-            return (
-              <button key={p.id} onClick={() => selectProfile(p)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:opacity-80 transition-opacity border-b last:border-0"
-                style={{ background: T.surface, borderColor: T.border }}>
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isMedP ? 'bg-red-400' : 'bg-blue-400'}`} />
-                <span className="text-xs flex-1 truncate" style={{ color: T.text }}>
-                  {isMedP ? `Dr. ${p.full_name}` : p.full_name}
-                </span>
-                <span className="text-xs" style={{ color: T.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {!selected && query.length >= 2 && filtered.length === 0 && (
-        <p className="text-xs text-center italic py-2" style={{ color: T.textFaint }}>Aucun résultat</p>
-      )}
-
-      {selected && (
-        <div className="space-y-3">
-          <div className="rounded-xl px-3 py-2.5 flex items-center gap-2"
-            style={{ background: accentBg, border: `1px solid ${accentBorder}` }}>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isMed ? 'bg-red-400' : 'bg-blue-400'}`} />
-            <span className="text-sm font-semibold" style={{ color: accentColor }}>
-              {isMed ? `Dr. ${selected.full_name}` : selected.full_name}
-            </span>
-            <span className="text-xs ml-auto" style={{ color: T.textFaint }}>{GRADE_LABELS[selected.grade] ?? ''}</span>
-          </div>
-
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: T.textFaint }}>Semaine</p>
-
-          {loading ? (
-            <p className="text-xs italic text-center py-2" style={{ color: T.textFaint }}>Chargement...</p>
-          ) : (
-            <div className="space-y-1.5">
-              {weekDays.map((dateStr, i) => {
-                const dayAssignments = weekAssignments.filter(a => a.date === dateStr)
-                const isToday = dateStr === selectedDate
-                const d = new Date(dateStr + 'T00:00:00')
-                const dayNum = d.getDate()
-                const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'août', 'sep', 'oct', 'nov', 'déc']
-
-                return (
-                  <div key={dateStr}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2"
-                    style={{
-                      background: isToday ? accentBg : T.surface,
-                      border: `1px solid ${isToday ? accentBorder : T.border}`
-                    }}>
-                    <div className="w-14 flex-shrink-0">
-                      <span className="text-xs font-bold" style={{ color: isToday ? accentColor : T.textSub }}>
-                        {dayLabels[i]}
-                      </span>
-                      <span className="text-xs ml-1" style={{ color: T.textFaint }}>
-                        {dayNum} {monthNames[d.getMonth()]}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {dayAssignments.length === 0 ? (
-                        <span className="text-xs italic" style={{ color: T.textFaint }}>—</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {dayAssignments.map((a, j) => (
-                            <span key={j} className="text-xs font-medium px-1.5 py-0.5 rounded"
-                              style={{ background: isToday ? accentBorder : T.cardHead, color: isToday ? accentColor : T.textSub }}>
-                              {ROOM_NAMES[a.room_id] ?? `Salle ${a.room_id}`}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {dayAssignments.some(a => a.start_time) && (
-                      <Check size={12} style={{ color: accentColor }} className="flex-shrink-0" />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 const MENU_ITEMS = [
   { id: 'profil',   label: 'Mon profil', icon: User },

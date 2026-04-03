@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
 import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME, SOFTGREEN as SOFTGREEN_THEME, GRAY as GRAY_THEME } from '../config/theme'
-import { ROOM_NAMES, DAY_NAMES, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
+import { ROOM_NAMES, DAY_NAMES, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
@@ -632,7 +632,7 @@ function QuickAssignModal({ date, dateLabel, allProfiles, rooms, roomNames, them
                       style={{ background: T.surface, borderColor: T.border, color: T.text }}>
                       <span className="font-medium">Dr. {p.full_name}</span>
                       <span className="text-xs ml-2" style={{ color: T.textFaint }}>
-                        {p.grade === 'adjoint' ? 'Adj.' : p.grade === 'chef_clinique' ? 'CDC' : p.grade === 'interne' ? 'Int.' : ''}
+                        {GRADE_LABELS[p.grade] ?? ''}
                       </span>
                     </button>
                   ))}
@@ -661,6 +661,7 @@ function QuickAssignModal({ date, dateLabel, allProfiles, rooms, roomNames, them
 
 export default function Dashboard({ unit, sector, onBack }) {
   const { profile } = useAuth()
+  const canManage = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
   const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
   const sectorLabel = sector?.name ?? 'HB'
   const T = sector?.id === 'julliard'         ? SKY_THEME
@@ -876,9 +877,7 @@ export default function Dashboard({ unit, sector, onBack }) {
 
   async function applySnapshot(snap) {
     const weekDates = selectedWeekDays.map(d => formatDateKey(d))
-    for (const date of weekDates) {
-      await supabase.from('assignments').delete().eq('date', date).in('room_id', ROOMS)
-    }
+    await supabase.from('assignments').delete().in('date', weekDates).in('room_id', ROOMS)
     if (snap.length > 0) await supabase.from('assignments').insert(snap)
     await fetchData()
   }
@@ -914,6 +913,15 @@ export default function Dashboard({ unit, sector, onBack }) {
     setDayResetConfirm(false)
     await fetchData()
   }
+
+  const assignmentsByDate = useMemo(() => {
+    const grouped = {}
+    for (const a of weekAssignments) {
+      if (!grouped[a.date]) grouped[a.date] = []
+      grouped[a.date].push(a)
+    }
+    return grouped
+  }, [weekAssignments])
 
   const totalAssigned = new Set(assignments.filter(a => ROOMS.includes(a.room_id)).map(a => a.user_id)).size
 
@@ -1008,7 +1016,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                 {dayClosed ? 'Réouvrir' : 'Jour férié'}
               </button>
             )}
-            {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
+            {canManage && (
               <>
                 <button onClick={() => setShowImport(true)}
                   className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
@@ -1026,7 +1034,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                 )}
               </>
             )}
-            {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
+            {canManage && (
               dayResetConfirm ? (
                 <button onClick={async () => { await handleResetDay(selectedDate); setDayResetConfirm(false) }}
                   className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-bold px-2.5 py-1.5 rounded-lg"
@@ -1076,7 +1084,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               const dateStr = formatDateKey(day)
               const isToday = dateStr === todayStr
               const isDayClosed = weekDayClosures.includes(dateStr)
-              const dayAsgn = weekAssignments.filter(a => a.date === dateStr)
+              const dayAsgn = assignmentsByDate[dateStr] ?? []
               // Grouper par salle
               const byRoom = {}
               for (const a of dayAsgn) {
@@ -1086,7 +1094,6 @@ export default function Dashboard({ unit, sector, onBack }) {
               }
               const roomEntries = Object.entries(byRoom)
               const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
-              const canManage = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
               const dayLabel = `${DAY_NAMES[i]} ${day.getDate()}`
               return (
                 <div key={i}
@@ -1202,7 +1209,7 @@ export default function Dashboard({ unit, sector, onBack }) {
             <SupervisorCard
               date={selectedDate}
               allProfiles={allProfiles}
-              canManage={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
+              canManage={canManage}
               sectorId={sector?.id ?? 'hors-bloc'}
               sectorLabel={sectorLabel}
               theme={T}
@@ -1233,7 +1240,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               <SouhaitsCard
                 date={selectedDate}
                 sectorId={sector.id}
-                canEdit={profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'}
+                canEdit={canManage}
                 theme={T}
               />
             )}
@@ -1263,7 +1270,7 @@ export default function Dashboard({ unit, sector, onBack }) {
           sectorId={sector?.id ?? 'hors-bloc'}
           dateLabel={selectedDayLabel}
           selectedDate={selectedDate}
-          canManage={profile?.is_admin || profile?.grade === 'chef_clinique' || profile?.grade === 'adjoint'}
+          canManage={canManage}
           currentProfile={profile}
           theme={T}
           onClose={() => setShowEffectif(false)}

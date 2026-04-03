@@ -1,0 +1,954 @@
+diff --git a/src/components/ContactsModal.jsx b/src/components/ContactsModal.jsx
+index 44f9c33..8dd8ba9 100644
+--- a/src/components/ContactsModal.jsx
++++ b/src/components/ContactsModal.jsx
+@@ -294,7 +294,19 @@ const CONTACTS_DISPLAY = CONTACTS.filter(s =>
+   !['Médecins-chefs & Adjoints', 'Chefs de clinique', 'Internes', 'Médecins associés & consultants'].includes(s.section)
+ )
+ 
+-export { CONTACTS }
++function findGsmPhone(fullName) {
++  if (!fullName) return null
++  const parts = fullName.toUpperCase().split(' ')
++  for (const section of CONTACTS) {
++    for (const entry of section.entries) {
++      const entryUp = entry.name.toUpperCase()
++      if (parts.some(p => p.length > 2 && entryUp.startsWith(p))) return entry.phone
++    }
++  }
++  return null
++}
++
++export { CONTACTS, findGsmPhone }
+ 
+ export default function ContactsModal({ theme, onClose }) {
+   const T = theme ?? WARM
+diff --git a/src/components/Header.jsx b/src/components/Header.jsx
+index 714e7bb..c271b23 100644
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -14,38 +14,38 @@ export default function Header({ unit, sector, onBack, onMenuOpen, theme }) {
+   return (
+     <header style={{ background: T.cardHead, borderColor: T.border }}
+       className="border-b px-4 py-3 shadow-sm sticky top-0 z-10">
+-      <div className="max-w-4xl mx-auto flex items-center justify-between">
+-        <div className="flex items-center gap-2">
++      <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 min-w-0">
++        <div className="flex items-center gap-2 min-w-0">
+           {onMenuOpen && (
+             <button onClick={onMenuOpen}
+               style={{ color: T.textSub }}
+-              className="p-1.5 rounded-lg hover:opacity-70 transition-opacity">
++              className="p-1.5 rounded-lg hover:opacity-70 transition-opacity flex-shrink-0">
+               <Menu size={20} />
+             </button>
+           )}
+           {onBack && (
+             <button onClick={onBack}
+               style={{ color: T.textSub }}
+-              className="p-1.5 rounded-lg hover:opacity-70 transition-opacity mr-1">
++              className="p-1.5 rounded-lg hover:opacity-70 transition-opacity mr-1 flex-shrink-0">
+               <ArrowLeft size={18} />
+             </button>
+           )}
+-          <div>
+-            <div className="flex items-center gap-1.5">
+-              <span className="font-bold text-sm tracking-wide" style={{ color: T.text }}>Planning Bloc</span>
+-              {unit   && <span style={{ color: T.textFaint }} className="text-xs"> · </span>}
+-              {unit   && <span className="text-xs" style={{ color: T.textSub }}>{unit.name}</span>}
+-              {sector && <span style={{ color: T.textFaint }} className="text-xs"> › </span>}
+-              {sector && <span className="text-xs font-semibold" style={{ color: T.text }}>{sector.name}</span>}
++          <div className="min-w-0">
++            <div className="flex items-center gap-1 min-w-0">
++              <span className="font-bold text-sm tracking-wide flex-shrink-0" style={{ color: T.text }}>Planning Bloc</span>
++              {unit   && <span style={{ color: T.textFaint }} className="text-xs flex-shrink-0"> · </span>}
++              {unit   && <span className="text-xs truncate" style={{ color: T.textSub }}>{unit.name}</span>}
++              {sector && <span style={{ color: T.textFaint }} className="text-xs flex-shrink-0"> › </span>}
++              {sector && <span className="text-xs font-semibold truncate" style={{ color: T.text }}>{sector.name}</span>}
+             </div>
+-            <div className="text-xs capitalize" style={{ color: T.textFaint }}>{today}</div>
++            <div className="text-xs capitalize truncate" style={{ color: T.textFaint }}>{today}</div>
+           </div>
+         </div>
+ 
+-        <div className="flex items-center gap-3">
++        <div className="flex items-center gap-2 flex-shrink-0">
+           {profile && (
+-            <div className="text-right">
+-              <div className="text-sm font-medium leading-tight" style={{ color: T.text }}>
++            <div className="text-right hidden sm:block">
++              <div className="text-sm font-medium leading-tight truncate max-w-32" style={{ color: T.text }}>
+                 {profile.profession === 'medecin' ? `Dr. ${profile.full_name}` : profile.full_name}
+               </div>
+               <div className="text-xs" style={{ color: T.textSub }}>
+diff --git a/src/components/ProfileModal.jsx b/src/components/ProfileModal.jsx
+index a26a97c..0988643 100644
+--- a/src/components/ProfileModal.jsx
++++ b/src/components/ProfileModal.jsx
+@@ -1,9 +1,10 @@
+ import { useState } from 'react'
+-import { X, Phone, User, Edit2, Check } from 'lucide-react'
++import { X, Phone, Edit2, Check } from 'lucide-react'
+ import { supabase } from '../lib/supabase'
+ import { useAuth } from '../contexts/AuthContext'
+ import { WARM } from '../config/theme'
+ import { GRADE_LABELS_FULL as GRADE_LABELS } from '../config/constants'
++import { findGsmPhone } from './ContactsModal'
+ 
+ const PROFESSION_LABELS = {
+   medecin: 'Médecin Anesthésiste (Med)',
+@@ -17,6 +18,7 @@ export default function ProfileModal({ profile, onClose }) {
+   const [saving, setSaving] = useState(false)
+ 
+   const canEdit = currentProfile?.id === profile.id || currentProfile?.is_admin
++  const gsmPhone = !profile.phone ? findGsmPhone(profile.full_name) : null
+ 
+   async function savePhone() {
+     setSaving(true)
+@@ -83,7 +85,11 @@ export default function ProfileModal({ profile, onClose }) {
+                 <div className="flex items-center gap-2">
+                   <Phone size={15} style={{ color: WARM.textFaint }} />
+                   {phone ? (
+-                    <span className="text-sm font-medium" style={{ color: WARM.text }}>{phone}</span>
++                    <a href={`tel:${phone.replace(/\s/g, '')}`} className="text-sm font-medium" style={{ color: WARM.accentBar }}>{phone}</a>
++                  ) : gsmPhone ? (
++                    <a href={`tel:${gsmPhone.replace(/\s/g, '')}`} className="text-sm font-medium" style={{ color: WARM.accentBar }}>
++                      {gsmPhone} <span className="text-xs font-normal opacity-60">annuaire</span>
++                    </a>
+                   ) : (
+                     <span className="text-sm italic" style={{ color: WARM.textFaint }}>Non renseigné</span>
+                   )}
+diff --git a/src/components/RoomCard.jsx b/src/components/RoomCard.jsx
+index dd47942..7f5bb67 100644
+--- a/src/components/RoomCard.jsx
++++ b/src/components/RoomCard.jsx
+@@ -1,5 +1,5 @@
+-import { useState, useRef } from 'react'
+-import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle } from 'lucide-react'
++import { useState, useRef, useEffect } from 'react'
++import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle, ChevronDown } from 'lucide-react'
+ import { getCurrentTime } from '../config/constants'
+ import { WARM, SKY } from '../config/theme'
+ 
+@@ -251,6 +251,13 @@ export default function RoomCard({
+   const openingTime = roomSchedule?.opening_time?.slice(0, 5) ?? null
+   const roomIsLate  = isToday && closingTime && isLate(closingTime) && roomAssignments.length > 0 && !isClosed
+ 
++  const hasMedecin = medecins.length > 0
++  const [collapsed, setCollapsed] = useState(!hasMedecin || isClosed)
++
++  useEffect(() => {
++    if (hasMedecin) setCollapsed(false)
++  }, [hasMedecin])
++
+   const [tooltip,         setTooltip]         = useState(null)
+   const timerRef                              = useRef(null)
+   const [leaveTarget,     setLeaveTarget]     = useState(null)
+@@ -302,7 +309,8 @@ export default function RoomCard({
+ 
+         {/* En-tête */}
+         <div style={{ background: T.cardHead, borderColor: T.border }}
+-          className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b">
++          className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b cursor-pointer select-none"
++          onClick={() => setCollapsed(v => !v)}>
+           <div className="flex items-center gap-2 min-w-0">
+             <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+             <span className="font-bold text-sm" style={{ color: isClosed ? T.textFaint : T.text }}>
+@@ -312,9 +320,11 @@ export default function RoomCard({
+           <div className="flex items-center gap-2 flex-shrink-0">
+             <span className={`w-3.5 h-3.5 rounded-full ${config.dot}`} />
+             {isClosed && <Lock size={13} style={{ color: T.textFaint }} />}
++            <ChevronDown size={14} style={{ color: T.textFaint, transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
+           </div>
+         </div>
+ 
++        {!collapsed && (<>
+         {/* Horaire salle */}
+         {!isClosed && (
+           <div className="px-3 pt-2.5 pb-3">
+@@ -421,6 +431,7 @@ export default function RoomCard({
+             )
+           )}
+         </div>
++        </>)}
+       </div>
+     </>
+   )
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+index 302a7d5..acedbf1 100644
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -4,20 +4,7 @@ import { supabase } from '../lib/supabase'
+ import { useAuth } from '../contexts/AuthContext'
+ import { ROOM_NAMES, GRADE_LABELS, getISOWeek } from '../config/constants'
+ import { WARM } from '../config/theme'
+-import ContactsModal, { CONTACTS } from './ContactsModal'
+-
+-// Cherche un numéro GSM dans l'annuaire par correspondance sur le nom de famille
+-function findGsmPhone(fullName) {
+-  if (!fullName) return null
+-  const parts = fullName.toUpperCase().split(' ')
+-  for (const section of CONTACTS) {
+-    for (const entry of section.entries) {
+-      const entryUp = entry.name.toUpperCase()
+-      if (parts.some(p => p.length > 2 && entryUp.startsWith(p))) return entry.phone
+-    }
+-  }
+-  return null
+-}
++import ContactsModal, { findGsmPhone } from './ContactsModal'
+ 
+ const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+ 
+@@ -285,6 +272,7 @@ function StaffList({ profession, T }) {
+   const { profile: currentProfile } = useAuth()
+   const [staff, setStaff] = useState([])
+   const [loading, setLoading] = useState(true)
++  const [search, setSearch] = useState('')
+ 
+   useEffect(() => {
+     supabase.from('profiles').select('*').eq('profession', profession).order('full_name')
+@@ -293,39 +281,67 @@ function StaffList({ profession, T }) {
+ 
+   if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: T.textFaint }}>Chargement...</p>
+ 
++  const searchBar = (
++    <div className="relative mb-3">
++      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: T.textFaint }} />
++      <input
++        type="text"
++        value={search}
++        onChange={e => setSearch(e.target.value)}
++        placeholder="Rechercher..."
++        style={{ background: T.surface, borderColor: T.border, color: T.text }}
++        className="w-full border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none"
++      />
++    </div>
++  )
++
+   if (profession === 'infirmier') {
++    const filtered = search ? staff.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) : staff
+     return (
+-      <div className="space-y-1">
+-        {staff.map(p => (
+-          <StaffRow key={p.id} p={p} profession={profession} T={T}
+-            isMe={p.id === currentProfile?.id}
+-            canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
+-        ))}
++      <div>
++        {searchBar}
++        <div className="space-y-1">
++          {filtered.map(p => (
++            <StaffRow key={p.id} p={p} profession={profession} T={T}
++              isMe={p.id === currentProfile?.id}
++              canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
++          ))}
++        </div>
+       </div>
+     )
+   }
+ 
+   const knownGrades = MED_SECTIONS.map(s => s.grade)
+   const autres = staff.filter(p => !knownGrades.includes(p.grade))
+-  const sections = [
++  const allSections = [
+     ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
+     ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
+   ].filter(s => s.list.length > 0)
+ 
++  const sections = search
++    ? allSections.map(s => ({ ...s, list: s.list.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) })).filter(s => s.list.length > 0)
++    : allSections
++
+   return (
+-    <div className="space-y-4">
+-      {sections.map(section => (
+-        <div key={section.label}>
+-          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: T.accentBar }}>{section.label}</p>
+-          <div className="space-y-0.5">
+-            {section.list.map(p => (
+-              <StaffRow key={p.id} p={p} profession={profession} T={T}
+-                isMe={p.id === currentProfile?.id}
+-                canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
+-            ))}
++    <div>
++      {searchBar}
++      <div className="space-y-4">
++        {sections.map(section => (
++          <div key={section.label}>
++            <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: T.accentBar }}>{section.label}</p>
++            <div className="space-y-0.5">
++              {section.list.map(p => (
++                <StaffRow key={p.id} p={p} profession={profession} T={T}
++                  isMe={p.id === currentProfile?.id}
++                  canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
++              ))}
++            </div>
+           </div>
+-        </div>
+-      ))}
++        ))}
++        {sections.length === 0 && (
++          <p className="text-xs text-center italic py-2" style={{ color: T.textFaint }}>Aucun résultat</p>
++        )}
++      </div>
+     </div>
+   )
+ }
+@@ -487,11 +503,10 @@ function SearchPanel({ selectedDate, T }) {
+ }
+ 
+ const MENU_ITEMS = [
+-  { id: 'profil',    label: 'Mon profil',   icon: User },
+-  { id: 'recherche', label: 'Recherche',    icon: Search },
+-  { id: 'medecins',  label: 'Med',          icon: Stethoscope },
+-  { id: 'isa',       label: 'ISA',          icon: Users },
+-  { id: 'contacts',  label: 'GSM',          icon: BookUser },
++  { id: 'profil',   label: 'Mon profil', icon: User },
++  { id: 'medecins', label: 'Med',        icon: Stethoscope },
++  { id: 'isa',      label: 'ISA',        icon: Users },
++  { id: 'contacts', label: 'GSM',        icon: BookUser },
+ ]
+ 
+ export default function Sidebar({ open, onClose, selectedDate, theme }) {
+@@ -543,10 +558,9 @@ export default function Sidebar({ open, onClose, selectedDate, theme }) {
+ 
+         {/* Content */}
+         <div className="flex-1 overflow-y-auto px-4 py-4">
+-          {activeItem === 'profil'    && <ProfilePanel selectedDate={selectedDate} T={T} />}
+-          {activeItem === 'recherche' && <SearchPanel  selectedDate={selectedDate} T={T} />}
+-          {activeItem === 'medecins'  && <StaffList profession="medecin"    T={T} />}
+-          {activeItem === 'isa'       && <StaffList profession="infirmier"  T={T} />}
++          {activeItem === 'profil'   && <ProfilePanel selectedDate={selectedDate} T={T} />}
++          {activeItem === 'medecins' && <StaffList profession="medecin"   T={T} />}
++          {activeItem === 'isa'      && <StaffList profession="infirmier" T={T} />}
+         </div>
+       </div>
+ 
+diff --git a/src/index.css b/src/index.css
+index ebd204e..275c441 100644
+--- a/src/index.css
++++ b/src/index.css
+@@ -6,6 +6,11 @@
+   -webkit-tap-highlight-color: transparent;
+ }
+ 
++html, body {
++  overflow-x: hidden;
++  max-width: 100vw;
++}
++
+ body {
+   @apply bg-gray-50 text-gray-900;
+   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+index 94803c1..4e7af53 100644
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen } from 'lucide-react'
++import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen, Trash2, Undo2, Redo2 } from 'lucide-react'
+ import ImportPlanningModal from '../components/ImportPlanningModal'
+ import DocumentsModal from '../components/DocumentsModal'
+ import { supabase } from '../lib/supabase'
+@@ -547,6 +547,118 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, sectorId, d
+   )
+ }
+ 
++function QuickAssignModal({ date, dateLabel, allProfiles, rooms, roomNames, theme, onClose, onDone }) {
++  const T = theme
++  const { profile: currentProfile } = useAuth()
++  const [selectedRoom, setSelectedRoom] = useState(rooms[0] ?? null)
++  const [search, setSearch] = useState('')
++  const [selectedDoctor, setSelectedDoctor] = useState(null)
++  const [saving, setSaving] = useState(false)
++
++  const medecins = allProfiles.filter(p => p.profession === 'medecin')
++  const filtered = search.length >= 1
++    ? medecins.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase()))
++    : medecins
++
++  async function handleAdd() {
++    if (!selectedDoctor || !selectedRoom) return
++    setSaving(true)
++    const { data: existing } = await supabase.from('assignments').select('id')
++      .eq('user_id', selectedDoctor.id).eq('room_id', selectedRoom).eq('date', date).maybeSingle()
++    let insertedId = null
++    if (!existing) {
++      const { data: ins } = await supabase.from('assignments').insert({
++        user_id: selectedDoctor.id,
++        room_id: selectedRoom,
++        date,
++        assigned_by: currentProfile?.id,
++        start_time: null,
++      }).select('id').maybeSingle()
++      insertedId = ins?.id ?? null
++    }
++    setSaving(false)
++    onDone(insertedId)
++  }
++
++  return (
++    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
++      <div style={{ background: T.cardBg, borderColor: T.border }}
++        className="border rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
++        <div className="px-5 py-4 border-b flex items-center justify-between"
++          style={{ background: T.cardHead, borderColor: T.border }}>
++          <h2 className="font-bold text-base" style={{ color: T.text }}>Ajouter — {dateLabel}</h2>
++          <button onClick={onClose} style={{ color: T.textFaint }} className="p-1 hover:opacity-70">
++            <X size={18} />
++          </button>
++        </div>
++
++        <div className="px-5 py-4 space-y-4">
++          {/* Salle */}
++          <div>
++            <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: T.textFaint }}>Salle</label>
++            <select value={selectedRoom ?? ''} onChange={e => setSelectedRoom(Number(e.target.value))}
++              style={{ background: T.surface, borderColor: T.border, color: T.text }}
++              className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none">
++              {rooms.map(roomId => (
++                <option key={roomId} value={roomId}>{roomNames[roomId] ?? `Salle ${roomId}`}</option>
++              ))}
++            </select>
++          </div>
++
++          {/* Médecin */}
++          <div>
++            <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: T.textFaint }}>Médecin</label>
++            {selectedDoctor ? (
++              <div style={{ background: T.surface, borderColor: T.accentBar }}
++                className="border-2 rounded-xl px-3 py-2.5 flex items-center justify-between">
++                <span className="text-sm font-semibold" style={{ color: T.text }}>Dr. {selectedDoctor.full_name}</span>
++                <button onClick={() => { setSelectedDoctor(null); setSearch('') }} style={{ color: T.textFaint }}
++                  className="p-0.5 hover:opacity-70">
++                  <X size={14} />
++                </button>
++              </div>
++            ) : (
++              <>
++                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
++                  placeholder="Rechercher un médecin..."
++                  style={{ background: T.surface, borderColor: T.border, color: T.text }}
++                  className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none mb-1.5"
++                  autoFocus
++                />
++                <div className="border rounded-xl overflow-hidden max-h-44 overflow-y-auto" style={{ borderColor: T.border }}>
++                  {filtered.slice(0, 10).map(p => (
++                    <button key={p.id} onClick={() => setSelectedDoctor(p)}
++                      className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity border-b last:border-0"
++                      style={{ background: T.surface, borderColor: T.border, color: T.text }}>
++                      <span className="font-medium">Dr. {p.full_name}</span>
++                      <span className="text-xs ml-2" style={{ color: T.textFaint }}>
++                        {p.grade === 'adjoint' ? 'Adj.' : p.grade === 'chef_clinique' ? 'CDC' : p.grade === 'interne' ? 'Int.' : ''}
++                      </span>
++                    </button>
++                  ))}
++                </div>
++              </>
++            )}
++          </div>
++        </div>
++
++        <div className="px-5 pb-5 flex gap-2">
++          <button onClick={onClose}
++            style={{ background: T.surface, color: T.textSub, border: `1px solid ${T.border}` }}
++            className="flex-1 py-2.5 rounded-xl text-sm font-medium hover:opacity-80 transition-opacity">
++            Annuler
++          </button>
++          <button onClick={handleAdd} disabled={!selectedDoctor || !selectedRoom || saving}
++            style={{ background: T.accentBar }}
++            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity disabled:opacity-40">
++            {saving ? 'Ajout…' : 'Ajouter'}
++          </button>
++        </div>
++      </div>
++    </div>
++  )
++}
++
+ export default function Dashboard({ unit, sector, onBack }) {
+   const { profile } = useAuth()
+   const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
+@@ -578,6 +690,13 @@ export default function Dashboard({ unit, sector, onBack }) {
+   const [selectedProfile, setSelectedProfile] = useState(null)
+   const [sidebarOpen, setSidebarOpen] = useState(false)
+   const [loading, setLoading] = useState(true)
++  const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
++  const [weekAssignments, setWeekAssignments] = useState([])
++  const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
++  const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation (vue semaine)
++  const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
++  const [undoStack, setUndoStack] = useState([]) // snapshots avant chaque action
++  const [redoStack, setRedoStack] = useState([]) // snapshots pour redo
+ 
+   const todayStr = formatDateKey(new Date())
+ 
+@@ -602,6 +721,7 @@ export default function Dashboard({ unit, sector, onBack }) {
+     const days = getWeekDays(weeks[index])
+     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
+     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
++    setViewMode('week')
+   }
+ 
+   function shiftWindow(direction) {
+@@ -612,19 +732,21 @@ export default function Dashboard({ unit, sector, onBack }) {
+     const days = getWeekDays(newStart)
+     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
+     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
++    setViewMode('week')
+   }
+ 
+   const fetchData = useCallback(async () => {
+     setLoading(true)
+     const sectorId = sector?.id ?? 'hors-bloc'
+     const weekDates = selectedWeekDays.map(d => formatDateKey(d))
+-    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }] = await Promise.all([
++    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }, { data: weekAsgn }] = await Promise.all([
+       supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
+       supabase.from('room_closures').select('*').eq('date', selectedDate),
+       supabase.from('profiles').select('*').order('full_name'),
+       supabase.from('room_schedules').select('*').eq('date', selectedDate),
+       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
+       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
++      supabase.from('assignments').select('id, user_id, date, room_id, start_time, end_time, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
+     ])
+     setAssignments(asgn ?? [])
+     setClosures(cls ?? [])
+@@ -632,6 +754,7 @@ export default function Dashboard({ unit, sector, onBack }) {
+     setRoomSchedules(scheds ?? [])
+     setDayClosed(!!dayCls)
+     setWeekDayClosures((weekCls ?? []).map(r => r.date))
++    setWeekAssignments((weekAsgn ?? []).filter(a => ROOMS.includes(a.room_id)))
+     setLoading(false)
+   }, [selectedDate, selectedWeekDays, sector?.id])
+ 
+@@ -647,6 +770,9 @@ export default function Dashboard({ unit, sector, onBack }) {
+     return () => supabase.removeChannel(channel)
+   }, [fetchData])
+ 
++  // Vider les stacks undo/redo si on change de semaine ou de secteur
++  useEffect(() => { setUndoStack([]); setRedoStack([]) }, [selectedWeekIndex, sector?.id])
++
+   async function handleJoin(roomId, startTime) {
+     if (!profile) return
+     const { data: existing } = await supabase
+@@ -735,6 +861,60 @@ export default function Dashboard({ unit, sector, onBack }) {
+     await fetchData()
+   }
+ 
++  function snapshotWeek() {
++    return weekAssignments.map(a => ({
++      user_id: a.user_id, room_id: a.room_id, date: a.date,
++      start_time: a.start_time ?? null, end_time: a.end_time ?? null,
++    }))
++  }
++
++  function pushUndo() {
++    const snap = snapshotWeek()
++    setUndoStack(prev => [...prev, snap])
++    setRedoStack([])
++  }
++
++  async function applySnapshot(snap) {
++    const weekDates = selectedWeekDays.map(d => formatDateKey(d))
++    for (const date of weekDates) {
++      await supabase.from('assignments').delete().eq('date', date).in('room_id', ROOMS)
++    }
++    if (snap.length > 0) await supabase.from('assignments').insert(snap)
++    await fetchData()
++  }
++
++  async function handleUndo() {
++    if (undoStack.length === 0) return
++    const current = snapshotWeek()
++    setRedoStack(prev => [...prev, current])
++    const prev = undoStack[undoStack.length - 1]
++    setUndoStack(s => s.slice(0, -1))
++    await applySnapshot(prev)
++  }
++
++  async function handleRedo() {
++    if (redoStack.length === 0) return
++    const current = snapshotWeek()
++    setUndoStack(prev => [...prev, current])
++    const next = redoStack[redoStack.length - 1]
++    setRedoStack(s => s.slice(0, -1))
++    await applySnapshot(next)
++  }
++
++  async function handleDeleteWeekAssignment(assignment) {
++    pushUndo()
++    await supabase.from('assignments').delete().eq('id', assignment.id)
++    await fetchData()
++  }
++
++  async function handleResetDay(dateStr) {
++    pushUndo()
++    await supabase.from('assignments').delete().eq('date', dateStr).in('room_id', ROOMS)
++    setResetConfirm(null)
++    setDayResetConfirm(false)
++    await fetchData()
++  }
++
+   const totalAssigned = new Set(assignments.filter(a => ROOMS.includes(a.room_id)).map(a => a.user_id)).size
+ 
+   const selectedDayLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-FR', {
+@@ -747,8 +927,8 @@ export default function Dashboard({ unit, sector, onBack }) {
+       <Header unit={unit} sector={sector} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} theme={T} />
+ 
+       {/* Sélecteur semaine/jour */}
+-      <div className="border-b px-4 py-3" style={{ background: T.cardHead, borderColor: T.border }}>
+-        <div className="max-w-4xl mx-auto space-y-3">
++      <div className="border-b px-4 py-3 overflow-x-hidden" style={{ background: T.cardHead, borderColor: T.border }}>
++        <div className="max-w-4xl mx-auto space-y-3 w-full">
+           <div className="flex items-center gap-2">
+             <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: T.textSub }}>
+               <ChevronLeft size={18} />
+@@ -784,7 +964,7 @@ export default function Dashboard({ unit, sector, onBack }) {
+               const isPast = dateStr < todayStr
+               const isDayClosed = weekDayClosures.includes(dateStr)
+               return (
+-                <button key={i} onClick={() => setSelectedDate(dateStr)}
++                <button key={i} onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}
+                   style={isSelected
+                     ? { background: T.accentBar, color: '#fff' }
+                     : isToday
+@@ -804,9 +984,9 @@ export default function Dashboard({ unit, sector, onBack }) {
+       </div>
+ 
+       {/* Barre info */}
+-      <div className="border-b px-4 py-2" style={{ background: T.cardHead, borderColor: T.border }}>
+-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: T.textSub }}>
+-          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: T.text }}>{totalAssigned}</span> affecté(s)</span>
++      <div className="border-b px-4 py-2 overflow-x-auto" style={{ background: T.cardHead, borderColor: T.border }}>
++        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm min-w-max sm:min-w-0" style={{ color: T.textSub }}>
++          <span className="capitalize shrink-0 mr-3">{selectedDayLabel} — <span className="font-semibold" style={{ color: T.text }}>{totalAssigned}</span> affecté(s)</span>
+           <div className="flex items-center gap-2">
+             <button onClick={() => setShowEffectif(true)}
+               className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+@@ -846,7 +1026,35 @@ export default function Dashboard({ unit, sector, onBack }) {
+                 )}
+               </>
+             )}
+-            <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
++            {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
++              dayResetConfirm ? (
++                <button onClick={async () => { await handleResetDay(selectedDate); setDayResetConfirm(false) }}
++                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-bold px-2.5 py-1.5 rounded-lg"
++                  style={{ background: '#FEE2E2', color: '#DC2626' }}>
++                  Confirmer ?
++                </button>
++              ) : (
++                <button onClick={() => setDayResetConfirm(true)}
++                  title="Vider toutes les affectations du jour"
++                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
++                  style={{ background: T.surface, color: T.textFaint }}>
++                  <Trash2 size={13} />
++                </button>
++              )
++            )}
++            <button onClick={handleUndo} disabled={undoStack.length === 0}
++              title="Annuler"
++              className="p-1.5 rounded-lg transition-opacity hover:opacity-70 disabled:opacity-25"
++              style={{ color: T.accent }}>
++              <Undo2 size={15} />
++            </button>
++            <button onClick={handleRedo} disabled={redoStack.length === 0}
++              title="Rétablir"
++              className="p-1.5 rounded-lg transition-opacity hover:opacity-70 disabled:opacity-25"
++              style={{ color: T.accent }}>
++              <Redo2 size={15} />
++            </button>
++            <button onClick={fetchData} className="p-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
+               <RefreshCw size={14} />
+             </button>
+           </div>
+@@ -862,6 +1070,116 @@ export default function Dashboard({ unit, sector, onBack }) {
+               <p className="text-sm">Chargement...</p>
+             </div>
+           </div>
++        ) : viewMode === 'week' ? (
++          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
++            {selectedWeekDays.map((day, i) => {
++              const dateStr = formatDateKey(day)
++              const isToday = dateStr === todayStr
++              const isDayClosed = weekDayClosures.includes(dateStr)
++              const dayAsgn = weekAssignments.filter(a => a.date === dateStr)
++              // Grouper par salle
++              const byRoom = {}
++              for (const a of dayAsgn) {
++                if (!byRoom[a.room_id]) byRoom[a.room_id] = { med: [], isa: [] }
++                if (a.profiles?.profession === 'medecin') byRoom[a.room_id].med.push(a)
++                else byRoom[a.room_id].isa.push(a)
++              }
++              const roomEntries = Object.entries(byRoom)
++              const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
++              const canManage = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
++              const dayLabel = `${DAY_NAMES[i]} ${day.getDate()}`
++              return (
++                <div key={i}
++                  style={{
++                    background: T.cardBg,
++                    borderColor: isToday ? T.accentBar : T.border,
++                    boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
++                  }}
++                  className="rounded-2xl border p-4 flex flex-col">
++                  {/* Header jour — cliquable pour aller en vue jour */}
++                  <div className="flex items-center justify-between mb-1 cursor-pointer hover:opacity-70 transition-opacity"
++                    onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
++                    <div className="flex items-baseline gap-2">
++                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_NAMES[i]}</span>
++                      <span className="text-xl font-bold" style={{ color: T.text }}>{day.getDate()}</span>
++                    </div>
++                    {isDayClosed
++                      ? <span className="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Fermé</span>
++                      : isToday
++                        ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: T.accentBar, color: '#fff' }}>Aujourd'hui</span>
++                        : totalPeople > 0
++                          ? <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: T.surface, color: T.textSub }}>{totalPeople} pers.</span>
++                          : null}
++                  </div>
++                  {/* Aperçu salles */}
++                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
++                    {isDayClosed ? (
++                      <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
++                    ) : roomEntries.length === 0 ? (
++                      <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
++                    ) : (
++                      <div className="mt-2 space-y-1">
++                        {roomEntries.slice(0, 7).map(([roomId, group]) => (
++                          <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
++                            <span className="flex-shrink-0 font-medium truncate" style={{ color: T.textFaint, maxWidth: '70px' }}>
++                              {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
++                            </span>
++                            <div className="flex flex-wrap gap-x-1.5 min-w-0">
++                              {[...group.med, ...group.isa].map(a => (
++                                <span key={a.id ?? a.user_id} className="flex items-center gap-0.5">
++                                  <span className={`truncate ${a.profiles?.profession === 'medecin' ? 'font-semibold' : ''}`}
++                                    style={{ color: a.profiles?.profession === 'medecin' ? T.text : T.textSub }}>
++                                    {a.profiles?.full_name?.split(' ')[0]}
++                                  </span>
++                                  {canManage && a.id && (
++                                    <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }}
++                                      className="flex-shrink-0 hover:text-red-500 transition-colors"
++                                      style={{ color: T.textFaint }}>
++                                      <X size={9} />
++                                    </button>
++                                  )}
++                                </span>
++                              ))}
++                            </div>
++                          </div>
++                        ))}
++                        {roomEntries.length > 7 && (
++                          <p className="text-xs" style={{ color: T.textFaint }}>+{roomEntries.length - 7} salles…</p>
++                        )}
++                      </div>
++                    )}
++                  </div>
++                  {/* Boutons action */}
++                  {canManage && !isDayClosed && (
++                    <div className="mt-3 flex gap-1.5">
++                      <button
++                        onClick={e => { e.stopPropagation(); setQuickAssign({ date: dateStr, dateLabel: dayLabel }) }}
++                        style={{ background: T.surface, borderColor: T.border, color: T.accentBar }}
++                        className="flex-1 border rounded-xl py-1.5 text-xs font-bold hover:opacity-80 transition-opacity flex items-center justify-center gap-1">
++                        + Ajouter
++                      </button>
++                      {resetConfirm === dateStr ? (
++                        <button
++                          onClick={e => { e.stopPropagation(); handleResetDay(dateStr) }}
++                          className="flex-shrink-0 border rounded-xl px-2.5 py-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
++                          style={{ background: '#FEE2E2', borderColor: '#FECACA', color: '#DC2626' }}>
++                          Confirmer ?
++                        </button>
++                      ) : (
++                        <button
++                          onClick={e => { e.stopPropagation(); setResetConfirm(dateStr) }}
++                          title="Vider la journée"
++                          style={{ background: T.surface, borderColor: T.border, color: T.textFaint }}
++                          className="flex-shrink-0 border rounded-xl px-2.5 py-1.5 text-xs hover:opacity-80 transition-opacity">
++                          🗑
++                        </button>
++                      )}
++                    </div>
++                  )}
++                </div>
++              )
++            })}
++          </div>
+         ) : dayClosed ? (
+           <div className="flex flex-col items-center justify-center py-20 gap-4">
+             <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: '#FEE2E2' }}>
+@@ -880,7 +1198,7 @@ export default function Dashboard({ unit, sector, onBack }) {
+             )}
+           </div>
+         ) : (
+-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
++          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+             <SupervisorCard
+               date={selectedDate}
+               allProfiles={allProfiles}
+@@ -923,6 +1241,19 @@ export default function Dashboard({ unit, sector, onBack }) {
+         )}
+       </main>
+ 
++      {quickAssign && (
++        <QuickAssignModal
++          date={quickAssign.date}
++          dateLabel={quickAssign.dateLabel}
++          allProfiles={allProfiles}
++          rooms={ROOMS}
++          roomNames={ROOM_NAMES}
++          theme={T}
++          onClose={() => setQuickAssign(null)}
++          onDone={(insertedId) => { if (insertedId) pushUndo(); setQuickAssign(null); fetchData() }}
++        />
++      )}
++
+       {showEffectif && (
+         <EffectifModal
+           assignments={assignments}
+diff --git a/src/pages/UnitSelector.jsx b/src/pages/UnitSelector.jsx
+index 5f4f753..46d940a 100644
+--- a/src/pages/UnitSelector.jsx
++++ b/src/pages/UnitSelector.jsx
+@@ -1,12 +1,83 @@
+-import { useState } from 'react'
+-import { Menu, Flame } from 'lucide-react'
++import { useState, useEffect } from 'react'
++import { Menu, Flame, FileSpreadsheet, X, LogOut } from 'lucide-react'
+ import { useAuth } from '../contexts/AuthContext'
+ import { UNITS } from '../config/sectors'
+ import { GRADE_LABELS } from '../config/constants'
+ import Sidebar from '../components/Sidebar'
+ import DocumentsModal from '../components/DocumentsModal'
++import ImportPlanningModal from '../components/ImportPlanningModal'
++import { supabase } from '../lib/supabase'
+ import { WARM } from '../config/theme'
+ 
++const IMPORT_TARGETS = [
++  { label: 'Hors-Bloc',     type: 'sector', id: 'hors-bloc',    color: '#3B82F6', bg: '#EFF6FF' },
++  { label: 'Julliard',      type: 'sector', id: 'julliard',      color: '#0EA5E9', bg: '#F0F9FF' },
++  { label: 'BOU',           type: 'sector', id: 'bou',           color: '#F59E0B', bg: '#FFFBEB' },
++  { label: 'Traumato',      type: 'sector', id: 'traumatologie', color: '#6B7280', bg: '#F9FAFB' },
++  { label: 'Prévost',       type: 'sector', id: 'prevost',       color: '#EC4899', bg: '#FDF2F8' },
++  { label: 'DU HB',         type: 'unit',   id: 'duhb',          color: '#3B82F6', bg: '#EFF6FF' },
++  { label: 'UNICAT',        type: 'unit',   id: 'unicat',        color: '#F97316', bg: '#FFF7ED' },
++  { label: 'AMOPA',         type: 'unit',   id: 'amopa',         color: '#A855F7', bg: '#FAF5FF' },
++]
++
++function GlobalImportModal({ onClose }) {
++  const [profiles, setProfiles] = useState([])
++  const [active, setActive] = useState(null)
++
++  useEffect(() => {
++    supabase.from('profiles').select('*').then(({ data }) => setProfiles(data ?? []))
++  }, [])
++
++  if (active) {
++    return (
++      <ImportPlanningModal
++        profiles={profiles}
++        sector={active.type === 'sector' ? { id: active.id, name: active.label } : undefined}
++        unit={active.type === 'unit'   ? { id: active.id, name: active.label } : undefined}
++        theme={WARM}
++        onClose={() => setActive(null)}
++        onImported={() => setActive(null)}
++      />
++    )
++  }
++
++  return (
++    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
++      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
++        className="border rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
++        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
++          className="px-5 py-4 border-b flex items-center justify-between">
++          <div className="flex items-center gap-2">
++            <FileSpreadsheet size={17} style={{ color: WARM.accentBar }} />
++            <h2 className="font-bold text-base" style={{ color: WARM.text }}>Import global</h2>
++          </div>
++          <button onClick={onClose} style={{ color: WARM.textFaint }}
++            className="p-1.5 hover:opacity-70 transition-opacity">
++            <X size={18} />
++          </button>
++        </div>
++        <div className="px-5 py-5">
++          <p className="text-xs mb-4" style={{ color: WARM.textSub }}>
++            Choisissez l'unité ou le secteur à importer
++          </p>
++          <div className="grid grid-cols-2 gap-2.5">
++            {IMPORT_TARGETS.map(t => (
++              <button key={t.id} onClick={() => setActive(t)}
++                style={{ background: t.bg, borderColor: t.color + '55' }}
++                className="border rounded-xl px-3 py-3 text-left hover:opacity-80 transition-opacity active:scale-95">
++                <div className="flex items-center gap-2">
++                  <FileSpreadsheet size={13} style={{ color: t.color }} />
++                  <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
++                </div>
++              </button>
++            ))}
++          </div>
++        </div>
++      </div>
++    </div>
++  )
++}
++
+ // Palette bloc opératoire — pastels cliniques
+ const UNIT_STYLES = {
+   duhb:   { bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', text: '#1D4ED8' },
+@@ -20,9 +91,12 @@ const UNIT_STYLES = {
+ }
+ 
+ export default function UnitSelector({ onSelect }) {
+-  const { profile } = useAuth()
++  const { profile, signOut } = useAuth()
+   const [sidebarOpen, setSidebarOpen] = useState(false)
+   const [hotTopicsUnit, setHotTopicsUnit] = useState(null)
++  const [showGlobalImport, setShowGlobalImport] = useState(false)
++
++  const canImport = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
+ 
+   const today = new Date().toLocaleDateString('fr-FR', {
+     weekday: 'long', day: 'numeric', month: 'long',
+@@ -45,12 +119,25 @@ export default function UnitSelector({ onSelect }) {
+             </div>
+           </div>
+           <div className="flex items-center gap-2">
++            {canImport && (
++              <button onClick={() => setShowGlobalImport(true)}
++                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
++                style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', color: '#16A34A' }}>
++                <FileSpreadsheet size={13} />
++                Import
++              </button>
++            )}
+             <button onClick={() => setHotTopicsUnit({ id: 'global', name: 'Hot Topics' })}
+               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
+               style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#DC2626' }}>
+               <Flame size={13} />
+               Hot Topics
+             </button>
++            <button onClick={signOut}
++              className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
++              title="Déconnexion">
++              <LogOut size={20} />
++            </button>
+             <button onClick={() => setSidebarOpen(true)}
+               className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
+               <Menu size={22} />
+@@ -112,6 +199,10 @@ export default function UnitSelector({ onSelect }) {
+         <DocumentsModal unit={hotTopicsUnit} theme={WARM} initialTab="hot_topics"
+           onClose={() => setHotTopicsUnit(null)} />
+       )}
++
++      {showGlobalImport && (
++        <GlobalImportModal onClose={() => setShowGlobalImport(false)} />
++      )}
+     </div>
+   )
+ }
