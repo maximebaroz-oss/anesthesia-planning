@@ -4,20 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { ROOM_NAMES, GRADE_LABELS, getISOWeek } from '../config/constants'
 import { WARM } from '../config/theme'
-import ContactsModal, { CONTACTS } from './ContactsModal'
-
-// Cherche un numéro GSM dans l'annuaire par correspondance sur le nom de famille
-function findGsmPhone(fullName) {
-  if (!fullName) return null
-  const parts = fullName.toUpperCase().split(' ')
-  for (const section of CONTACTS) {
-    for (const entry of section.entries) {
-      const entryUp = entry.name.toUpperCase()
-      if (parts.some(p => p.length > 2 && entryUp.startsWith(p))) return entry.phone
-    }
-  }
-  return null
-}
+import ContactsModal, { findGsmPhone } from './ContactsModal'
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
@@ -285,6 +272,7 @@ function StaffList({ profession, T }) {
   const { profile: currentProfile } = useAuth()
   const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     supabase.from('profiles').select('*').eq('profession', profession).order('full_name')
@@ -293,39 +281,67 @@ function StaffList({ profession, T }) {
 
   if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: T.textFaint }}>Chargement...</p>
 
+  const searchBar = (
+    <div className="relative mb-3">
+      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: T.textFaint }} />
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Rechercher..."
+        style={{ background: T.surface, borderColor: T.border, color: T.text }}
+        className="w-full border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none"
+      />
+    </div>
+  )
+
   if (profession === 'infirmier') {
+    const filtered = search ? staff.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) : staff
     return (
-      <div className="space-y-1">
-        {staff.map(p => (
-          <StaffRow key={p.id} p={p} profession={profession} T={T}
-            isMe={p.id === currentProfile?.id}
-            canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
-        ))}
+      <div>
+        {searchBar}
+        <div className="space-y-1">
+          {filtered.map(p => (
+            <StaffRow key={p.id} p={p} profession={profession} T={T}
+              isMe={p.id === currentProfile?.id}
+              canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
+          ))}
+        </div>
       </div>
     )
   }
 
   const knownGrades = MED_SECTIONS.map(s => s.grade)
   const autres = staff.filter(p => !knownGrades.includes(p.grade))
-  const sections = [
+  const allSections = [
     ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
     ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
   ].filter(s => s.list.length > 0)
 
+  const sections = search
+    ? allSections.map(s => ({ ...s, list: s.list.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) })).filter(s => s.list.length > 0)
+    : allSections
+
   return (
-    <div className="space-y-4">
-      {sections.map(section => (
-        <div key={section.label}>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: T.accentBar }}>{section.label}</p>
-          <div className="space-y-0.5">
-            {section.list.map(p => (
-              <StaffRow key={p.id} p={p} profession={profession} T={T}
-                isMe={p.id === currentProfile?.id}
-                canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
-            ))}
+    <div>
+      {searchBar}
+      <div className="space-y-4">
+        {sections.map(section => (
+          <div key={section.label}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: T.accentBar }}>{section.label}</p>
+            <div className="space-y-0.5">
+              {section.list.map(p => (
+                <StaffRow key={p.id} p={p} profession={profession} T={T}
+                  isMe={p.id === currentProfile?.id}
+                  canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+        {sections.length === 0 && (
+          <p className="text-xs text-center italic py-2" style={{ color: T.textFaint }}>Aucun résultat</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -487,11 +503,10 @@ function SearchPanel({ selectedDate, T }) {
 }
 
 const MENU_ITEMS = [
-  { id: 'profil',    label: 'Mon profil',   icon: User },
-  { id: 'recherche', label: 'Recherche',    icon: Search },
-  { id: 'medecins',  label: 'Med',          icon: Stethoscope },
-  { id: 'isa',       label: 'ISA',          icon: Users },
-  { id: 'contacts',  label: 'GSM',          icon: BookUser },
+  { id: 'profil',   label: 'Mon profil', icon: User },
+  { id: 'medecins', label: 'Med',        icon: Stethoscope },
+  { id: 'isa',      label: 'ISA',        icon: Users },
+  { id: 'contacts', label: 'GSM',        icon: BookUser },
 ]
 
 export default function Sidebar({ open, onClose, selectedDate, theme }) {
@@ -543,10 +558,9 @@ export default function Sidebar({ open, onClose, selectedDate, theme }) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {activeItem === 'profil'    && <ProfilePanel selectedDate={selectedDate} T={T} />}
-          {activeItem === 'recherche' && <SearchPanel  selectedDate={selectedDate} T={T} />}
-          {activeItem === 'medecins'  && <StaffList profession="medecin"    T={T} />}
-          {activeItem === 'isa'       && <StaffList profession="infirmier"  T={T} />}
+          {activeItem === 'profil'   && <ProfilePanel selectedDate={selectedDate} T={T} />}
+          {activeItem === 'medecins' && <StaffList profession="medecin"   T={T} />}
+          {activeItem === 'isa'      && <StaffList profession="infirmier" T={T} />}
         </div>
       </div>
 

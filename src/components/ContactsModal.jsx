@@ -294,7 +294,19 @@ const CONTACTS_DISPLAY = CONTACTS.filter(s =>
   !['Médecins-chefs & Adjoints', 'Chefs de clinique', 'Internes', 'Médecins associés & consultants'].includes(s.section)
 )
 
-export { CONTACTS }
+function findGsmPhone(fullName) {
+  if (!fullName) return null
+  const parts = fullName.toUpperCase().split(' ')
+  for (const section of CONTACTS) {
+    for (const entry of section.entries) {
+      const entryUp = entry.name.toUpperCase()
+      if (parts.some(p => p.length > 2 && entryUp.startsWith(p))) return entry.phone
+    }
+  }
+  return null
+}
+
+export { CONTACTS, findGsmPhone }
 
 export default function ContactsModal({ theme, onClose }) {
   const T = theme ?? WARM

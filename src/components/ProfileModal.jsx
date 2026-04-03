@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { X, Phone, User, Edit2, Check } from 'lucide-react'
+import { X, Phone, Edit2, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { WARM } from '../config/theme'
 import { GRADE_LABELS_FULL as GRADE_LABELS } from '../config/constants'
+import { findGsmPhone } from './ContactsModal'
 
 const PROFESSION_LABELS = {
   medecin: 'Médecin Anesthésiste (Med)',
@@ -17,6 +18,7 @@ export default function ProfileModal({ profile, onClose }) {
   const [saving, setSaving] = useState(false)
 
   const canEdit = currentProfile?.id === profile.id || currentProfile?.is_admin
+  const gsmPhone = !profile.phone ? findGsmPhone(profile.full_name) : null
 
   async function savePhone() {
     setSaving(true)
@@ -83,7 +85,11 @@ export default function ProfileModal({ profile, onClose }) {
                 <div className="flex items-center gap-2">
                   <Phone size={15} style={{ color: WARM.textFaint }} />
                   {phone ? (
-                    <span className="text-sm font-medium" style={{ color: WARM.text }}>{phone}</span>
+                    <a href={`tel:${phone.replace(/\s/g, '')}`} className="text-sm font-medium" style={{ color: WARM.accentBar }}>{phone}</a>
+                  ) : gsmPhone ? (
+                    <a href={`tel:${gsmPhone.replace(/\s/g, '')}`} className="text-sm font-medium" style={{ color: WARM.accentBar }}>
+                      {gsmPhone} <span className="text-xs font-normal opacity-60">annuaire</span>
+                    </a>
                   ) : (
                     <span className="text-sm italic" style={{ color: WARM.textFaint }}>Non renseigné</span>
                   )}
