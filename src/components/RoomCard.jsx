@@ -252,7 +252,7 @@ export default function RoomCard({
   const roomIsLate  = isToday && closingTime && isLate(closingTime) && roomAssignments.length > 0 && !isClosed
 
   const hasMedecin = medecins.length > 0
-  const [collapsed, setCollapsed] = useState(!hasMedecin && !isClosed)
+  const [collapsed, setCollapsed] = useState(!hasMedecin || isClosed)
 
   useEffect(() => {
     if (hasMedecin) setCollapsed(false)
