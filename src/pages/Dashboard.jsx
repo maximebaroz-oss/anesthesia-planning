@@ -877,8 +877,8 @@ export default function Dashboard({ unit, sector, onBack }) {
       <Header unit={unit} sector={sector} onBack={onBack} onMenuOpen={() => setSidebarOpen(true)} theme={T} />
 
       {/* Sélecteur semaine/jour */}
-      <div className="border-b px-4 py-3" style={{ background: T.cardHead, borderColor: T.border }}>
-        <div className="max-w-4xl mx-auto space-y-3">
+      <div className="border-b px-4 py-3 overflow-x-hidden" style={{ background: T.cardHead, borderColor: T.border }}>
+        <div className="max-w-4xl mx-auto space-y-3 w-full">
           <div className="flex items-center gap-2">
             <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: T.textSub }}>
               <ChevronLeft size={18} />
@@ -934,9 +934,9 @@ export default function Dashboard({ unit, sector, onBack }) {
       </div>
 
       {/* Barre info */}
-      <div className="border-b px-4 py-2" style={{ background: T.cardHead, borderColor: T.border }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm" style={{ color: T.textSub }}>
-          <span className="capitalize">{selectedDayLabel} — <span className="font-semibold" style={{ color: T.text }}>{totalAssigned}</span> affecté(s)</span>
+      <div className="border-b px-4 py-2 overflow-x-auto" style={{ background: T.cardHead, borderColor: T.border }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm min-w-max sm:min-w-0" style={{ color: T.textSub }}>
+          <span className="capitalize shrink-0 mr-3">{selectedDayLabel} — <span className="font-semibold" style={{ color: T.text }}>{totalAssigned}</span> affecté(s)</span>
           <div className="flex items-center gap-2">
             <button onClick={() => setShowEffectif(true)}
               className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
