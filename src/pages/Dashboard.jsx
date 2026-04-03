@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen, Trash2 } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen, Trash2, Undo2, Redo2 } from 'lucide-react'
 import ImportPlanningModal from '../components/ImportPlanningModal'
 import DocumentsModal from '../components/DocumentsModal'
 import { supabase } from '../lib/supabase'
@@ -695,8 +695,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
   const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation (vue semaine)
   const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
-  const [undoAction, setUndoAction] = useState(null) // { type: 'insert'|'delete', id?, data? }
-  const undoTimer = useRef(null)
+  const [undoStack, setUndoStack] = useState([]) // snapshots avant chaque action
+  const [redoStack, setRedoStack] = useState([]) // snapshots pour redo
 
   const todayStr = formatDateKey(new Date())
 
@@ -746,7 +746,7 @@ export default function Dashboard({ unit, sector, onBack }) {
       supabase.from('room_schedules').select('*').eq('date', selectedDate),
       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
-      supabase.from('assignments').select('id, user_id, date, room_id, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
+      supabase.from('assignments').select('id, user_id, date, room_id, start_time, end_time, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
@@ -769,6 +769,9 @@ export default function Dashboard({ unit, sector, onBack }) {
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [fetchData])
+
+  // Vider les stacks undo/redo si on change de semaine ou de secteur
+  useEffect(() => { setUndoStack([]); setRedoStack([]) }, [selectedWeekIndex, sector?.id])
 
   async function handleJoin(roomId, startTime) {
     if (!profile) return
@@ -858,33 +861,57 @@ export default function Dashboard({ unit, sector, onBack }) {
     await fetchData()
   }
 
-  function triggerUndo(action) {
-    if (undoTimer.current) clearTimeout(undoTimer.current)
-    setUndoAction(action)
-    undoTimer.current = setTimeout(() => setUndoAction(null), 8000)
+  function snapshotWeek() {
+    return weekAssignments.map(a => ({
+      user_id: a.user_id, room_id: a.room_id, date: a.date,
+      start_time: a.start_time ?? null, end_time: a.end_time ?? null,
+    }))
   }
 
-  async function handleUndo() {
-    if (!undoAction) return
-    clearTimeout(undoTimer.current)
-    if (undoAction.type === 'insert' && undoAction.id) {
-      await supabase.from('assignments').delete().eq('id', undoAction.id)
-    } else if (undoAction.type === 'delete' && undoAction.data) {
-      await supabase.from('assignments').insert(undoAction.data)
+  function pushUndo() {
+    const snap = snapshotWeek()
+    setUndoStack(prev => [...prev, snap])
+    setRedoStack([])
+  }
+
+  async function applySnapshot(snap) {
+    const weekDates = selectedWeekDays.map(d => formatDateKey(d))
+    for (const date of weekDates) {
+      await supabase.from('assignments').delete().eq('date', date).in('room_id', ROOMS)
     }
-    setUndoAction(null)
+    if (snap.length > 0) await supabase.from('assignments').insert(snap)
     await fetchData()
   }
 
+  async function handleUndo() {
+    if (undoStack.length === 0) return
+    const current = snapshotWeek()
+    setRedoStack(prev => [...prev, current])
+    const prev = undoStack[undoStack.length - 1]
+    setUndoStack(s => s.slice(0, -1))
+    await applySnapshot(prev)
+  }
+
+  async function handleRedo() {
+    if (redoStack.length === 0) return
+    const current = snapshotWeek()
+    setUndoStack(prev => [...prev, current])
+    const next = redoStack[redoStack.length - 1]
+    setRedoStack(s => s.slice(0, -1))
+    await applySnapshot(next)
+  }
+
   async function handleDeleteWeekAssignment(assignment) {
-    triggerUndo({ type: 'delete', data: { user_id: assignment.user_id, room_id: assignment.room_id, date: assignment.date } })
+    pushUndo()
     await supabase.from('assignments').delete().eq('id', assignment.id)
     await fetchData()
   }
 
   async function handleResetDay(dateStr) {
+    pushUndo()
     await supabase.from('assignments').delete().eq('date', dateStr).in('room_id', ROOMS)
     setResetConfirm(null)
+    setDayResetConfirm(false)
     await fetchData()
   }
 
@@ -1015,7 +1042,19 @@ export default function Dashboard({ unit, sector, onBack }) {
                 </button>
               )
             )}
-            <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
+            <button onClick={handleUndo} disabled={undoStack.length === 0}
+              title="Annuler"
+              className="p-1.5 rounded-lg transition-opacity hover:opacity-70 disabled:opacity-25"
+              style={{ color: T.accent }}>
+              <Undo2 size={15} />
+            </button>
+            <button onClick={handleRedo} disabled={redoStack.length === 0}
+              title="Rétablir"
+              className="p-1.5 rounded-lg transition-opacity hover:opacity-70 disabled:opacity-25"
+              style={{ color: T.accent }}>
+              <Redo2 size={15} />
+            </button>
+            <button onClick={fetchData} className="p-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
               <RefreshCw size={14} />
             </button>
           </div>
@@ -1202,26 +1241,6 @@ export default function Dashboard({ unit, sector, onBack }) {
         )}
       </main>
 
-      {/* Toast Undo */}
-      {undoAction && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border"
-          style={{ background: T.cardBg, borderColor: T.border }}>
-          <span className="text-sm" style={{ color: T.text }}>
-            {undoAction.type === 'delete' ? 'Affectation supprimée' : 'Affectation ajoutée'}
-          </span>
-          <button onClick={handleUndo}
-            style={{ background: T.accentBar, color: '#fff' }}
-            className="text-sm font-bold px-3 py-1.5 rounded-xl hover:opacity-90 transition-opacity whitespace-nowrap">
-            ↩ Annuler
-          </button>
-          <button onClick={() => { clearTimeout(undoTimer.current); setUndoAction(null) }}
-            style={{ color: T.textFaint }}
-            className="hover:opacity-70 transition-opacity">
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
       {quickAssign && (
         <QuickAssignModal
           date={quickAssign.date}
@@ -1231,7 +1250,7 @@ export default function Dashboard({ unit, sector, onBack }) {
           roomNames={ROOM_NAMES}
           theme={T}
           onClose={() => setQuickAssign(null)}
-          onDone={(insertedId) => { setQuickAssign(null); if (insertedId) triggerUndo({ type: 'insert', id: insertedId }); fetchData() }}
+          onDone={(insertedId) => { if (insertedId) pushUndo(); setQuickAssign(null); fetchData() }}
         />
       )}
 
