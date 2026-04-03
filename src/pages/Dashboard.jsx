@@ -547,6 +547,116 @@ function EffectifModal({ assignments, allProfiles, rooms, roomNames, sectorId, d
   )
 }
 
+function QuickAssignModal({ date, dateLabel, allProfiles, rooms, roomNames, theme, onClose, onDone }) {
+  const T = theme
+  const { profile: currentProfile } = useAuth()
+  const [selectedRoom, setSelectedRoom] = useState(rooms[0] ?? null)
+  const [search, setSearch] = useState('')
+  const [selectedDoctor, setSelectedDoctor] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const medecins = allProfiles.filter(p => p.profession === 'medecin')
+  const filtered = search.length >= 1
+    ? medecins.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase()))
+    : medecins
+
+  async function handleAdd() {
+    if (!selectedDoctor || !selectedRoom) return
+    setSaving(true)
+    const { data: existing } = await supabase.from('assignments').select('id')
+      .eq('user_id', selectedDoctor.id).eq('room_id', selectedRoom).eq('date', date).maybeSingle()
+    if (!existing) {
+      await supabase.from('assignments').insert({
+        user_id: selectedDoctor.id,
+        room_id: selectedRoom,
+        date,
+        assigned_by: currentProfile?.id,
+        start_time: null,
+      })
+    }
+    setSaving(false)
+    onDone()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+      <div style={{ background: T.cardBg, borderColor: T.border }}
+        className="border rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+        <div className="px-5 py-4 border-b flex items-center justify-between"
+          style={{ background: T.cardHead, borderColor: T.border }}>
+          <h2 className="font-bold text-base" style={{ color: T.text }}>Ajouter — {dateLabel}</h2>
+          <button onClick={onClose} style={{ color: T.textFaint }} className="p-1 hover:opacity-70">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* Salle */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: T.textFaint }}>Salle</label>
+            <select value={selectedRoom ?? ''} onChange={e => setSelectedRoom(Number(e.target.value))}
+              style={{ background: T.surface, borderColor: T.border, color: T.text }}
+              className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none">
+              {rooms.map(roomId => (
+                <option key={roomId} value={roomId}>{roomNames[roomId] ?? `Salle ${roomId}`}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Médecin */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: T.textFaint }}>Médecin</label>
+            {selectedDoctor ? (
+              <div style={{ background: T.surface, borderColor: T.accentBar }}
+                className="border-2 rounded-xl px-3 py-2.5 flex items-center justify-between">
+                <span className="text-sm font-semibold" style={{ color: T.text }}>Dr. {selectedDoctor.full_name}</span>
+                <button onClick={() => { setSelectedDoctor(null); setSearch('') }} style={{ color: T.textFaint }}
+                  className="p-0.5 hover:opacity-70">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Rechercher un médecin..."
+                  style={{ background: T.surface, borderColor: T.border, color: T.text }}
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none mb-1.5"
+                  autoFocus
+                />
+                <div className="border rounded-xl overflow-hidden max-h-44 overflow-y-auto" style={{ borderColor: T.border }}>
+                  {filtered.slice(0, 10).map(p => (
+                    <button key={p.id} onClick={() => setSelectedDoctor(p)}
+                      className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity border-b last:border-0"
+                      style={{ background: T.surface, borderColor: T.border, color: T.text }}>
+                      <span className="font-medium">Dr. {p.full_name}</span>
+                      <span className="text-xs ml-2" style={{ color: T.textFaint }}>
+                        {p.grade === 'adjoint' ? 'Adj.' : p.grade === 'chef_clinique' ? 'CDC' : p.grade === 'interne' ? 'Int.' : ''}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="px-5 pb-5 flex gap-2">
+          <button onClick={onClose}
+            style={{ background: T.surface, color: T.textSub, border: `1px solid ${T.border}` }}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium hover:opacity-80 transition-opacity">
+            Annuler
+          </button>
+          <button onClick={handleAdd} disabled={!selectedDoctor || !selectedRoom || saving}
+            style={{ background: T.accentBar }}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity disabled:opacity-40">
+            {saving ? 'Ajout…' : 'Ajouter'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard({ unit, sector, onBack }) {
   const { profile } = useAuth()
   const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
@@ -580,6 +690,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
   const [weekAssignments, setWeekAssignments] = useState([])
+  const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
 
   const todayStr = formatDateKey(new Date())
 
@@ -884,17 +995,19 @@ export default function Dashboard({ unit, sector, onBack }) {
               }
               const roomEntries = Object.entries(byRoom)
               const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
+              const canManage = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
+              const dayLabel = `${DAY_NAMES[i]} ${day.getDate()}`
               return (
-                <button key={i}
-                  onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}
+                <div key={i}
                   style={{
                     background: T.cardBg,
                     borderColor: isToday ? T.accentBar : T.border,
                     boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
                   }}
-                  className="rounded-2xl border p-4 text-left hover:opacity-80 transition-opacity">
-                  {/* Header jour */}
-                  <div className="flex items-center justify-between mb-1">
+                  className="rounded-2xl border p-4 flex flex-col">
+                  {/* Header jour — cliquable pour aller en vue jour */}
+                  <div className="flex items-center justify-between mb-1 cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}>
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_NAMES[i]}</span>
                       <span className="text-xl font-bold" style={{ color: T.text }}>{day.getDate()}</span>
@@ -908,37 +1021,48 @@ export default function Dashboard({ unit, sector, onBack }) {
                           : null}
                   </div>
                   {/* Aperçu salles */}
-                  {isDayClosed ? (
-                    <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
-                  ) : roomEntries.length === 0 ? (
-                    <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
-                  ) : (
-                    <div className="mt-2 space-y-1">
-                      {roomEntries.slice(0, 7).map(([roomId, group]) => (
-                        <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
-                          <span className="flex-shrink-0 font-medium truncate" style={{ color: T.textFaint, maxWidth: '70px' }}>
-                            {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
-                          </span>
-                          <div className="flex flex-wrap gap-x-1.5 min-w-0">
-                            {group.med.map(a => (
-                              <span key={a.user_id} className="font-semibold truncate" style={{ color: T.text }}>
-                                {a.profiles?.full_name?.split(' ')[0]}
-                              </span>
-                            ))}
-                            {group.isa.map(a => (
-                              <span key={a.user_id} className="truncate" style={{ color: T.textSub }}>
-                                {a.profiles?.full_name?.split(' ')[0]}
-                              </span>
-                            ))}
+                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}>
+                    {isDayClosed ? (
+                      <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
+                    ) : roomEntries.length === 0 ? (
+                      <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        {roomEntries.slice(0, 7).map(([roomId, group]) => (
+                          <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
+                            <span className="flex-shrink-0 font-medium truncate" style={{ color: T.textFaint, maxWidth: '70px' }}>
+                              {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
+                            </span>
+                            <div className="flex flex-wrap gap-x-1.5 min-w-0">
+                              {group.med.map(a => (
+                                <span key={a.user_id} className="font-semibold truncate" style={{ color: T.text }}>
+                                  {a.profiles?.full_name?.split(' ')[0]}
+                                </span>
+                              ))}
+                              {group.isa.map(a => (
+                                <span key={a.user_id} className="truncate" style={{ color: T.textSub }}>
+                                  {a.profiles?.full_name?.split(' ')[0]}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {roomEntries.length > 7 && (
-                        <p className="text-xs" style={{ color: T.textFaint }}>+{roomEntries.length - 7} salles…</p>
-                      )}
-                    </div>
+                        ))}
+                        {roomEntries.length > 7 && (
+                          <p className="text-xs" style={{ color: T.textFaint }}>+{roomEntries.length - 7} salles…</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* Bouton + */}
+                  {canManage && !isDayClosed && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setQuickAssign({ date: dateStr, dateLabel: dayLabel }) }}
+                      style={{ background: T.surface, borderColor: T.border, color: T.accentBar }}
+                      className="mt-3 w-full border rounded-xl py-1.5 text-xs font-bold hover:opacity-80 transition-opacity flex items-center justify-center gap-1">
+                      + Ajouter un médecin
+                    </button>
                   )}
-                </button>
+                </div>
               )
             })}
           </div>
@@ -1002,6 +1126,19 @@ export default function Dashboard({ unit, sector, onBack }) {
           </div>
         )}
       </main>
+
+      {quickAssign && (
+        <QuickAssignModal
+          date={quickAssign.date}
+          dateLabel={quickAssign.dateLabel}
+          allProfiles={allProfiles}
+          rooms={ROOMS}
+          roomNames={ROOM_NAMES}
+          theme={T}
+          onClose={() => setQuickAssign(null)}
+          onDone={() => { setQuickAssign(null); fetchData() }}
+        />
+      )}
 
       {showEffectif && (
         <EffectifModal
