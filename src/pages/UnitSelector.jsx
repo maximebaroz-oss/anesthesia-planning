@@ -1,11 +1,82 @@
-import { useState } from 'react'
-import { Menu, Flame } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Menu, Flame, FileSpreadsheet, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
 import Sidebar from '../components/Sidebar'
 import DocumentsModal from '../components/DocumentsModal'
+import ImportPlanningModal from '../components/ImportPlanningModal'
+import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
+
+const IMPORT_TARGETS = [
+  { label: 'Hors-Bloc',     type: 'sector', id: 'hors-bloc',    color: '#3B82F6', bg: '#EFF6FF' },
+  { label: 'Julliard',      type: 'sector', id: 'julliard',      color: '#0EA5E9', bg: '#F0F9FF' },
+  { label: 'BOU',           type: 'sector', id: 'bou',           color: '#F59E0B', bg: '#FFFBEB' },
+  { label: 'Traumato',      type: 'sector', id: 'traumatologie', color: '#6B7280', bg: '#F9FAFB' },
+  { label: 'Prévost',       type: 'sector', id: 'prevost',       color: '#EC4899', bg: '#FDF2F8' },
+  { label: 'DU HB',         type: 'unit',   id: 'duhb',          color: '#3B82F6', bg: '#EFF6FF' },
+  { label: 'UNICAT',        type: 'unit',   id: 'unicat',        color: '#F97316', bg: '#FFF7ED' },
+  { label: 'AMOPA',         type: 'unit',   id: 'amopa',         color: '#A855F7', bg: '#FAF5FF' },
+]
+
+function GlobalImportModal({ onClose }) {
+  const [profiles, setProfiles] = useState([])
+  const [active, setActive] = useState(null)
+
+  useEffect(() => {
+    supabase.from('profiles').select('*').then(({ data }) => setProfiles(data ?? []))
+  }, [])
+
+  if (active) {
+    return (
+      <ImportPlanningModal
+        profiles={profiles}
+        sector={active.type === 'sector' ? { id: active.id, name: active.label } : undefined}
+        unit={active.type === 'unit'   ? { id: active.id, name: active.label } : undefined}
+        theme={WARM}
+        onClose={() => setActive(null)}
+        onImported={() => setActive(null)}
+      />
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
+        className="border rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
+          className="px-5 py-4 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet size={17} style={{ color: WARM.accentBar }} />
+            <h2 className="font-bold text-base" style={{ color: WARM.text }}>Import global</h2>
+          </div>
+          <button onClick={onClose} style={{ color: WARM.textFaint }}
+            className="p-1.5 hover:opacity-70 transition-opacity">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-xs mb-4" style={{ color: WARM.textSub }}>
+            Choisissez l'unité ou le secteur à importer
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {IMPORT_TARGETS.map(t => (
+              <button key={t.id} onClick={() => setActive(t)}
+                style={{ background: t.bg, borderColor: t.color + '55' }}
+                className="border rounded-xl px-3 py-3 text-left hover:opacity-80 transition-opacity active:scale-95">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet size={13} style={{ color: t.color }} />
+                  <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Palette bloc opératoire — pastels cliniques
 const UNIT_STYLES = {
@@ -23,6 +94,9 @@ export default function UnitSelector({ onSelect }) {
   const { profile } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [hotTopicsUnit, setHotTopicsUnit] = useState(null)
+  const [showGlobalImport, setShowGlobalImport] = useState(false)
+
+  const canImport = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
 
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -45,6 +119,14 @@ export default function UnitSelector({ onSelect }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canImport && (
+              <button onClick={() => setShowGlobalImport(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
+                style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', color: '#16A34A' }}>
+                <FileSpreadsheet size={13} />
+                Import
+              </button>
+            )}
             <button onClick={() => setHotTopicsUnit({ id: 'global', name: 'Hot Topics' })}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation transition-opacity hover:opacity-80"
               style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', color: '#DC2626' }}>
@@ -111,6 +193,10 @@ export default function UnitSelector({ onSelect }) {
       {hotTopicsUnit && (
         <DocumentsModal unit={hotTopicsUnit} theme={WARM} initialTab="hot_topics"
           onClose={() => setHotTopicsUnit(null)} />
+      )}
+
+      {showGlobalImport && (
+        <GlobalImportModal onClose={() => setShowGlobalImport(false)} />
       )}
     </div>
   )
