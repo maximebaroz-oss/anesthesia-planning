@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -271,6 +271,13 @@ function StaffList({ profession, T }) {
       .then(({ data }) => { setStaff(data ?? []); setLoading(false) })
   }, [profession])
 
+  const knownGrades = MED_SECTIONS.map(s => s.grade)
+  const autres = staff.filter(p => !knownGrades.includes(p.grade))
+  const allSections = [
+    ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
+    ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
+  ].filter(s => s.list.length > 0)
+
   if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: T.textFaint }}>Chargement...</p>
 
   const searchBar = (
@@ -302,15 +309,6 @@ function StaffList({ profession, T }) {
       </div>
     )
   }
-
-  const allSections = useMemo(() => {
-    const knownGrades = MED_SECTIONS.map(s => s.grade)
-    const autres = staff.filter(p => !knownGrades.includes(p.grade))
-    return [
-      ...MED_SECTIONS.map(s => ({ label: s.label, list: staff.filter(p => p.grade === s.grade) })),
-      ...(autres.length > 0 ? [{ label: 'Autres', list: autres }] : []),
-    ].filter(s => s.list.length > 0)
-  }, [staff])
 
   const sections = search
     ? allSections.map(s => ({ ...s, list: s.list.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) })).filter(s => s.list.length > 0)
