@@ -886,7 +886,7 @@ export default function Dashboard({ unit, sector, onBack }) {
             )}
           </div>
         ) : viewMode === 'week' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
             {selectedWeekDays.map((day, i) => {
               const dateStr = formatDateKey(day)
               const isToday = dateStr === todayStr
@@ -960,7 +960,7 @@ export default function Dashboard({ unit, sector, onBack }) {
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
             <SupervisorCard
               date={selectedDate}
               allProfiles={allProfiles}
