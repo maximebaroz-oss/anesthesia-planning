@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen, Trash2 } from 'lucide-react'
 import ImportPlanningModal from '../components/ImportPlanningModal'
 import DocumentsModal from '../components/DocumentsModal'
 import { supabase } from '../lib/supabase'
@@ -691,7 +691,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
   const [weekAssignments, setWeekAssignments] = useState([])
   const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
-  const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation
+  const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation (vue semaine)
+  const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
 
   const todayStr = formatDateKey(new Date())
 
@@ -913,7 +914,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               const isPast = dateStr < todayStr
               const isDayClosed = weekDayClosures.includes(dateStr)
               return (
-                <button key={i} onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}
+                <button key={i} onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}
                   style={isSelected
                     ? { background: T.accentBar, color: '#fff' }
                     : isToday
@@ -975,6 +976,22 @@ export default function Dashboard({ unit, sector, onBack }) {
                 )}
               </>
             )}
+            {(profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique') && (
+              dayResetConfirm ? (
+                <button onClick={async () => { await handleResetDay(selectedDate); setDayResetConfirm(false) }}
+                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-bold px-2.5 py-1.5 rounded-lg"
+                  style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                  Confirmer ?
+                </button>
+              ) : (
+                <button onClick={() => setDayResetConfirm(true)}
+                  title="Vider toutes les affectations du jour"
+                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                  style={{ background: T.surface, color: T.textFaint }}>
+                  <Trash2 size={13} />
+                </button>
+              )
+            )}
             <button onClick={fetchData} className="flex items-center gap-1.5 transition-opacity hover:opacity-70" style={{ color: T.accent }}>
               <RefreshCw size={14} />
             </button>
@@ -1019,7 +1036,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                   className="rounded-2xl border p-4 flex flex-col">
                   {/* Header jour — cliquable pour aller en vue jour */}
                   <div className="flex items-center justify-between mb-1 cursor-pointer hover:opacity-70 transition-opacity"
-                    onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}>
+                    onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_NAMES[i]}</span>
                       <span className="text-xl font-bold" style={{ color: T.text }}>{day.getDate()}</span>
@@ -1033,7 +1050,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                           : null}
                   </div>
                   {/* Aperçu salles */}
-                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day') }}>
+                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
                     {isDayClosed ? (
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
                     ) : roomEntries.length === 0 ? (
