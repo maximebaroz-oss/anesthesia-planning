@@ -355,11 +355,15 @@ export default function ImportPlanningPDFModal({ profiles, theme, onClose, onImp
   async function handleImport() {
     if (!result?.assignments?.length) return
     setImporting(true)
+    setError(null)
     try {
       const dates   = [...new Set(result.assignments.map(a => a.date))]
       const roomIds = [...new Set(result.assignments.map(a => a.roomId))]
-      await supabase.from('assignments').delete()
+
+      const { error: delErr } = await supabase
+        .from('assignments').delete()
         .in('date', dates).in('room_id', roomIds)
+      if (delErr) throw new Error(`Suppression : ${delErr.message}`)
 
       const rows = result.assignments.map(a => ({
         user_id:     a.userId,
@@ -367,12 +371,14 @@ export default function ImportPlanningPDFModal({ profiles, theme, onClose, onImp
         date:        a.date,
         assigned_by: currentProfile?.id ?? null,
       }))
-      await supabase.from('assignments').insert(rows)
+      const { error: insErr } = await supabase.from('assignments').insert(rows)
+      if (insErr) throw new Error(`Insertion : ${insErr.message}`)
+
       onImported()
     } catch (err) {
       setError(`Erreur d'import : ${err.message}`)
+      setImporting(false)
     }
-    setImporting(false)
   }
 
   return (
