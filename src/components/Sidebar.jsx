@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser } from 'lucide-react'
+import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser, Calendar, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { ROOM_NAMES, GRADE_LABELS, getISOWeek, getMonday, formatDateKey } from '../config/constants'
@@ -7,6 +7,64 @@ import { WARM } from '../config/theme'
 import ContactsModal, { findGsmPhone } from './ContactsModal'
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+const MONTH_SHORT  = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc']
+
+function MiniPlanning({ userId, T }) {
+  const [rows, setRows] = useState(null) // null = loading
+
+  useEffect(() => {
+    const monday = getMonday(new Date())
+    const from   = formatDateKey(monday)
+    const end    = new Date(monday)
+    end.setDate(monday.getDate() + 27)
+    const to = formatDateKey(end)
+
+    supabase.from('assignments')
+      .select('date, room_id')
+      .eq('user_id', userId)
+      .gte('date', from).lte('date', to)
+      .order('date')
+      .then(({ data }) => {
+        if (!data) { setRows([]); return }
+        const byDate = {}
+        for (const a of data) {
+          if (!byDate[a.date]) byDate[a.date] = []
+          byDate[a.date].push(a.room_id)
+        }
+        setRows(
+          Object.entries(byDate)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, roomIds]) => {
+              const d = new Date(date + 'T12:00:00')
+              const dayIdx = (d.getDay() + 6) % 7
+              const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
+              return {
+                date,
+                label: `${DAY_SHORT[dayIdx] ?? DAY_NAMES_FR[d.getDay()]} ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`,
+                rooms: roomIds.map(id => ROOM_NAMES[id] ?? `S.${id}`),
+              }
+            })
+        )
+      })
+  }, [userId])
+
+  if (rows === null)
+    return <p className="text-xs italic px-3 py-2" style={{ color: T.textFaint }}>Chargement…</p>
+  if (rows.length === 0)
+    return <p className="text-xs italic px-3 py-2" style={{ color: T.textFaint }}>Aucune affectation (4 sem.)</p>
+
+  return (
+    <div className="max-h-52 overflow-y-auto space-y-0.5 pb-1">
+      {rows.map(row => (
+        <div key={row.date} className="flex items-start gap-2 px-3 py-1.5 rounded-lg"
+          style={{ background: T.surface }}>
+          <span className="text-xs font-semibold flex-shrink-0 w-20" style={{ color: T.textSub }}>{row.label}</span>
+          <span className="text-xs" style={{ color: T.text }}>{row.rooms.join(', ')}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function ProfilePanel({ selectedDate, T }) {
   const { profile: currentProfile } = useAuth()
@@ -167,6 +225,7 @@ function ProfilePanel({ selectedDate, T }) {
 
 function StaffRow({ p, profession, canEdit, isMe, T }) {
   const [showPhone, setShowPhone] = useState(false)
+  const [showPlan, setShowPlan] = useState(false)
   const [editing, setEditing] = useState(false)
   const [phone, setPhone] = useState(p.phone ?? '')
   const [saving, setSaving] = useState(false)
@@ -185,15 +244,24 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
   const myBorder = isMed ? '#FECACA' : '#BFDBFE'
   const myColor = isMed ? '#DC2626' : '#2563EB'
 
+  function togglePlan() {
+    setShowPlan(v => !v)
+    setShowPhone(false)
+    setEditing(false)
+  }
+
   return (
     <div>
       <div
-        className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors"
+        className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors cursor-pointer"
         style={isMe
           ? { background: myBg, border: `1px solid ${myBorder}` }
-          : {}}
-        onMouseEnter={e => { if (!isMe) e.currentTarget.style.background = T.surfaceHov }}
-        onMouseLeave={e => { if (!isMe) e.currentTarget.style.background = '' }}
+          : showPlan
+            ? { background: T.surface }
+            : {}}
+        onMouseEnter={e => { if (!isMe && !showPlan) e.currentTarget.style.background = T.surfaceHov }}
+        onMouseLeave={e => { if (!isMe && !showPlan) e.currentTarget.style.background = '' }}
+        onClick={togglePlan}
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
         <span className="text-xs flex-1 truncate font-medium" style={{ color: isMe ? myColor : T.text }}>
@@ -201,14 +269,28 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
           {isMe && <span className="ml-1 text-xs font-bold">(moi)</span>}
         </span>
         <span className="text-xs flex-shrink-0" style={{ color: T.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
+        {showPlan
+          ? <ChevronUp size={14} className="flex-shrink-0" style={{ color: T.textFaint }} />
+          : <Calendar size={14} className="flex-shrink-0" style={{ color: T.textFaint }} />
+        }
         <button
-          onClick={() => { setShowPhone(v => !v); setEditing(false) }}
+          onClick={e => { e.stopPropagation(); setShowPhone(v => !v); setShowPlan(false); setEditing(false) }}
           className="p-2 -mr-1 rounded-lg transition-colors flex-shrink-0 touch-manipulation"
           style={{ color: phone ? T.accentBar : T.textFaint }}
         >
           <Phone size={14} />
         </button>
       </div>
+
+      {showPlan && (
+        <div className="mt-1 mb-2 rounded-xl overflow-hidden border" style={{ borderColor: T.border }}>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-b" style={{ background: T.cardHead, borderColor: T.border }}>
+            <Calendar size={11} style={{ color: T.textFaint }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: T.textFaint }}>Planning — 4 semaines</span>
+          </div>
+          <MiniPlanning userId={p.id} T={T} />
+        </div>
+      )}
 
       {showPhone && (
         <div className="px-4 pb-1">
