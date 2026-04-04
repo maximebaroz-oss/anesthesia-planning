@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  room_id INTEGER NOT NULL CHECK (room_id BETWEEN 1 AND 8),
+  room_id INTEGER NOT NULL CHECK (room_id BETWEEN 1 AND 73),
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   assigned_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS assignments (
 -- 3. Table des fermetures de salles
 CREATE TABLE IF NOT EXISTS room_closures (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_id INTEGER NOT NULL CHECK (room_id BETWEEN 1 AND 8),
+  room_id INTEGER NOT NULL CHECK (room_id BETWEEN 1 AND 73),
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   closed_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
