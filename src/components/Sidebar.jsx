@@ -54,14 +54,24 @@ function MiniPlanning({ userId, T }) {
     return <p className="text-xs italic px-3 py-2" style={{ color: T.textFaint }}>Aucune affectation (4 sem.)</p>
 
   return (
-    <div className="max-h-52 overflow-y-auto space-y-0.5 pb-1">
-      {rows.map(row => (
-        <div key={row.date} className="flex items-start gap-2 px-3 py-1.5 rounded-lg"
-          style={{ background: T.surface }}>
-          <span className="text-xs font-semibold flex-shrink-0 w-20" style={{ color: T.textSub }}>{row.label}</span>
-          <span className="text-xs" style={{ color: T.text }}>{row.rooms.join(', ')}</span>
-        </div>
-      ))}
+    <div className="max-h-52 overflow-y-auto pb-1">
+      {rows.map((row, i) => {
+        const prevDate = i > 0 ? new Date(rows[i - 1].date + 'T12:00:00') : null
+        const currDate = new Date(row.date + 'T12:00:00')
+        const weekChanged = prevDate && getISOWeek(currDate) !== getISOWeek(prevDate)
+        return (
+          <div key={row.date}>
+            {weekChanged && (
+              <div className="mx-2 my-1 border-t-2" style={{ borderColor: T.border }} />
+            )}
+            <div className="flex items-start gap-2 px-3 py-1.5"
+              style={{ background: i % 2 === 0 ? T.surface : 'transparent' }}>
+              <span className="text-xs font-semibold flex-shrink-0 w-20" style={{ color: T.textSub }}>{row.label}</span>
+              <span className="text-xs" style={{ color: T.text }}>{row.rooms.join(', ')}</span>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
