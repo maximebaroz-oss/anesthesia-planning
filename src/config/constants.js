@@ -63,6 +63,26 @@ export const ROOM_NAMES = {
   54: 'Antalgie chronique box 7',
   55: 'Antalgie chronique box 8',
   56: 'Antalgie chronique box 3/BOCHA 4',
+  // Gynéco (Maternité)
+  57: 'MG1',
+  58: 'MG2 Interne',
+  59: 'MG2 CDC',
+  60: 'MG3 Tardif',
+  61: 'MG4 Tardif',
+  62: 'MG5 Da Vinci',
+  63: 'MC Consult',
+  // Obstétrique (Maternité)
+  64: 'MO1 (32727)',
+  65: 'MO2 CS électives',
+  66: 'MO1 Jour (32722)',
+  67: 'MO1 Soir (32722)',
+  68: 'MO1 Garde WE (32727)',
+  69: 'MO2 Garde WE (32722)',
+  70: 'MO1 Garde N (32727)',
+  71: 'MO2 Garde N (32722)',
+  72: 'Piquet Maternité',
+  // Ophtalmo
+  73: 'Ophtalmologie',
 }
 
 // Abréviations (listes, badges)

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, CalendarOff, CalendarCheck, Users, BookOpen, Trash2, Undo2, Redo2 } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, FileText, CalendarOff, CalendarCheck, Users, BookOpen, Trash2, Undo2, Redo2 } from 'lucide-react'
 import ImportPlanningModal from '../components/ImportPlanningModal'
 import DocumentsModal from '../components/DocumentsModal'
 import { supabase } from '../lib/supabase'
@@ -11,6 +11,7 @@ import { ROOM_NAMES, DAY_NAMES, GRADE_LABELS, getCurrentTime, getMonday, getWeek
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
+import ImportPlanningPDFModal from '../components/ImportPlanningPDFModal'
 
 const WARM = WARM_THEME
 
@@ -156,7 +157,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
 }
 
 // Salles sans ISA
-const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56])
+const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73])
 
 const SECTOR_ROOMS = {
   'hors-bloc':         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -165,9 +166,9 @@ const SECTOR_ROOMS = {
   'traumatologie':     [23, 36, 37, 24],
   'prevost':           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
   // Maternité
-  'gyneco':            [],
-  'obstetrique':       [],
-  'ophtalmo':          [],
+  'gyneco':            [57, 58, 59, 60, 61, 62, 63],
+  'obstetrique':       [64, 65, 66, 67, 68, 69, 70, 71, 72],
+  'ophtalmo':          [73],
   // BOCHA (AMOPA)
   'bocha-amopa':       [38, 39, 40, 41, 42],
   'orl-maxfa-plastie': [43, 44, 45, 46, 47, 48, 49],
@@ -237,6 +238,25 @@ const DEFAULT_SCHEDULES = {
   51: { opening_time: '09:00', closing_time: '19:00' },
   52: { opening_time: '09:00', closing_time: '19:00' },
   // rooms 53-56 (Antalgie chronique boxes) : pas d'horaire par défaut → null
+  // Gynéco
+  57: { opening_time: '07:00', closing_time: '16:00' },
+  58: { opening_time: '07:00', closing_time: '17:00' },
+  59: { opening_time: '07:00', closing_time: '16:00' },
+  60: { opening_time: '12:00', closing_time: '20:00' },
+  61: { opening_time: '09:00', closing_time: '19:00' },
+  62: { opening_time: '07:00', closing_time: '17:00' },
+  63: { opening_time: '07:00', closing_time: '17:00' },
+  // Obstétrique
+  64: { opening_time: '07:00', closing_time: '17:00' },
+  65: { opening_time: '07:00', closing_time: '17:00' },
+  66: { opening_time: '07:00', closing_time: '17:00' },
+  67: { opening_time: '10:00', closing_time: '20:00' },
+  68: { opening_time: '07:00', closing_time: '20:00' },
+  69: { opening_time: '07:00', closing_time: '20:00' },
+  70: { opening_time: '19:30', closing_time: '07:30' },
+  71: { opening_time: '19:30', closing_time: '07:30' },
+  // Ophtalmo
+  73: { opening_time: '07:00', closing_time: '17:00' },
 }
 
 
@@ -686,6 +706,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
   const [showImport, setShowImport] = useState(false)
   const [showUnitImport, setShowUnitImport] = useState(false)
+  const [showPDFImport, setShowPDFImport] = useState(false)
   const [showEffectif, setShowEffectif] = useState(false)
   const [showProtocols, setShowProtocols] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState(null)
@@ -1032,6 +1053,14 @@ export default function Dashboard({ unit, sector, onBack }) {
                     Import {unit?.name}
                   </button>
                 )}
+                {['gyneco', 'obstetrique', 'ophtalmo'].includes(sector?.id) && (
+                  <button onClick={() => setShowPDFImport(true)}
+                    className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                    style={{ background: T.accentBar, color: '#fff' }}>
+                    <FileText size={13} />
+                    Import PDF
+                  </button>
+                )}
               </>
             )}
             {canManage && (
@@ -1239,7 +1268,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                 </div>
               ))}
             </div>
-            {['julliard', 'bou', 'traumatologie', 'prevost', 'bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id) && (
+            {['julliard', 'bou', 'traumatologie', 'prevost', 'bocha-amopa', 'orl-maxfa-plastie', 'antalgie', 'gyneco', 'obstetrique', 'ophtalmo'].includes(sector?.id) && (
               <SouhaitsCard
                 date={selectedDate}
                 sectorId={sector.id}
@@ -1302,6 +1331,15 @@ export default function Dashboard({ unit, sector, onBack }) {
           theme={T}
           onClose={() => setShowUnitImport(false)}
           onImported={() => { fetchData(); setShowUnitImport(false) }}
+        />
+      )}
+
+      {showPDFImport && (
+        <ImportPlanningPDFModal
+          profiles={allProfiles}
+          theme={T}
+          onClose={() => setShowPDFImport(false)}
+          onImported={() => { fetchData(); setShowPDFImport(false) }}
         />
       )}
 
