@@ -48,18 +48,58 @@ function buildDate(dayNum, monthStr, refYear) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Remove all diacritics: é→E, è→E, ü→U, etc.
+function deAccent(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+}
+
+// Simple Levenshtein distance (capped at maxDist for performance)
+function levenshtein(a, b, maxDist = 3) {
+  if (Math.abs(a.length - b.length) > maxDist) return maxDist + 1
+  const dp = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= b.length; j++) {
+      const temp = dp[j]
+      dp[j] = a[i - 1] === b[j - 1]
+        ? prev
+        : 1 + Math.min(prev, dp[j], dp[j - 1])
+      prev = temp
+    }
+  }
+  return dp[b.length]
+}
+
 function matchProfile(rawName, profiles) {
   if (!rawName || typeof rawName !== 'string') return null
-  const name = rawName.trim().toUpperCase().replace(/\s+/g, ' ')
+  const name    = rawName.trim().toUpperCase().replace(/\s+/g, ' ')
+  const nameDA  = deAccent(name)
   if (!name || name.length < 2) return null
+
   return profiles.find(p => {
     if (p.profession !== 'medecin') return false
-    const up = p.full_name.toUpperCase()
-    const parts = up.split(' ')
+    const up    = p.full_name.toUpperCase()
+    const upDA  = deAccent(up)
+    const parts   = up.split(' ')
+    const partsDA = upDA.split(' ')
+
+    // Exact match (with and without accents)
     if (parts[parts.length - 1] === name) return true
+    if (partsDA[partsDA.length - 1] === nameDA) return true
     if (parts.length >= 2 && parts.slice(-2).join(' ') === name) return true
+    if (partsDA.length >= 2 && partsDA.slice(-2).join(' ') === nameDA) return true
     if (parts.length >= 3 && parts.slice(-3).join(' ') === name) return true
-    if (up.includes(name)) return true
+    if (partsDA.length >= 3 && partsDA.slice(-3).join(' ') === nameDA) return true
+    if (upDA.includes(nameDA)) return true
+
+    // Fuzzy: compare nameDA against each part (for typos / encoding differences)
+    // Only for tokens long enough to avoid false positives
+    if (nameDA.length >= 6) {
+      for (const part of partsDA) {
+        if (part.length >= 6 && levenshtein(nameDA, part) <= 2) return true
+      }
+    }
     return false
   }) ?? null
 }
