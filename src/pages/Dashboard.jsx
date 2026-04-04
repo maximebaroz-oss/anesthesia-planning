@@ -63,7 +63,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
 
   return (
     <div style={{ background: T.cardBg, borderColor: T.border, boxShadow: '0 2px 12px rgba(180,130,60,0.08)' }}
-      className="rounded-2xl border overflow-visible mb-4 col-span-full">
+      className="rounded-2xl border overflow-visible mb-3">
       <div style={{ background: T.cardHead, borderColor: T.border }}
         className="px-4 pt-3 pb-2.5 flex items-center gap-2 border-b">
         <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
@@ -1205,7 +1205,7 @@ export default function Dashboard({ unit, sector, onBack }) {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <div>
             <SupervisorCard
               date={selectedDate}
               allProfiles={allProfiles}
@@ -1214,28 +1214,31 @@ export default function Dashboard({ unit, sector, onBack }) {
               sectorLabel={sectorLabel}
               theme={T}
             />
-            {ROOMS.map(roomId => (
-              <RoomCard
-                key={roomId}
-                roomId={roomId}
-                roomName={ROOM_NAMES[roomId]}
-                noISA={NO_ISA_ROOMS.has(roomId)}
-                assignments={assignments}
-                closures={closures}
-                roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
-                currentProfile={profile}
-                isToday={selectedDate === todayStr}
-                onJoin={handleJoin}
-                onLeave={handleLeave}
-                onClose={handleClose}
-                onOpen={handleOpen}
-                onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
-                onProfileClick={(p) => setSelectedProfile(p)}
-                onUpdateTime={handleUpdateAssignmentTime}
-                onUpdateRoomSchedule={handleUpdateRoomSchedule}
-                theme={T}
-              />
-            ))}
+            <div className="sm:columns-2 gap-3">
+              {ROOMS.map(roomId => (
+                <div key={roomId} className="break-inside-avoid mb-3">
+                  <RoomCard
+                    roomId={roomId}
+                    roomName={ROOM_NAMES[roomId]}
+                    noISA={NO_ISA_ROOMS.has(roomId)}
+                    assignments={assignments}
+                    closures={closures}
+                    roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
+                    currentProfile={profile}
+                    isToday={selectedDate === todayStr}
+                    onJoin={handleJoin}
+                    onLeave={handleLeave}
+                    onClose={handleClose}
+                    onOpen={handleOpen}
+                    onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
+                    onProfileClick={(p) => setSelectedProfile(p)}
+                    onUpdateTime={handleUpdateAssignmentTime}
+                    onUpdateRoomSchedule={handleUpdateRoomSchedule}
+                    theme={T}
+                  />
+                </div>
+              ))}
+            </div>
             {['julliard', 'bou', 'traumatologie', 'prevost', 'bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id) && (
               <SouhaitsCard
                 date={selectedDate}
