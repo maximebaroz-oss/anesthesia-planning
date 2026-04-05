@@ -95,7 +95,7 @@ export const ROOM_NAMES = {
   82: 'WE S1 07h-19h30',
   83: 'WE S2 07h-17h',
   84: 'WE Nuit 19h-07h30',
-  85: 'PA',
+  85: 'Piquet Adjoint',
 }
 
 // Abréviations (listes, badges)
