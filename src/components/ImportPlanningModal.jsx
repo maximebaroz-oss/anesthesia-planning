@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 import { WARM, SKY } from '../config/theme'
+import { formatDateKey } from '../config/constants'
 
 // HB row index (0-based) → { roomId, label }
 const HB_ROWS = [
@@ -128,12 +129,22 @@ function parseSINPISheet(ws, rows, profiles) {
   const headerRow = rows[0] ?? []
   const year = new Date().getFullYear()
 
-  // All day columns D-J (indices 3-9)
-  const allDays = [3, 4, 5, 6, 7, 8, 9].map(colIdx => ({
-    colIdx,
-    header: String(headerRow[colIdx] ?? ''),
-    date: parseDateFromHeader(String(headerRow[colIdx] ?? ''), year),
-  })).filter(d => d.date)
+  // Only column D (index 3) has a full date like "Lundi 6 avril"
+  // Columns E-J only have the day number like "Mardi 7" — derive from Monday
+  const mondayDate = parseDateFromHeader(String(headerRow[3] ?? ''), year)
+  if (!mondayDate) return null
+
+  const monday = new Date(mondayDate + 'T12:00:00')
+  // Build all 7 days (Mon=0 … Sun=6) from the Monday date
+  const allDays = [3, 4, 5, 6, 7, 8, 9].map((colIdx, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return {
+      colIdx,
+      header: String(headerRow[colIdx] ?? ''),
+      date: formatDateKey(d),
+    }
+  })
 
   if (allDays.length === 0) return null
 
