@@ -28,7 +28,9 @@ export const UNITS = [
     id: 'sinpi',
     name: 'SINPI',
     color: 'salmon',
-    sectors: [],
+    sectors: [
+      { id: 'sinpi', name: 'SINPI' },
+    ],
   },
   {
     id: 'maternite',

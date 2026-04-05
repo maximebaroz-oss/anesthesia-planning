@@ -169,6 +169,8 @@ const SECTOR_ROOMS = {
   'gyneco':            [57, 58, 59, 60, 61, 62, 63],
   'obstetrique':       [64, 65, 66, 67, 68, 69, 70, 71, 72],
   'ophtalmo':          [73],
+  // SINPI
+  'sinpi':             [74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85],
   // BOCHA (AMOPA)
   'bocha-amopa':       [38, 39, 40, 41, 42],
   'orl-maxfa-plastie': [43, 44, 45, 46, 47, 48, 49],
@@ -257,6 +259,19 @@ const DEFAULT_SCHEDULES = {
   71: { opening_time: '19:30', closing_time: '07:30' },
   // Ophtalmo
   73: { opening_time: '07:00', closing_time: '17:00' },
+  // SINPI
+  74: { opening_time: '07:00', closing_time: '16:00' },
+  75: { opening_time: '07:00', closing_time: '16:00' },
+  76: { opening_time: '07:00', closing_time: '16:00' },
+  77: { opening_time: '13:00', closing_time: '22:00' },
+  78: { opening_time: '11:00', closing_time: '21:00' },
+  79: { opening_time: '07:00', closing_time: '17:00' },
+  80: { opening_time: '12:00', closing_time: '22:00' },
+  81: { opening_time: '21:30', closing_time: '07:30' },
+  82: { opening_time: '07:00', closing_time: '19:30' },
+  83: { opening_time: '07:00', closing_time: '17:00' },
+  84: { opening_time: '19:00', closing_time: '07:30' },
+  // 85 PA : pas d'horaire fixe
 }
 
 
@@ -1045,7 +1060,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                   <FileSpreadsheet size={13} />
                   Import
                 </button>
-                {['duhb', 'unicat', 'amopa'].includes(unit?.id) && (
+                {['duhb', 'unicat', 'amopa', 'sinpi'].includes(unit?.id) && (
                   <button onClick={() => setShowUnitImport(true)}
                     className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                     style={{ background: T.accentBar, color: '#fff' }}>

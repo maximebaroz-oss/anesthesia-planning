@@ -91,6 +91,83 @@ const DU_ROWS = [
   { rowIdx: 21, type: 'day_note',   label: 'Souhait / Remarque',    roomId: null },
 ]
 
+// Like matchProfile but matches any profession (médecin + ISA)
+function matchProfileAny(excelName, profiles) {
+  if (!excelName || typeof excelName !== 'string') return null
+  const name = excelName.trim().toUpperCase().replace(/\s+/g, ' ')
+  if (!name) return null
+  return profiles.find(p => {
+    const up = p.full_name.toUpperCase()
+    const parts = up.split(' ')
+    if (parts[parts.length - 1] === name) return true
+    if (parts.length >= 2 && parts.slice(-2).join(' ') === name) return true
+    if (parts.length >= 3 && parts.slice(-3).join(' ') === name) return true
+    if (up.includes(name)) return true
+    return false
+  }) ?? null
+}
+
+// SINPI (USPI) row definitions — Excel "HEBDO_REMPLI" sheet
+// dayMode: 'weekday'=cols 3-7, 'weekend'=cols 8-9, 'all'=cols 3-9
+const SINPI_ROWS = [
+  { rowIdx: 2,  type: 'supervisor', label: 'Superviseur SINPI',  roomId: null, sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'med' },
+  { rowIdx: 3,  type: 'assignment', label: 'Superviseur ISA',    roomId: 75,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 4,  type: 'assignment', label: 'SINPI AM 07h-16h',   roomId: 76,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 5,  type: 'assignment', label: 'SINPI PM 13h-22h',   roomId: 77,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 6,  type: 'assignment', label: 'SSPI 11h-21h',       roomId: 78,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 7,  type: 'assignment', label: 'SINPI AM 07h-17h',   roomId: 79,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 8,  type: 'assignment', label: 'SINPI PM 12h-22h',   roomId: 80,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 9,  type: 'assignment', label: 'Nuit 21h30-07h30',   roomId: 81,   sectorId: 'sinpi', dayMode: 'weekday', matchFn: 'any' },
+  { rowIdx: 10, type: 'assignment', label: 'WE S1 07h-19h30',    roomId: 82,   sectorId: 'sinpi', dayMode: 'all',     matchFn: 'any' },
+  { rowIdx: 11, type: 'assignment', label: 'WE S2 07h-17h',      roomId: 83,   sectorId: 'sinpi', dayMode: 'weekend', matchFn: 'any' },
+  { rowIdx: 12, type: 'assignment', label: 'WE Nuit 19h-07h30',  roomId: 84,   sectorId: 'sinpi', dayMode: 'weekend', matchFn: 'any' },
+  { rowIdx: 14, type: 'assignment', label: 'PA',                  roomId: 85,   sectorId: 'sinpi', dayMode: 'all',     matchFn: 'med' },
+]
+
+function parseSINPISheet(ws, rows, profiles) {
+  const headerRow = rows[0] ?? []
+  const year = new Date().getFullYear()
+
+  // All day columns D-J (indices 3-9)
+  const allDays = [3, 4, 5, 6, 7, 8, 9].map(colIdx => ({
+    colIdx,
+    header: String(headerRow[colIdx] ?? ''),
+    date: parseDateFromHeader(String(headerRow[colIdx] ?? ''), year),
+  })).filter(d => d.date)
+
+  if (allDays.length === 0) return null
+
+  const weekdayDays = allDays.filter(d => { const dow = new Date(d.date + 'T12:00:00').getDay(); return dow >= 1 && dow <= 5 })
+  const weekendDays = allDays.filter(d => { const dow = new Date(d.date + 'T12:00:00').getDay(); return dow === 0 || dow === 6 })
+
+  const entries = []
+  for (const rowDef of SINPI_ROWS) {
+    const days = rowDef.dayMode === 'weekend' ? weekendDays
+               : rowDef.dayMode === 'weekday' ? weekdayDays
+               : allDays
+
+    for (const day of days) {
+      const raw = String(rows[rowDef.rowIdx]?.[day.colIdx] ?? '').trim()
+      if (!raw) continue
+      const profile = rowDef.matchFn === 'any'
+        ? matchProfileAny(raw, profiles)
+        : matchProfile(raw, profiles)
+      entries.push({
+        date: day.date,
+        dayLabel: day.header,
+        rowLabel: rowDef.label,
+        excelName: raw,
+        profile,
+        type: rowDef.type,
+        roomId: rowDef.roomId,
+        sectorId: rowDef.sectorId,
+      })
+    }
+  }
+
+  return { entries, weekLabel: String(headerRow[0] ?? '') }
+}
+
 function matchProfile(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
   const name = excelName.trim().toUpperCase().replace(/\s+/g, ' ')
@@ -457,18 +534,24 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
   const isDuhbImport  = unit?.id === 'duhb'
   const isUnitImport  = unit?.id === 'unicat'
   const isAmopaImport = unit?.id === 'amopa'
+  const isSinpiImport = unit?.id === 'sinpi' || sector?.id === 'sinpi'
   const isAmopaSector = ['bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id)
   const isAmopaAny    = isAmopaImport || isAmopaSector
   const isJulliard    = sector?.id === 'julliard'
   const isFeuil1      = isUnitImport || ['bou', 'traumatologie', 'prevost'].includes(sector?.id)
-  const sectorLabel   = isDuhbImport  ? 'DUHB'
+  const sectorLabel   = isSinpiImport ? 'SINPI'
+                      : isDuhbImport  ? 'DUHB'
                       : isUnitImport  ? 'UNICAT'
                       : isAmopaImport ? 'AMOPA'
                       : isJulliard    ? 'Julliard'
                       : isAmopaSector ? (sector?.name ?? 'AMOPA')
                       : isFeuil1      ? (sector?.name ?? 'BOU')
                       : 'HB'
-  const sheetName     = isAmopaAny ? 'semaine' : isJulliard ? 'DU' : isFeuil1 ? 'Feuil1' : 'HB'
+  const sheetName     = isSinpiImport ? 'HEBDO_REMPLI'
+                      : isAmopaAny    ? 'semaine'
+                      : isJulliard    ? 'DU'
+                      : isFeuil1      ? 'Feuil1'
+                      : 'HB'
 
   async function handleFile(e) {
     const file = e.target.files[0]
@@ -481,7 +564,10 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
 
       // Sélection de l'onglet selon le mode
       let targetSheet
-      if (isAmopaAny) {
+      if (isSinpiImport) {
+        targetSheet = wb.SheetNames.find(n => n.toUpperCase().includes('HEBDO'))
+          ?? wb.SheetNames[0]
+      } else if (isAmopaAny) {
         // Feuille "semaine" (avec éventuel espace en trop)
         targetSheet = wb.SheetNames.find(n => n.trim().toUpperCase() === 'SEMAINE')
           ?? wb.SheetNames.find(n => n.trim().toUpperCase().includes('SEMAINE'))
@@ -501,7 +587,9 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false })
 
       let result
-      if (isAmopaAny) {
+      if (isSinpiImport) {
+        result = parseSINPISheet(ws, rows, profiles)
+      } else if (isAmopaAny) {
         result = parseAMOPASheet(ws, rows, profiles)
       } else if (isJulliard) {
         result = parseDUSheet(ws, rows, profiles)

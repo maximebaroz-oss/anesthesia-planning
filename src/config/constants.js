@@ -83,6 +83,19 @@ export const ROOM_NAMES = {
   72: 'Piquet Maternité',
   // Ophtalmo
   73: 'Ophtalmologie',
+  // SINPI
+  74: 'Superviseur',
+  75: 'Superviseur ISA',
+  76: 'SINPI AM 07h-16h',
+  77: 'SINPI PM 13h-22h',
+  78: 'SSPI 11h-21h',
+  79: 'SINPI AM 07h-17h',
+  80: 'SINPI PM 12h-22h',
+  81: 'Nuit 21h30-07h30',
+  82: 'WE S1 07h-19h30',
+  83: 'WE S2 07h-17h',
+  84: 'WE Nuit 19h-07h30',
+  85: 'PA',
 }
 
 // Abréviations (listes, badges)

@@ -18,6 +18,7 @@ const IMPORT_TARGETS = [
   { label: 'DU HB',         type: 'unit',   id: 'duhb',          color: '#3B82F6', bg: '#EFF6FF' },
   { label: 'UNICAT',        type: 'unit',   id: 'unicat',        color: '#F97316', bg: '#FFF7ED' },
   { label: 'AMOPA',         type: 'unit',   id: 'amopa',         color: '#A855F7', bg: '#FAF5FF' },
+  { label: 'SINPI',         type: 'unit',   id: 'sinpi',         color: '#D08888', bg: '#FAF0EF' },
 ]
 
 function GlobalImportModal({ onClose }) {
