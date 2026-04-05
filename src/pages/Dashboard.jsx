@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
 import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME, SOFTGREEN as SOFTGREEN_THEME, GRAY as GRAY_THEME } from '../config/theme'
-import { ROOM_NAMES, DAY_NAMES, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getISOWeek, formatDateKey } from '../config/constants'
+import { ROOM_NAMES, DAY_NAMES, DAY_NAMES_7, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getFullWeekDays, getISOWeek, formatDateKey } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
@@ -698,6 +698,18 @@ export default function Dashboard({ unit, sector, onBack }) {
   const { profile } = useAuth()
   const canManage = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
   const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
+  // Secteurs avec gardes le week-end → vue 7 jours
+  const isFullWeek = ['sinpi', 'obstetrique', 'gyneco', 'ophtalmo'].includes(sector?.id)
+  const DAY_LABELS = isFullWeek ? DAY_NAMES_7 : DAY_NAMES
+
+  // SINPI : salles différentes selon le jour de la semaine
+  const SINPI_WEEKDAY_ROOMS = [74, 75, 76, 77, 78, 79, 80, 81, 85]
+  const SINPI_WEEKEND_ROOMS = [82, 83, 84, 85]
+  function getRoomsForDate(dateStr) {
+    if (sector?.id !== 'sinpi') return ROOMS
+    const dow = new Date(dateStr + 'T12:00:00').getDay() // 0=Dim, 6=Sam
+    return (dow === 0 || dow === 6) ? SINPI_WEEKEND_ROOMS : SINPI_WEEKDAY_ROOMS
+  }
   const sectorLabel = sector?.name ?? 'HB'
   const T = sector?.id === 'julliard'         ? SKY_THEME
           : sector?.id === 'bou'              ? AMBER_THEME
@@ -750,8 +762,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   }, [windowStart])
 
   const selectedWeekDays = useMemo(() => {
-    return getWeekDays(weeks[selectedWeekIndex])
-  }, [weeks, selectedWeekIndex])
+    return isFullWeek ? getFullWeekDays(weeks[selectedWeekIndex]) : getWeekDays(weeks[selectedWeekIndex])
+  }, [weeks, selectedWeekIndex, isFullWeek])
 
   function handleWeekSelect(index) {
     setSelectedWeekIndex(index)
@@ -1015,7 +1027,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                       ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
                       : { color: isPast ? T.textFaint : T.textSub }}
                   className="flex-1 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80 flex flex-col items-center gap-0.5 relative">
-                  <span className="text-xs uppercase tracking-wide">{DAY_NAMES[i]}</span>
+                  <span className="text-xs uppercase tracking-wide">{DAY_LABELS[i]}</span>
                   <span className="text-sm font-bold">{day.getDate()}</span>
                   {isDayClosed && (
                     <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-400" />
@@ -1130,15 +1142,17 @@ export default function Dashboard({ unit, sector, onBack }) {
               const isDayClosed = weekDayClosures.includes(dateStr)
               const dayAsgn = assignmentsByDate[dateStr] ?? []
               // Grouper par salle
+              const dayRooms = new Set(getRoomsForDate(dateStr))
               const byRoom = {}
               for (const a of dayAsgn) {
+                if (!dayRooms.has(a.room_id)) continue
                 if (!byRoom[a.room_id]) byRoom[a.room_id] = { med: [], isa: [] }
                 if (a.profiles?.profession === 'medecin') byRoom[a.room_id].med.push(a)
                 else byRoom[a.room_id].isa.push(a)
               }
               const roomEntries = Object.entries(byRoom)
               const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
-              const dayLabel = `${DAY_NAMES[i]} ${day.getDate()}`
+              const dayLabel = `${DAY_LABELS[i]} ${day.getDate()}`
               return (
                 <div key={i}
                   style={{
@@ -1151,7 +1165,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                   <div className="flex items-center justify-between mb-1 cursor-pointer hover:opacity-70 transition-opacity"
                     onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_NAMES[i]}</span>
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_LABELS[i]}</span>
                       <span className="text-xl font-bold" style={{ color: T.text }}>{day.getDate()}</span>
                     </div>
                     {isDayClosed
@@ -1259,7 +1273,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               theme={T}
             />
             <div className="sm:columns-2 gap-3">
-              {ROOMS.map(roomId => (
+              {getRoomsForDate(selectedDate).map(roomId => (
                 <div key={roomId} className="break-inside-avoid mb-3">
                   <RoomCard
                     roomId={roomId}

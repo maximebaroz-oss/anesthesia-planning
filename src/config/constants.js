@@ -116,7 +116,8 @@ export const GRADE_LABELS_FULL = {
   iade:         'ISA',
 }
 
-export const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
+export const DAY_NAMES   = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
+export const DAY_NAMES_7 = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
 export function getCurrentTime() {
   const now = new Date()
@@ -137,6 +138,14 @@ export function getMonday(date) {
 
 export function getWeekDays(monday) {
   return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+}
+
+export function getFullWeekDays(monday) {
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
     return d

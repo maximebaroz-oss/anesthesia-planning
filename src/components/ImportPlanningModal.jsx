@@ -122,7 +122,7 @@ const SINPI_ROWS = [
   { rowIdx: 10, type: 'assignment', label: 'WE S1 07h-19h30',    roomId: 82,   sectorId: 'sinpi', dayMode: 'all',     matchFn: 'any' },
   { rowIdx: 11, type: 'assignment', label: 'WE S2 07h-17h',      roomId: 83,   sectorId: 'sinpi', dayMode: 'weekend', matchFn: 'any' },
   { rowIdx: 12, type: 'assignment', label: 'WE Nuit 19h-07h30',  roomId: 84,   sectorId: 'sinpi', dayMode: 'weekend', matchFn: 'any' },
-  { rowIdx: 14, type: 'assignment', label: 'PA',                  roomId: 85,   sectorId: 'sinpi', dayMode: 'all',     matchFn: 'med' },
+  { rowIdx: 14, type: 'assignment', label: 'Piquet Adjoint',      roomId: 85,   sectorId: 'sinpi', dayMode: 'all',     matchFn: 'med' },
 ]
 
 function parseSINPISheet(ws, rows, profiles) {
