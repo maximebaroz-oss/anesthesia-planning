@@ -1454,14 +1454,21 @@ export default function Dashboard({ unit, sector, onBack }) {
                 <div>
                   {groups.map((g, gi) => (
                     <Fragment key={g.grp + gi}>
-                      {gi > 0 && (
-                        <div className="flex items-center gap-2 my-3">
-                          <div className="flex-1 border-t-2" style={{ borderColor: T.accentBar }} />
-                          <span className="text-xs font-bold flex-shrink-0" style={{ color: T.accentBar }}>
-                            {g.grp === 'chef_clinique' ? 'CDC' : g.grp === 'interne' ? 'Int' : g.grp === 'none' ? '—' : g.grp}
-                          </span>
-                        </div>
-                      )}
+                      {gi > 0 && (() => {
+                        const lbl = grp => grp === 'adjoint' ? 'Adj' : grp === 'chef_clinique' ? 'CDC' : 'Int'
+                        const prev = groups[gi - 1].grp
+                        return (
+                          <div className="my-3">
+                            <div className="flex justify-end mb-1">
+                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(prev)}</span>
+                            </div>
+                            <div className="border-t-2" style={{ borderColor: T.accentBar }} />
+                            <div className="flex justify-end mt-1">
+                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(g.grp)}</span>
+                            </div>
+                          </div>
+                        )
+                      })()}
                       <div className="sm:columns-2 gap-3">
                         {g.rooms.map(roomId => (
                           <div key={roomId} className="break-inside-avoid mb-3">
