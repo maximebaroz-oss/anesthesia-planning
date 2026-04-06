@@ -1311,7 +1311,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
                     ) : roomEntries.length === 0 ? (
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
-                    ) : sector?.id === 'sinpi' ? (() => {
+                    ) : (() => {
                       const _go = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
                       const _gr = g => Math.min(...[...g.med, ...g.isa].map(a => _go[a.profiles?.grade] ?? 99), 99)
                       const _gk = g => { const n = _gr(g); return n === 0 ? 'adj' : n === 1 ? 'cdc' : 'other' }
@@ -1328,7 +1328,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                                   <div className="border-t-2 my-1" style={{ borderColor: T.accentBar }} />
                                 )}
                                 <div className="grid text-xs leading-tight mb-0.5"
-                                  style={{ gridTemplateColumns: '108px 1fr' }}>
+                                  style={{ gridTemplateColumns: '100px 1fr' }}>
                                   <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>
                                     {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                                   </span>
@@ -1353,39 +1353,12 @@ export default function Dashboard({ unit, sector, onBack }) {
                               </Fragment>
                             )
                           })}
+                          {roomEntries.length > 12 && (
+                            <p className="text-xs mt-1" style={{ color: T.textFaint }}>+{roomEntries.length - 12} salles…</p>
+                          )}
                         </div>
                       )
-                    })() : (
-                      <div className="mt-2 space-y-1">
-                        {roomEntries.slice(0, 7).map(([roomId, group]) => (
-                          <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
-                            <span className="flex-shrink-0 font-medium" style={{ color: T.textFaint }}>
-                              {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
-                            </span>
-                            <div className="flex flex-wrap gap-x-1.5 min-w-0">
-                              {[...group.med, ...group.isa].map(a => (
-                                <span key={a.id ?? a.user_id} className="flex items-center gap-0.5">
-                                  <span className={`truncate ${a.profiles?.profession === 'medecin' ? 'font-semibold' : ''}`}
-                                    style={{ color: a.profiles?.profession === 'medecin' ? T.text : T.textSub }}>
-                                    {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
-                                  </span>
-                                  {canManage && a.id && (
-                                    <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }}
-                                      className="flex-shrink-0 hover:text-red-500 transition-colors"
-                                      style={{ color: T.textFaint }}>
-                                      <X size={9} />
-                                    </button>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {roomEntries.length > 7 && (
-                          <p className="text-xs" style={{ color: T.textFaint }}>+{roomEntries.length - 7} salles…</p>
-                        )}
-                      </div>
-                    )}
+                    })()}
                   </div>
                   {/* Boutons action */}
                   {canManage && !isDayClosed && (
