@@ -156,6 +156,116 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
   )
 }
 
+function PiquetCard({ date, assignments, allProfiles, canManage, theme, onRefresh }) {
+  const T = theme ?? WARM
+  const { profile: currentProfile } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const dropRef = useRef(null)
+
+  const PIQUET_ROOM = 85
+  const piquetAsgn = assignments.find(a => a.room_id === PIQUET_ROOM)
+  const assignee   = piquetAsgn?.profiles ?? null
+
+  useEffect(() => {
+    function handleClick(e) { if (dropRef.current && !dropRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  async function assign(p) {
+    if (piquetAsgn?.id) {
+      await supabase.from('assignments').delete().eq('id', piquetAsgn.id)
+    }
+    await supabase.from('assignments').insert({
+      date, room_id: PIQUET_ROOM, user_id: p.id, assigned_by: currentProfile?.id
+    })
+    setOpen(false); setSearch('')
+    onRefresh?.()
+  }
+
+  async function remove() {
+    if (piquetAsgn?.id) await supabase.from('assignments').delete().eq('id', piquetAsgn.id)
+    onRefresh?.()
+  }
+
+  const options = allProfiles.filter(p =>
+    p.profession === 'medecin' && p.grade === 'adjoint' &&
+    (!search || p.full_name.toLowerCase().includes(search.toLowerCase()))
+  )
+
+  return (
+    <div style={{ background: T.cardBg, borderColor: T.border, boxShadow: '0 2px 12px rgba(180,130,60,0.08)' }}
+      className="rounded-2xl border overflow-visible mb-3">
+      <div style={{ background: T.cardHead, borderColor: T.border }}
+        className="px-4 pt-3 pb-2.5 flex items-center gap-2 border-b">
+        <span style={{ background: T.accentBar }} className="w-0.5 h-4 rounded-full flex-shrink-0" />
+        <span className="font-bold text-sm" style={{ color: T.text }}>Piquet Adjoint</span>
+      </div>
+      <div className="px-4 py-3 flex items-center gap-3">
+        {assignee ? (
+          <>
+            <div style={{ background: T.surface, borderColor: T.border }}
+              className="flex-1 flex items-center gap-2.5 rounded-xl px-3 py-2 border">
+              <div style={{ background: T.accentBar }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                {assignee.full_name.charAt(0)}
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: T.text }}>Dr. {formatLastFirst(assignee.full_name)}</p>
+                <p className="text-xs" style={{ color: T.textFaint }}>Adjoint</p>
+              </div>
+            </div>
+            {canManage && (
+              <button onClick={remove} style={{ color: T.textFaint }}
+                className="p-1.5 hover:text-red-500 transition-colors flex-shrink-0">
+                <X size={16} />
+              </button>
+            )}
+          </>
+        ) : (
+          <span className="flex-1 text-sm italic" style={{ color: T.textFaint }}>Aucun adjoint assigné</span>
+        )}
+
+        {canManage && (
+          <div className="relative flex-shrink-0" ref={dropRef}>
+            <button onClick={() => { setOpen(v => !v); setSearch('') }}
+              style={{ background: T.accentBar }}
+              className="flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-2 rounded-xl hover:opacity-90 transition-opacity">
+              {assignee ? 'Changer' : 'Assigner'} <ChevronDown size={14} />
+            </button>
+            {open && (
+              <div style={{ background: T.cardBg, borderColor: T.border }}
+                className="absolute right-0 top-full mt-2 w-64 border rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="p-2 border-b" style={{ borderColor: T.border }}>
+                  <input autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Rechercher..." style={{ background: T.surface, borderColor: T.border, color: T.text }}
+                    className="w-full text-sm px-3 py-1.5 rounded-lg border focus:outline-none placeholder-gray-400" />
+                </div>
+                <div className="max-h-56 overflow-y-auto py-1">
+                  {options.length === 0
+                    ? <p className="text-xs text-center py-3" style={{ color: T.textFaint }}>Aucun résultat</p>
+                    : options.map(p => (
+                      <button key={p.id} onClick={() => assign(p)} style={{ color: T.text }}
+                        className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          style={{ background: T.accentBar, color: '#fff' }}>
+                          {p.full_name.charAt(0)}
+                        </div>
+                        <span className="font-medium">Dr. {formatLastFirst(p.full_name)}</span>
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Salles sans ISA
 const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
   // SINPI
@@ -705,8 +815,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   const DAY_LABELS = isFullWeek ? DAY_NAMES_7 : DAY_NAMES
 
   // SINPI : salles différentes selon le jour de la semaine
-  const SINPI_WEEKDAY_ROOMS = [76, 77, 78, 79, 80, 81, 85]
-  const SINPI_WEEKEND_ROOMS = [82, 83, 84, 85]
+  const SINPI_WEEKDAY_ROOMS = [76, 77, 78, 79, 80, 81]
+  const SINPI_WEEKEND_ROOMS = [82, 83, 84]
   function getRoomsForDate(dateStr) {
     if (sector?.id !== 'sinpi') return ROOMS
     const dow = new Date(dateStr + 'T12:00:00').getDay() // 0=Dim, 6=Sam
@@ -1335,6 +1445,16 @@ export default function Dashboard({ unit, sector, onBack }) {
               sectorLabel={sectorLabel}
               theme={T}
             />
+            {sector?.id === 'sinpi' && (
+              <PiquetCard
+                date={selectedDate}
+                assignments={assignments}
+                allProfiles={allProfiles}
+                canManage={canManage}
+                theme={T}
+                onRefresh={fetchData}
+              />
+            )}
             {sector?.id === 'sinpi' ? (() => {
               const dayRooms = sortSinpiRooms(getRoomsForDate(selectedDate), assignments)
               // Group rooms by grade group
