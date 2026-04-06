@@ -1449,7 +1449,12 @@ export default function Dashboard({ unit, sector, onBack }) {
                   {groups.map((g, gi) => (
                     <Fragment key={g.grp + gi}>
                       {gi > 0 && (
-                        <div className="border-t-2 my-3" style={{ borderColor: T.accentBar }} />
+                        <div className="flex items-center gap-2 my-3">
+                          <div className="flex-1 border-t-2" style={{ borderColor: T.accentBar }} />
+                          <span className="text-xs font-bold flex-shrink-0" style={{ color: T.accentBar }}>
+                            {g.grp === 'chef_clinique' ? 'CDC' : g.grp === 'interne' ? 'Int' : g.grp === 'none' ? '—' : g.grp}
+                          </span>
+                        </div>
                       )}
                       <div className="sm:columns-2 gap-3">
                         {g.rooms.map(roomId => (
