@@ -703,7 +703,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const DAY_LABELS = isFullWeek ? DAY_NAMES_7 : DAY_NAMES
 
   // SINPI : salles différentes selon le jour de la semaine
-  const SINPI_WEEKDAY_ROOMS = [74, 75, 76, 77, 78, 79, 80, 81, 85]
+  const SINPI_WEEKDAY_ROOMS = [75, 76, 77, 78, 79, 80, 81, 85]
   const SINPI_WEEKEND_ROOMS = [82, 83, 84, 85]
   function getRoomsForDate(dateStr) {
     if (sector?.id !== 'sinpi') return ROOMS
