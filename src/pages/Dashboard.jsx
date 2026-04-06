@@ -1324,14 +1324,20 @@ export default function Dashboard({ unit, sector, onBack }) {
                             const showSep = prevGrp !== null && prevGrp !== curGrp
                             return (
                               <Fragment key={roomId}>
-                                {showSep && (
-                                  <div className="flex items-center gap-1 my-1">
-                                    <div className="flex-1 border-t-2" style={{ borderColor: T.accentBar }} />
-                                    <span className="text-xs font-bold flex-shrink-0" style={{ color: T.accentBar }}>
-                                      {curGrp === 'cdc' ? 'CDC' : 'Int'}
-                                    </span>
-                                  </div>
-                                )}
+                                {showSep && (() => {
+                                  const lbl = g => g === 'adj' ? 'Adj' : g === 'cdc' ? 'CDC' : 'Int'
+                                  return (
+                                    <div className="my-1">
+                                      <div className="flex justify-end mb-0.5">
+                                        <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(prevGrp)}</span>
+                                      </div>
+                                      <div className="border-t-2" style={{ borderColor: T.accentBar }} />
+                                      <div className="flex justify-end mt-0.5">
+                                        <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(curGrp)}</span>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
                                 <div className="grid text-xs leading-tight mb-0.5"
                                   style={{ gridTemplateColumns: '100px 1fr' }}>
                                   <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>
