@@ -1325,7 +1325,12 @@ export default function Dashboard({ unit, sector, onBack }) {
                             return (
                               <Fragment key={roomId}>
                                 {showSep && (
-                                  <div className="border-t-2 my-1" style={{ borderColor: T.accentBar }} />
+                                  <div className="flex items-center gap-1 my-1">
+                                    <div className="flex-1 border-t-2" style={{ borderColor: T.accentBar }} />
+                                    <span className="text-xs font-bold flex-shrink-0" style={{ color: T.accentBar }}>
+                                      {curGrp === 'cdc' ? 'CDC' : 'Int'}
+                                    </span>
+                                  </div>
                                 )}
                                 <div className="grid text-xs leading-tight mb-0.5"
                                   style={{ gridTemplateColumns: '100px 1fr' }}>
