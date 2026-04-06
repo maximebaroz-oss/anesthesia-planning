@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
 import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME, SOFTGREEN as SOFTGREEN_THEME, GRAY as GRAY_THEME } from '../config/theme'
-import { ROOM_NAMES, DAY_NAMES, DAY_NAMES_7, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getFullWeekDays, getISOWeek, formatDateKey } from '../config/constants'
+import { ROOM_NAMES, DAY_NAMES, DAY_NAMES_7, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getFullWeekDays, getISOWeek, formatDateKey, formatLastFirst, getLastName } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
@@ -85,7 +85,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
               </div>
               <div>
                 <p className="text-sm font-semibold" style={{ color: T.text }}>
-                  Dr. {supervisor.full_name}
+                  Dr. {formatLastFirst(supervisor.full_name)}
                 </p>
                 <p className="text-xs" style={{ color: T.textFaint }}>
                   {supervisor.grade === 'adjoint' ? 'Adjoint' : 'Chef de clinique'}
@@ -139,7 +139,7 @@ function SupervisorCard({ date, allProfiles, canManage, sectorId, sectorLabel, t
                         {p.full_name.charAt(0)}
                       </div>
                       <div>
-                        <span className="font-medium">Dr. {p.full_name}</span>
+                        <span className="font-medium">Dr. {formatLastFirst(p.full_name)}</span>
                         <span className="text-xs ml-1.5" style={{ color: T.textFaint }}>
                           {p.grade === 'adjoint' ? 'Adj.' : 'CDC'}
                         </span>
@@ -665,7 +665,7 @@ function QuickAssignModal({ date, dateLabel, allProfiles, rooms, roomNames, them
                     <button key={p.id} onClick={() => setSelectedDoctor(p)}
                       className="w-full text-left px-3 py-2 text-sm hover:opacity-70 transition-opacity border-b last:border-0"
                       style={{ background: T.surface, borderColor: T.border, color: T.text }}>
-                      <span className="font-medium">Dr. {p.full_name}</span>
+                      <span className="font-medium">Dr. {formatLastFirst(p.full_name)}</span>
                       <span className="text-xs ml-2" style={{ color: T.textFaint }}>
                         {GRADE_LABELS[p.grade] ?? ''}
                       </span>
@@ -1186,7 +1186,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                       <div className="mt-2 space-y-1">
                         {roomEntries.slice(0, 7).map(([roomId, group]) => (
                           <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
-                            <span className="flex-shrink-0 font-medium truncate" style={{ color: T.textFaint, maxWidth: '70px' }}>
+                            <span className="flex-shrink-0 font-medium" style={{ color: T.textFaint }}>
                               {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                             </span>
                             <div className="flex flex-wrap gap-x-1.5 min-w-0">
@@ -1194,7 +1194,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                                 <span key={a.id ?? a.user_id} className="flex items-center gap-0.5">
                                   <span className={`truncate ${a.profiles?.profession === 'medecin' ? 'font-semibold' : ''}`}
                                     style={{ color: a.profiles?.profession === 'medecin' ? T.text : T.textSub }}>
-                                    {a.profiles?.full_name?.split(' ')[0]}
+                                    {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
                                   </span>
                                   {canManage && a.id && (
                                     <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }}

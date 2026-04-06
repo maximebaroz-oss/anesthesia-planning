@@ -3,7 +3,7 @@ import { X, Phone, Edit2, Check, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { WARM } from '../config/theme'
-import { GRADE_LABELS_FULL as GRADE_LABELS, ROOM_NAMES, getMonday, formatDateKey } from '../config/constants'
+import { GRADE_LABELS_FULL as GRADE_LABELS, ROOM_NAMES, getMonday, formatDateKey, formatLastFirst } from '../config/constants'
 import { findGsmPhone } from './ContactsModal'
 
 const PROFESSION_LABELS = {
@@ -87,7 +87,7 @@ export default function ProfileModal({ profile, onClose }) {
             </div>
             <div>
               <h2 className="font-bold text-base leading-tight" style={{ color: WARM.text }}>
-                {isMedecin ? `Dr. ${profile.full_name}` : profile.full_name}
+                {isMedecin ? `Dr. ${formatLastFirst(profile.full_name)}` : formatLastFirst(profile.full_name)}
               </h2>
               <p className="text-xs" style={{ color: WARM.textSub }}>
                 {GRADE_LABELS[profile.grade] ?? profile.grade}

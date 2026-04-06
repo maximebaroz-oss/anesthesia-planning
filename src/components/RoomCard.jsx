@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle, ChevronDown } from 'lucide-react'
-import { getCurrentTime } from '../config/constants'
+import { getCurrentTime, formatLastFirst } from '../config/constants'
 import { WARM, SKY } from '../config/theme'
 
 function isLate(timeStr) {
@@ -184,7 +184,7 @@ function PersonRow({ a, isToday, currentProfile, canManage, onUpdateTime, onProf
           className="flex-1 min-w-0 text-left">
           <p className={`text-xs font-semibold ${personIsLate ? 'text-red-500' : ''}`}
             style={personIsLate ? {} : { color: T.text }}>
-            {isMedecin ? `Dr. ${a.profiles?.full_name}` : a.profiles?.full_name}
+            {isMedecin ? `Dr. ${formatLastFirst(a.profiles?.full_name)}` : formatLastFirst(a.profiles?.full_name)}
           </p>
           {a.profiles?.grade && (
             <p className="text-xs leading-none" style={{ color: T.textFaint }}>{gradeLabel(a.profiles.grade)}</p>

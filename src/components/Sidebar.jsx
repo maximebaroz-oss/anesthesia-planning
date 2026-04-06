@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser, Calendar, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { ROOM_NAMES, GRADE_LABELS, getISOWeek, getMonday, formatDateKey } from '../config/constants'
+import { ROOM_NAMES, GRADE_LABELS, getISOWeek, getMonday, formatDateKey, formatLastFirst, getLastName } from '../config/constants'
 import { WARM } from '../config/theme'
 import ContactsModal, { findGsmPhone } from './ContactsModal'
 
@@ -275,7 +275,7 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
         <span className="text-xs flex-1 truncate font-medium" style={{ color: isMe ? myColor : T.text }}>
-          {isMed ? `Dr. ${p.full_name}` : p.full_name}
+          {isMed ? `Dr. ${formatLastFirst(p.full_name)}` : formatLastFirst(p.full_name)}
           {isMe && <span className="ml-1 text-xs font-bold">(moi)</span>}
         </span>
         <span className="text-xs flex-shrink-0" style={{ color: T.textFaint }}>{GRADE_LABELS[p.grade] ?? ''}</span>
@@ -359,8 +359,14 @@ function StaffList({ profession, T }) {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    supabase.from('profiles').select('*').eq('profession', profession).order('full_name')
-      .then(({ data }) => { setStaff(data ?? []); setLoading(false) })
+    supabase.from('profiles').select('*').eq('profession', profession)
+      .then(({ data }) => {
+        const sorted = (data ?? []).slice().sort((a, b) =>
+          getLastName(a.full_name).localeCompare(getLastName(b.full_name), 'fr')
+        )
+        setStaff(sorted)
+        setLoading(false)
+      })
   }, [profession])
 
   const knownGrades = MED_SECTIONS.map(s => s.grade)

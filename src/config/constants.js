@@ -119,6 +119,23 @@ export const GRADE_LABELS_FULL = {
 export const DAY_NAMES   = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 export const DAY_NAMES_7 = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
+// Formate "Prénom Nom" → "NOM Prénom" (last word = last name, uppercase)
+export function formatLastFirst(fullName) {
+  if (!fullName) return ''
+  const parts = fullName.trim().split(' ')
+  if (parts.length === 1) return parts[0].toUpperCase()
+  const last  = parts[parts.length - 1].toUpperCase()
+  const first = parts.slice(0, -1).join(' ')
+  return `${last} ${first}`
+}
+
+// Extrait uniquement le nom de famille (dernier mot, uppercase) pour le tri
+export function getLastName(fullName) {
+  if (!fullName) return ''
+  const parts = fullName.trim().split(' ')
+  return parts[parts.length - 1].toUpperCase()
+}
+
 export function getCurrentTime() {
   const now = new Date()
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
