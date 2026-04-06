@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'react'
 import { RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ChevronDown, X, FileSpreadsheet, FileText, CalendarOff, CalendarCheck, Users, BookOpen, Trash2, Undo2, Redo2 } from 'lucide-react'
 import ImportPlanningModal from '../components/ImportPlanningModal'
 import DocumentsModal from '../components/DocumentsModal'
@@ -703,12 +703,29 @@ export default function Dashboard({ unit, sector, onBack }) {
   const DAY_LABELS = isFullWeek ? DAY_NAMES_7 : DAY_NAMES
 
   // SINPI : salles différentes selon le jour de la semaine
-  const SINPI_WEEKDAY_ROOMS = [75, 76, 77, 78, 79, 80, 81, 85]
+  const SINPI_WEEKDAY_ROOMS = [76, 77, 78, 79, 80, 81, 85]
   const SINPI_WEEKEND_ROOMS = [82, 83, 84, 85]
   function getRoomsForDate(dateStr) {
     if (sector?.id !== 'sinpi') return ROOMS
     const dow = new Date(dateStr + 'T12:00:00').getDay() // 0=Dim, 6=Sam
     return (dow === 0 || dow === 6) ? SINPI_WEEKEND_ROOMS : SINPI_WEEKDAY_ROOMS
+  }
+
+  // SINPI : ordre de priorité des grades
+  const SINPI_GRADE_ORDER = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
+  function getSinpiGrade(roomId, asgns) {
+    const a = asgns.find(x => x.room_id === roomId)
+    return SINPI_GRADE_ORDER[a?.profiles?.grade] ?? 99
+  }
+  function sortSinpiRooms(roomIds, asgns) {
+    return [...roomIds].sort((a, b) => getSinpiGrade(a, asgns) - getSinpiGrade(b, asgns))
+  }
+  function getSinpiGradeGroup(roomId, asgns) {
+    const g = getSinpiGrade(roomId, asgns)
+    if (g === 0) return 'adjoint'
+    if (g === 1) return 'chef_clinique'
+    if (g <= 4) return 'interne'
+    return 'none'
   }
   const sectorLabel = sector?.name ?? 'HB'
   const T = sector?.id === 'julliard'         ? SKY_THEME
@@ -1182,7 +1199,51 @@ export default function Dashboard({ unit, sector, onBack }) {
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
                     ) : roomEntries.length === 0 ? (
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
-                    ) : (
+                    ) : sector?.id === 'sinpi' ? (() => {
+                      const _go = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
+                      const _gr = g => Math.min(...[...g.med, ...g.isa].map(a => _go[a.profiles?.grade] ?? 99), 99)
+                      const _gk = g => { const n = _gr(g); return n === 0 ? 'adj' : n === 1 ? 'cdc' : 'other' }
+                      const sorted = [...roomEntries].sort(([, a], [, b]) => _gr(a) - _gr(b))
+                      return (
+                        <div className="mt-2">
+                          {sorted.slice(0, 12).map(([roomId, group], idx) => {
+                            const curGrp = _gk(group)
+                            const prevGrp = idx > 0 ? _gk(sorted[idx - 1][1]) : null
+                            const showSep = prevGrp !== null && prevGrp !== curGrp
+                            return (
+                              <Fragment key={roomId}>
+                                {showSep && (
+                                  <div className="border-t-2 my-1" style={{ borderColor: T.accentBar }} />
+                                )}
+                                <div className="grid text-xs leading-tight mb-0.5"
+                                  style={{ gridTemplateColumns: '108px 1fr' }}>
+                                  <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>
+                                    {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
+                                  </span>
+                                  <div className="flex flex-wrap gap-x-1.5">
+                                    {[...group.med, ...group.isa].map(a => (
+                                      <span key={a.id ?? a.user_id} className="flex items-center gap-0.5">
+                                        <span className={a.profiles?.profession === 'medecin' ? 'font-semibold' : ''}
+                                          style={{ color: a.profiles?.profession === 'medecin' ? T.text : T.textSub }}>
+                                          {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
+                                        </span>
+                                        {canManage && a.id && (
+                                          <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }}
+                                            className="flex-shrink-0 hover:text-red-500 transition-colors"
+                                            style={{ color: T.textFaint }}>
+                                            <X size={9} />
+                                          </button>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </Fragment>
+                            )
+                          })}
+                        </div>
+                      )
+                    })() : (
                       <div className="mt-2 space-y-1">
                         {roomEntries.slice(0, 7).map(([roomId, group]) => (
                           <div key={roomId} className="flex items-start gap-1.5 text-xs leading-tight">
@@ -1272,31 +1333,80 @@ export default function Dashboard({ unit, sector, onBack }) {
               sectorLabel={sectorLabel}
               theme={T}
             />
-            <div className="sm:columns-2 gap-3">
-              {getRoomsForDate(selectedDate).map(roomId => (
-                <div key={roomId} className="break-inside-avoid mb-3">
-                  <RoomCard
-                    roomId={roomId}
-                    roomName={ROOM_NAMES[roomId]}
-                    noISA={NO_ISA_ROOMS.has(roomId)}
-                    assignments={assignments}
-                    closures={closures}
-                    roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
-                    currentProfile={profile}
-                    isToday={selectedDate === todayStr}
-                    onJoin={handleJoin}
-                    onLeave={handleLeave}
-                    onClose={handleClose}
-                    onOpen={handleOpen}
-                    onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
-                    onProfileClick={(p) => setSelectedProfile(p)}
-                    onUpdateTime={handleUpdateAssignmentTime}
-                    onUpdateRoomSchedule={handleUpdateRoomSchedule}
-                    theme={T}
-                  />
+            {sector?.id === 'sinpi' ? (() => {
+              const dayRooms = sortSinpiRooms(getRoomsForDate(selectedDate), assignments)
+              // Group rooms by grade group
+              const groups = []
+              for (const roomId of dayRooms) {
+                const grp = getSinpiGradeGroup(roomId, assignments)
+                if (groups.length === 0 || groups[groups.length - 1].grp !== grp) {
+                  groups.push({ grp, rooms: [] })
+                }
+                groups[groups.length - 1].rooms.push(roomId)
+              }
+              return (
+                <div>
+                  {groups.map((g, gi) => (
+                    <Fragment key={g.grp + gi}>
+                      {gi > 0 && (
+                        <div className="border-t-2 my-3" style={{ borderColor: T.accentBar }} />
+                      )}
+                      <div className="sm:columns-2 gap-3">
+                        {g.rooms.map(roomId => (
+                          <div key={roomId} className="break-inside-avoid mb-3">
+                            <RoomCard
+                              roomId={roomId}
+                              roomName={ROOM_NAMES[roomId]}
+                              noISA={NO_ISA_ROOMS.has(roomId)}
+                              assignments={assignments}
+                              closures={closures}
+                              roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
+                              currentProfile={profile}
+                              isToday={selectedDate === todayStr}
+                              onJoin={handleJoin}
+                              onLeave={handleLeave}
+                              onClose={handleClose}
+                              onOpen={handleOpen}
+                              onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
+                              onProfileClick={(p) => setSelectedProfile(p)}
+                              onUpdateTime={handleUpdateAssignmentTime}
+                              onUpdateRoomSchedule={handleUpdateRoomSchedule}
+                              theme={T}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </Fragment>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )
+            })() : (
+              <div className="sm:columns-2 gap-3">
+                {getRoomsForDate(selectedDate).map(roomId => (
+                  <div key={roomId} className="break-inside-avoid mb-3">
+                    <RoomCard
+                      roomId={roomId}
+                      roomName={ROOM_NAMES[roomId]}
+                      noISA={NO_ISA_ROOMS.has(roomId)}
+                      assignments={assignments}
+                      closures={closures}
+                      roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
+                      currentProfile={profile}
+                      isToday={selectedDate === todayStr}
+                      onJoin={handleJoin}
+                      onLeave={handleLeave}
+                      onClose={handleClose}
+                      onOpen={handleOpen}
+                      onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
+                      onProfileClick={(p) => setSelectedProfile(p)}
+                      onUpdateTime={handleUpdateAssignmentTime}
+                      onUpdateRoomSchedule={handleUpdateRoomSchedule}
+                      theme={T}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             {['julliard', 'bou', 'traumatologie', 'prevost', 'bocha-amopa', 'orl-maxfa-plastie', 'antalgie', 'gyneco', 'obstetrique', 'ophtalmo'].includes(sector?.id) && (
               <SouhaitsCard
                 date={selectedDate}

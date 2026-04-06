@@ -239,8 +239,11 @@ export default function RoomCard({
 
   const status          = getRoomStatus(roomId, closures, assignments, noISA)
   const isClosed        = status === 'closed'
+  const GRADE_SORT = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
   const roomAssignments = assignments.filter(a => a.room_id === roomId)
-  const medecins        = roomAssignments.filter(a => a.profiles?.profession === 'medecin')
+  const medecins        = roomAssignments
+    .filter(a => a.profiles?.profession === 'medecin')
+    .sort((a, b) => (GRADE_SORT[a.profiles?.grade] ?? 9) - (GRADE_SORT[b.profiles?.grade] ?? 9))
   const infirmiers      = roomAssignments.filter(a => a.profiles?.profession === 'infirmier')
   const isAssigned      = roomAssignments.some(a => a.user_id === currentProfile?.id)
   const isAdmin         = currentProfile?.is_admin
