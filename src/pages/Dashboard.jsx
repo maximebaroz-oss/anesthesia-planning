@@ -875,6 +875,8 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
   const [undoStack, setUndoStack] = useState([]) // snapshots avant chaque action
   const [redoStack, setRedoStack] = useState([]) // snapshots pour redo
+  const [pendingIds, setPendingIds] = useState(new Set()) // IDs d'affectations ajoutées/modifiées non encore validées
+  const [weekValidated, setWeekValidated] = useState(false) // semaine validée (VU)
 
   const todayStr = formatDateKey(new Date())
 
@@ -895,14 +897,18 @@ export default function Dashboard({ unit, sector, onBack }) {
   }, [weeks, selectedWeekIndex, isFullWeek])
 
   function handleWeekSelect(index) {
+    if (weekValidated) return
     setSelectedWeekIndex(index)
     const days = getWeekDays(weeks[index])
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
     setViewMode('week')
+    setPendingIds(new Set())
+    setWeekValidated(false)
   }
 
   function shiftWindow(direction) {
+    if (weekValidated) return
     const newStart = new Date(windowStart)
     newStart.setDate(windowStart.getDate() + direction * 7)
     setWindowStart(newStart)
@@ -911,6 +917,8 @@ export default function Dashboard({ unit, sector, onBack }) {
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
     setViewMode('week')
+    setPendingIds(new Set())
+    setWeekValidated(false)
   }
 
   const fetchData = useCallback(async () => {
@@ -1080,6 +1088,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   async function handleDeleteWeekAssignment(assignment) {
     pushUndo()
     await supabase.from('assignments').delete().eq('id', assignment.id)
+    setPendingIds(prev => { const next = new Set(prev); next.delete(assignment.id); return next })
     await fetchData()
   }
 
@@ -1115,7 +1124,10 @@ export default function Dashboard({ unit, sector, onBack }) {
       <div className="border-b px-4 py-3 overflow-x-hidden" style={{ background: T.cardHead, borderColor: T.border }}>
         <div className="max-w-4xl mx-auto space-y-3 w-full">
           <div className="flex items-center gap-2">
-            <button onClick={() => shiftWindow(-1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: T.textSub }}>
+            <button onClick={() => shiftWindow(-1)}
+              disabled={weekValidated}
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0 disabled:opacity-25 disabled:cursor-not-allowed"
+              style={{ color: T.textSub }}>
               <ChevronLeft size={18} />
             </button>
             <div className="flex flex-1 gap-2">
@@ -1125,20 +1137,38 @@ export default function Dashboard({ unit, sector, onBack }) {
                 const containsToday = getWeekDays(monday).some(d => formatDateKey(d) === todayStr)
                 return (
                   <button key={i} onClick={() => handleWeekSelect(i)}
+                    disabled={weekValidated}
                     style={isSelected
                       ? { background: T.accentBar, color: '#fff' }
                       : containsToday
                         ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
                         : { background: T.surface, color: T.textSub }}
-                    className="flex-1 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80">
+                    className="flex-1 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed">
                     S{weekNum}
                   </button>
                 )
               })}
             </div>
-            <button onClick={() => shiftWindow(1)} className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: T.textSub }}>
+            <button onClick={() => shiftWindow(1)}
+              disabled={weekValidated}
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0 disabled:opacity-25 disabled:cursor-not-allowed"
+              style={{ color: T.textSub }}>
               <ChevronRight size={18} />
             </button>
+            {/* Bouton VU / Valider */}
+            {viewMode === 'week' && (
+              <button
+                onClick={() => { if (!weekValidated) setWeekValidated(true) }}
+                className="flex-shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border transition-all"
+                style={weekValidated
+                  ? { background: '#16A34A', color: '#fff', borderColor: '#16A34A' }
+                  : pendingIds.size > 0
+                    ? { background: T.accentBar, color: '#fff', borderColor: T.accentBar }
+                    : { background: T.surface, color: T.textSub, borderColor: T.border }
+                }>
+                {weekValidated ? '✓ VU' : 'VU'}
+              </button>
+            )}
           </div>
 
           <div className="flex gap-1.5">
@@ -1546,7 +1576,14 @@ export default function Dashboard({ unit, sector, onBack }) {
           roomNames={ROOM_NAMES}
           theme={T}
           onClose={() => setQuickAssign(null)}
-          onDone={(insertedId) => { if (insertedId) pushUndo(); setQuickAssign(null); fetchData() }}
+          onDone={(insertedId) => {
+            if (insertedId) {
+              pushUndo()
+              setPendingIds(prev => new Set([...prev, insertedId]))
+            }
+            setQuickAssign(null)
+            fetchData()
+          }}
         />
       )}
 
