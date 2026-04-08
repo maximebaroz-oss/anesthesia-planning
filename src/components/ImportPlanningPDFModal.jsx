@@ -3,6 +3,7 @@ import { X, Upload, Check, AlertTriangle, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { WARM } from '../config/theme'
+import { getMonday, formatDateKey } from '../config/constants'
 
 // Row definitions — label regex → roomId + sectorId
 // mcConsult = special multi-line handling
@@ -413,6 +414,26 @@ export default function ImportPlanningPDFModal({ profiles, theme, onClose, onImp
       }))
       const { error: insErr } = await supabase.from('assignments').insert(rows)
       if (insErr) throw new Error(`Insertion : ${insErr.message}`)
+
+      // Sauvegarder un snapshot par (secteur, semaine) pour permettre le retour à l'origine
+      const snapsByKey = {}
+      for (const a of result.assignments) {
+        const monday = formatDateKey(getMonday(new Date(a.date + 'T12:00:00')))
+        const key = `${a.sectorId}||${monday}`
+        if (!snapsByKey[key]) snapsByKey[key] = { sectorId: a.sectorId, weekDate: monday, entries: {} }
+        if (!snapsByKey[key].entries[a.date]) snapsByKey[key].entries[a.date] = []
+        const prof = profiles.find(p => p.id === a.userId)
+        snapsByKey[key].entries[a.date].push({
+          room_id: a.roomId, user_id: a.userId,
+          full_name: prof?.full_name ?? '', grade: prof?.grade ?? '', profession: prof?.profession ?? '',
+        })
+      }
+      for (const { sectorId, weekDate, entries } of Object.values(snapsByKey)) {
+        await supabase.from('planning_snapshots').upsert(
+          { week_date: weekDate, unit_id: sectorId, snapshot: entries },
+          { onConflict: 'week_date,unit_id' }
+        )
+      }
 
       onImported()
     } catch (err) {

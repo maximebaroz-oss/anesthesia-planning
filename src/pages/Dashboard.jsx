@@ -875,8 +875,9 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
   const [undoStack, setUndoStack] = useState([]) // snapshots avant chaque action
   const [redoStack, setRedoStack] = useState([]) // snapshots pour redo
-  const [pendingIds, setPendingIds] = useState(new Set()) // IDs d'affectations ajoutées/modifiées non encore validées
+  const [weekSnapshot, setWeekSnapshot] = useState(null)   // { [dateStr]: [{room_id,user_id,full_name,grade,profession}] }
   const [weekValidated, setWeekValidated] = useState(false) // semaine validée (VU)
+  const [weekSupervisors, setWeekSupervisors] = useState({}) // { dateStr: profileObj }
 
   const todayStr = formatDateKey(new Date())
 
@@ -925,7 +926,8 @@ export default function Dashboard({ unit, sector, onBack }) {
     setLoading(true)
     const sectorId = sector?.id ?? 'hors-bloc'
     const weekDates = selectedWeekDays.map(d => formatDateKey(d))
-    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }, { data: weekAsgn }] = await Promise.all([
+    const weekMonday = formatDateKey(selectedWeekDays[0])
+    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }, { data: weekAsgn }, { data: weekSups }, { data: snapRow }] = await Promise.all([
       supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
       supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
@@ -933,6 +935,8 @@ export default function Dashboard({ unit, sector, onBack }) {
       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
       supabase.from('assignments').select('id, user_id, date, room_id, start_time, end_time, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
+      supabase.from('supervisors').select('date, profiles!supervisors_user_id_fkey(full_name, grade)').eq('unit_id', sectorId).in('date', weekDates),
+      supabase.from('planning_snapshots').select('snapshot').eq('week_date', weekMonday).eq('unit_id', sectorId).maybeSingle(),
     ])
     setAssignments(asgn ?? [])
     setClosures(cls ?? [])
@@ -941,6 +945,10 @@ export default function Dashboard({ unit, sector, onBack }) {
     setDayClosed(!!dayCls)
     setWeekDayClosures((weekCls ?? []).map(r => r.date))
     setWeekAssignments((weekAsgn ?? []).filter(a => ROOMS.includes(a.room_id)))
+    const supsByDate = {}
+    for (const s of (weekSups ?? [])) { if (s.profiles) supsByDate[s.date] = s.profiles }
+    setWeekSupervisors(supsByDate)
+    setWeekSnapshot(snapRow?.snapshot ?? null)
     setLoading(false)
   }, [selectedDate, selectedWeekDays, sector?.id])
 
@@ -1088,7 +1096,34 @@ export default function Dashboard({ unit, sector, onBack }) {
   async function handleDeleteWeekAssignment(assignment) {
     pushUndo()
     await supabase.from('assignments').delete().eq('id', assignment.id)
-    setPendingIds(prev => { const next = new Set(prev); next.delete(assignment.id); return next })
+    await fetchData()
+  }
+
+  async function handleValidateWeek() {
+    const sectorId = sector?.id ?? 'hors-bloc'
+    const weekMonday = formatDateKey(selectedWeekDays[0])
+    const snap = {}
+    for (const a of weekAssignments) {
+      if (!snap[a.date]) snap[a.date] = []
+      snap[a.date].push({ room_id: a.room_id, user_id: a.user_id, full_name: a.profiles?.full_name ?? '', grade: a.profiles?.grade ?? '', profession: a.profiles?.profession ?? '' })
+    }
+    await supabase.from('planning_snapshots').upsert({ week_date: weekMonday, unit_id: sectorId, snapshot: snap }, { onConflict: 'week_date,unit_id' })
+    setWeekSnapshot(snap)
+    setWeekValidated(true)
+  }
+
+  async function handleRevertWeek() {
+    if (!weekSnapshot) return
+    const snapDates = new Set(Object.keys(weekSnapshot))
+    const snapRooms = new Set(Object.values(weekSnapshot).flatMap(arr => arr.map(e => e.room_id)))
+    if (snapRooms.size > 0) {
+      await supabase.from('assignments').delete().in('date', [...snapDates]).in('room_id', [...snapRooms])
+    }
+    const inserts = Object.entries(weekSnapshot).flatMap(([dateStr, entries]) =>
+      entries.map(e => ({ date: dateStr, room_id: e.room_id, user_id: e.user_id, assigned_by: profile?.id }))
+    )
+    if (inserts.length > 0) await supabase.from('assignments').insert(inserts)
+    setWeekValidated(false)
     await fetchData()
   }
 
@@ -1155,19 +1190,27 @@ export default function Dashboard({ unit, sector, onBack }) {
               style={{ color: T.textSub }}>
               <ChevronRight size={18} />
             </button>
-            {/* Bouton VU / Valider */}
-            {viewMode === 'week' && (
-              <button
-                onClick={() => { if (!weekValidated) setWeekValidated(true) }}
-                className="flex-shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border transition-all"
-                style={weekValidated
-                  ? { background: '#16A34A', color: '#fff', borderColor: '#16A34A' }
-                  : pendingIds.size > 0
-                    ? { background: T.accentBar, color: '#fff', borderColor: T.accentBar }
-                    : { background: T.surface, color: T.textSub, borderColor: T.border }
-                }>
-                {weekValidated ? '✓ VU' : 'VU'}
-              </button>
+            {/* Boutons VU + Revenir */}
+            {viewMode === 'week' && weekSnapshot && (
+              <div className="flex gap-1.5 flex-shrink-0">
+                <button
+                  onClick={() => { if (!weekValidated) handleValidateWeek() }}
+                  className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl border transition-all"
+                  style={weekValidated
+                    ? { background: '#16A34A', color: '#fff', borderColor: '#16A34A' }
+                    : { background: T.accentBar, color: '#fff', borderColor: T.accentBar }
+                  }>
+                  {weekValidated ? '✓ VU' : 'VU'}
+                </button>
+                {!weekValidated && (
+                  <button
+                    onClick={handleRevertWeek}
+                    className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-all hover:opacity-80"
+                    style={{ background: T.surface, color: T.textSub, borderColor: T.border }}>
+                    ↩ Origine
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -1309,7 +1352,21 @@ export default function Dashboard({ unit, sector, onBack }) {
                 if (a.profiles?.profession === 'medecin') byRoom[a.room_id].med.push(a)
                 else byRoom[a.room_id].isa.push(a)
               }
-              const roomEntries = Object.entries(byRoom)
+              // Diff snapshot vs current
+              const snapshotDay = weekSnapshot?.[dateStr] ?? []
+              const allRoomIds = new Set([
+                ...Object.keys(byRoom).map(Number),
+                ...snapshotDay.filter(s => dayRooms.has(s.room_id)).map(s => s.room_id),
+              ])
+              const roomEntries = [...allRoomIds].map(roomId => {
+                const cur = [...(byRoom[roomId]?.med ?? []), ...(byRoom[roomId]?.isa ?? [])]
+                const snap = snapshotDay.filter(s => s.room_id === roomId)
+                return [roomId, {
+                  added:     cur.filter(a => !snap.some(s => s.user_id === a.user_id)),
+                  unchanged: cur.filter(a =>  snap.some(s => s.user_id === a.user_id)),
+                  removed:   snap.filter(s => !cur.some(a => a.user_id === s.user_id)),
+                }]
+              }).filter(([, g]) => g.added.length + g.unchanged.length + g.removed.length > 0)
               const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
               const dayLabel = `${DAY_LABELS[i]} ${day.getDate()}`
               return (
@@ -1335,6 +1392,44 @@ export default function Dashboard({ unit, sector, onBack }) {
                           ? <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: T.surface, color: T.textSub }}>{totalPeople} pers.</span>
                           : null}
                   </div>
+                  {/* Superviseur + séparateur — cliquable pour aller en vue jour */}
+                  {!isDayClosed && (
+                    <div className="cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
+                      {(() => {
+                        const sup = weekSupervisors[dateStr]
+                        return (
+                          <div className="mt-1 grid text-xs leading-tight" style={{ gridTemplateColumns: '100px 1fr' }}>
+                            <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>Superviseur</span>
+                            <span className="font-semibold" style={{ color: sup ? T.text : T.textFaint }}>
+                              {sup ? getLastName(sup.full_name) : '—'}
+                            </span>
+                          </div>
+                        )
+                      })()}
+                      {roomEntries.length > 0 && (() => {
+                        const _go = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
+                        const _effGrade = ([, g]) => {
+                          const cur = [...g.added, ...g.unchanged]
+                          const curG = cur.map(a => _go[a.profiles?.grade] ?? 99)
+                          const snapG = g.removed.map(s => _go[s.grade] ?? 99)
+                          return Math.min(...curG, ...snapG, 99)
+                        }
+                        const top = Math.min(...roomEntries.map(e => _effGrade(e)))
+                        const topLbl = top === 0 ? 'Adj' : top === 1 ? 'CDC' : 'Int'
+                        return (
+                          <div className="my-1">
+                            <div className="flex justify-end mb-0.5">
+                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>Sup</span>
+                            </div>
+                            <div className="border-t-2" style={{ borderColor: T.accentBar }} />
+                            <div className="flex justify-end mt-0.5">
+                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>{topLbl}</span>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
                   {/* Aperçu salles */}
                   <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
                     {isDayClosed ? (
@@ -1343,50 +1438,62 @@ export default function Dashboard({ unit, sector, onBack }) {
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Aucune affectation</p>
                     ) : (() => {
                       const _go = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
-                      const _gr = g => Math.min(...[...g.med, ...g.isa].map(a => _go[a.profiles?.grade] ?? 99), 99)
-                      const _gk = g => { const n = _gr(g); return n === 0 ? 'adj' : n === 1 ? 'cdc' : 'other' }
-                      const sorted = [...roomEntries].sort(([, a], [, b]) => _gr(a) - _gr(b))
+                      const _effGrade = ([, g]) => {
+                        const cur = [...g.added, ...g.unchanged]
+                        const curG = cur.map(a => _go[a.profiles?.grade] ?? 99)
+                        const snapG = g.removed.map(s => _go[s.grade] ?? 99)
+                        return Math.min(...curG, ...snapG, 99)
+                      }
+                      const _gk = n => n === 0 ? 'adj' : n === 1 ? 'cdc' : 'other'
+                      const sorted = [...roomEntries].sort((a, b) => _effGrade(a) - _effGrade(b))
                       return (
                         <div className="mt-2">
-                          {sorted.slice(0, 12).map(([roomId, group], idx) => {
-                            const curGrp = _gk(group)
-                            const prevGrp = idx > 0 ? _gk(sorted[idx - 1][1]) : null
+                          {sorted.slice(0, 12).map((entry, idx) => {
+                            const [roomId, group] = entry
+                            const curGrp = _gk(_effGrade(entry))
+                            const prevGrp = idx > 0 ? _gk(_effGrade(sorted[idx - 1])) : null
                             const showSep = prevGrp !== null && prevGrp !== curGrp
+                            const lbl = g => g === 'adj' ? 'Adj' : g === 'cdc' ? 'CDC' : 'Int'
                             return (
                               <Fragment key={roomId}>
-                                {showSep && (() => {
-                                  const lbl = g => g === 'adj' ? 'Adj' : g === 'cdc' ? 'CDC' : 'Int'
-                                  return (
-                                    <div className="my-1">
-                                      <div className="flex justify-end mb-0.5">
-                                        <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(prevGrp)}</span>
-                                      </div>
-                                      <div className="border-t-2" style={{ borderColor: T.accentBar }} />
-                                      <div className="flex justify-end mt-0.5">
-                                        <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(curGrp)}</span>
-                                      </div>
+                                {showSep && (
+                                  <div className="my-1">
+                                    <div className="flex justify-end mb-0.5">
+                                      <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(prevGrp)}</span>
                                     </div>
-                                  )
-                                })()}
-                                <div className="grid text-xs leading-tight mb-0.5"
-                                  style={{ gridTemplateColumns: '100px 1fr' }}>
+                                    <div className="border-t-2" style={{ borderColor: T.accentBar }} />
+                                    <div className="flex justify-end mt-0.5">
+                                      <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(curGrp)}</span>
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="grid text-xs leading-tight mb-0.5" style={{ gridTemplateColumns: '100px 1fr' }}>
                                   <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>
                                     {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                                   </span>
                                   <div className="flex flex-wrap gap-x-1.5">
-                                    {[...group.med, ...group.isa].map(a => (
-                                      <span key={a.id ?? a.user_id} className="flex items-center gap-0.5">
-                                        <span className={a.profiles?.profession === 'medecin' ? 'font-semibold' : ''}
-                                          style={{ color: a.profiles?.profession === 'medecin' ? T.text : T.textSub }}>
+                                    {/* Inchangés — normal */}
+                                    {group.unchanged.map(a => (
+                                      <span key={a.id} className="flex items-center gap-0.5">
+                                        <span className="font-semibold" style={{ color: T.text }}>
                                           {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
                                         </span>
-                                        {canManage && a.id && (
-                                          <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }}
-                                            className="flex-shrink-0 hover:text-red-500 transition-colors"
-                                            style={{ color: T.textFaint }}>
-                                            <X size={9} />
-                                          </button>
-                                        )}
+                                        {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
+                                      </span>
+                                    ))}
+                                    {/* Ajoutés — grisés */}
+                                    {group.added.map(a => (
+                                      <span key={a.id} className="flex items-center gap-0.5">
+                                        <span className="font-semibold" style={{ color: T.textFaint }}>
+                                          {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
+                                        </span>
+                                        {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
+                                      </span>
+                                    ))}
+                                    {/* Supprimés — grisés + barrés */}
+                                    {group.removed.map(s => (
+                                      <span key={s.user_id} className="line-through" style={{ color: T.textFaint }}>
+                                        {s.profession === 'medecin' ? getLastName(s.full_name) : (s.full_name?.split(' ')[0] ?? '')}
                                       </span>
                                     ))}
                                   </div>
@@ -1576,14 +1683,7 @@ export default function Dashboard({ unit, sector, onBack }) {
           roomNames={ROOM_NAMES}
           theme={T}
           onClose={() => setQuickAssign(null)}
-          onDone={(insertedId) => {
-            if (insertedId) {
-              pushUndo()
-              setPendingIds(prev => new Set([...prev, insertedId]))
-            }
-            setQuickAssign(null)
-            fetchData()
-          }}
+          onDone={(insertedId) => { if (insertedId) pushUndo(); setQuickAssign(null); fetchData() }}
         />
       )}
 
