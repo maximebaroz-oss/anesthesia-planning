@@ -874,8 +874,10 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
   const [undoStack, setUndoStack] = useState([]) // snapshots avant chaque action
   const [redoStack, setRedoStack] = useState([]) // snapshots pour redo
-  const [weekSnapshot, setWeekSnapshot] = useState(null)   // { [dateStr]: [{room_id,user_id,full_name,grade,profession}] }
-  const [weekValidated, setWeekValidated] = useState(false) // semaine validée (VU)
+  const [weekSnapshot, setWeekSnapshot]   = useState(null)        // snapshot PDF origin { [dateStr]: [...] }
+  const [weekValidated, setWeekValidated] = useState(false)        // semaine validée (VU)
+  const [pendingDeletes, setPendingDeletes] = useState(new Map())  // id → assignmentObj (supprimé mais pas encore commité)
+  const [pendingAdds,    setPendingAdds]    = useState(new Set())  // ids ajoutés cette session
   const [weekSupervisors, setWeekSupervisors] = useState({}) // { dateStr: profileObj }
 
   const todayStr = formatDateKey(new Date())
@@ -903,7 +905,7 @@ export default function Dashboard({ unit, sector, onBack }) {
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
     setViewMode('week')
-    setPendingIds(new Set())
+    setPendingDeletes(new Map()); setPendingAdds(new Set())
     setWeekValidated(false)
   }
 
@@ -917,7 +919,7 @@ export default function Dashboard({ unit, sector, onBack }) {
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
     setViewMode('week')
-    setPendingIds(new Set())
+    setPendingDeletes(new Map()); setPendingAdds(new Set())
     setWeekValidated(false)
   }
 
@@ -1092,37 +1094,40 @@ export default function Dashboard({ unit, sector, onBack }) {
     await applySnapshot(next)
   }
 
-  async function handleDeleteWeekAssignment(assignment) {
-    pushUndo()
-    await supabase.from('assignments').delete().eq('id', assignment.id)
-    await fetchData()
+  function handleDeleteWeekAssignment(assignment) {
+    // En vue semaine : marquer comme supprimé (grisé+barré) sans toucher la DB — commit au VU
+    setPendingDeletes(prev => new Map([...prev, [assignment.id, assignment]]))
   }
 
   async function handleValidateWeek() {
-    const sectorId = sector?.id ?? 'hors-bloc'
-    const weekMonday = formatDateKey(selectedWeekDays[0])
-    const snap = {}
-    for (const a of weekAssignments) {
-      if (!snap[a.date]) snap[a.date] = []
-      snap[a.date].push({ room_id: a.room_id, user_id: a.user_id, full_name: a.profiles?.full_name ?? '', grade: a.profiles?.grade ?? '', profession: a.profiles?.profession ?? '' })
+    // Supprimer réellement les assignments en attente de suppression
+    if (pendingDeletes.size > 0) {
+      await supabase.from('assignments').delete().in('id', [...pendingDeletes.keys()])
     }
-    await supabase.from('planning_snapshots').upsert({ week_date: weekMonday, unit_id: sectorId, snapshot: snap }, { onConflict: 'week_date,unit_id' })
-    setWeekSnapshot(snap)
+    setPendingDeletes(new Map()); setPendingAdds(new Set())
     setWeekValidated(true)
+    await fetchData()
   }
 
   async function handleRevertWeek() {
-    if (!weekSnapshot) return
-    const snapDates = new Set(Object.keys(weekSnapshot))
-    const snapRooms = new Set(Object.values(weekSnapshot).flatMap(arr => arr.map(e => e.room_id)))
-    if (snapRooms.size > 0) {
-      await supabase.from('assignments').delete().in('date', [...snapDates]).in('room_id', [...snapRooms])
+    // Annuler les ajouts de session
+    if (pendingAdds.size > 0) {
+      await supabase.from('assignments').delete().in('id', [...pendingAdds])
     }
-    const inserts = Object.entries(weekSnapshot).flatMap(([dateStr, entries]) =>
-      entries.map(e => ({ date: dateStr, room_id: e.room_id, user_id: e.user_id, assigned_by: profile?.id }))
-    )
-    if (inserts.length > 0) await supabase.from('assignments').insert(inserts)
-    setWeekValidated(false)
+    // Restaurer les suppressions de session (elles n'ont pas encore été supprimées en DB)
+    setPendingDeletes(new Map()); setPendingAdds(new Set())
+    // Si snapshot PDF disponible, rétablir complètement l'état d'origine
+    if (weekSnapshot) {
+      const snapDates = new Set(Object.keys(weekSnapshot))
+      const snapRooms = new Set(Object.values(weekSnapshot).flatMap(arr => arr.map(e => e.room_id)))
+      if (snapRooms.size > 0) {
+        await supabase.from('assignments').delete().in('date', [...snapDates]).in('room_id', [...snapRooms])
+      }
+      const inserts = Object.entries(weekSnapshot).flatMap(([dateStr, entries]) =>
+        entries.map(e => ({ date: dateStr, room_id: e.room_id, user_id: e.user_id, assigned_by: profile?.id }))
+      )
+      if (inserts.length > 0) await supabase.from('assignments').insert(inserts)
+    }
     await fetchData()
   }
 
@@ -1189,8 +1194,8 @@ export default function Dashboard({ unit, sector, onBack }) {
               style={{ color: T.textSub }}>
               <ChevronRight size={18} />
             </button>
-            {/* Boutons VU + Revenir */}
-            {viewMode === 'week' && weekSnapshot && (
+            {/* Boutons VU + Annuler */}
+            {viewMode === 'week' && (pendingDeletes.size > 0 || pendingAdds.size > 0 || weekValidated) && (
               <div className="flex gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => { if (!weekValidated) handleValidateWeek() }}
@@ -1201,12 +1206,12 @@ export default function Dashboard({ unit, sector, onBack }) {
                   }>
                   {weekValidated ? '✓ VU' : 'VU'}
                 </button>
-                {!weekValidated && (
+                {!weekValidated && (pendingDeletes.size > 0 || pendingAdds.size > 0 || weekSnapshot) && (
                   <button
                     onClick={handleRevertWeek}
                     className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-all hover:opacity-80"
                     style={{ background: T.surface, color: T.textSub, borderColor: T.border }}>
-                    ↩ Origine
+                    ↩ Annuler
                   </button>
                 )}
               </div>
@@ -1294,10 +1299,10 @@ export default function Dashboard({ unit, sector, onBack }) {
                 </button>
               ) : (
                 <button onClick={() => setDayResetConfirm(true)}
-                  title="Vider toutes les affectations du jour"
                   className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                   style={{ background: T.surface, color: T.textFaint }}>
                   <Trash2 size={13} />
+                  Vider le jour
                 </button>
               )
             )}
@@ -1345,21 +1350,15 @@ export default function Dashboard({ unit, sector, onBack }) {
                 if (a.profiles?.profession === 'medecin') byRoom[a.room_id].med.push(a)
                 else byRoom[a.room_id].isa.push(a)
               }
-              // Diff snapshot vs current
-              const snapshotDay = weekSnapshot?.[dateStr] ?? []
-              const allRoomIds = new Set([
-                ...Object.keys(byRoom).map(Number),
-                ...snapshotDay.filter(s => dayRooms.has(s.room_id)).map(s => s.room_id),
-              ])
-              const roomEntries = [...allRoomIds].map(roomId => {
-                const cur = [...(byRoom[roomId]?.med ?? []), ...(byRoom[roomId]?.isa ?? [])]
-                const snap = snapshotDay.filter(s => s.room_id === roomId)
-                return [roomId, {
-                  added:     cur.filter(a => !snap.some(s => s.user_id === a.user_id)),
-                  unchanged: cur.filter(a =>  snap.some(s => s.user_id === a.user_id)),
-                  removed:   snap.filter(s => !cur.some(a => a.user_id === s.user_id)),
+              // Diff session : pending deletes/adds vs assignments actuels
+              const roomEntries = Object.entries(byRoom).map(([roomId, group]) => {
+                const cur = [...group.med, ...group.isa]
+                return [Number(roomId), {
+                  unchanged: cur.filter(a => !pendingAdds.has(a.id) && !pendingDeletes.has(a.id)),
+                  added:     cur.filter(a =>  pendingAdds.has(a.id)),
+                  removed:   cur.filter(a =>  pendingDeletes.has(a.id)),
                 }]
-              }).filter(([, g]) => g.added.length + g.unchanged.length + g.removed.length > 0)
+              }).filter(([, g]) => g.unchanged.length + g.added.length + g.removed.length > 0)
               const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
               const dayLabel = `${DAY_LABELS[i]} ${day.getDate()}`
               return (
@@ -1402,10 +1401,8 @@ export default function Dashboard({ unit, sector, onBack }) {
                       {roomEntries.length > 0 && (() => {
                         const _go = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
                         const _effGrade = ([, g]) => {
-                          const cur = [...g.added, ...g.unchanged]
-                          const curG = cur.map(a => _go[a.profiles?.grade] ?? 99)
-                          const snapG = g.removed.map(s => _go[s.grade] ?? 99)
-                          return Math.min(...curG, ...snapG, 99)
+                          const all = [...g.added, ...g.unchanged, ...g.removed]
+                          return Math.min(...all.map(a => _go[a.profiles?.grade] ?? 99), 99)
                         }
                         const top = Math.min(...roomEntries.map(e => _effGrade(e)))
                         const topLbl = top === 0 ? 'Adj' : top === 1 ? 'CDC' : 'Int'
@@ -1432,10 +1429,8 @@ export default function Dashboard({ unit, sector, onBack }) {
                     ) : (() => {
                       const _go = { adjoint: 0, chef_clinique: 1, interne: 2, consultant: 3, iade: 4 }
                       const _effGrade = ([, g]) => {
-                        const cur = [...g.added, ...g.unchanged]
-                        const curG = cur.map(a => _go[a.profiles?.grade] ?? 99)
-                        const snapG = g.removed.map(s => _go[s.grade] ?? 99)
-                        return Math.min(...curG, ...snapG, 99)
+                        const all = [...g.added, ...g.unchanged, ...g.removed]
+                        return Math.min(...all.map(a => _go[a.profiles?.grade] ?? 99), 99)
                       }
                       const _gk = n => n === 0 ? 'adj' : n === 1 ? 'cdc' : 'other'
                       const sorted = [...roomEntries].sort((a, b) => _effGrade(a) - _effGrade(b))
@@ -1483,10 +1478,16 @@ export default function Dashboard({ unit, sector, onBack }) {
                                         {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
                                       </span>
                                     ))}
-                                    {/* Supprimés — grisés + barrés */}
-                                    {group.removed.map(s => (
-                                      <span key={s.user_id} className="line-through" style={{ color: T.textFaint }}>
-                                        {s.profession === 'medecin' ? getLastName(s.full_name) : (s.full_name?.split(' ')[0] ?? '')}
+                                    {/* Supprimés — grisés + barrés (en attente de VU) */}
+                                    {group.removed.map(a => (
+                                      <span key={a.id} className="flex items-center gap-0.5">
+                                        <span className="line-through" style={{ color: T.textFaint }}>
+                                          {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
+                                        </span>
+                                        <button onClick={e => { e.stopPropagation(); setPendingDeletes(prev => { const m = new Map(prev); m.delete(a.id); return m }) }}
+                                          title="Annuler la suppression" className="hover:text-green-500" style={{ color: T.textFaint }}>
+                                          <X size={9} />
+                                        </button>
                                       </span>
                                     ))}
                                   </div>
@@ -1676,7 +1677,10 @@ export default function Dashboard({ unit, sector, onBack }) {
           roomNames={ROOM_NAMES}
           theme={T}
           onClose={() => setQuickAssign(null)}
-          onDone={(insertedId) => { if (insertedId) pushUndo(); setQuickAssign(null); fetchData() }}
+          onDone={(insertedId) => {
+            if (insertedId) { pushUndo(); setPendingAdds(prev => new Set([...prev, insertedId])) }
+            setQuickAssign(null); fetchData()
+          }}
         />
       )}
 
