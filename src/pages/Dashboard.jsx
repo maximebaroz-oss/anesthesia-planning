@@ -1108,24 +1108,18 @@ export default function Dashboard({ unit, sector, onBack }) {
   }
 
   async function handleRevertWeek() {
-    // Annuler les ajouts de session
-    if (pendingAdds.size > 0) {
-      await supabase.from('assignments').delete().in('id', [...pendingAdds])
+    if (!weekSnapshot) return
+    const snapDates = new Set(Object.keys(weekSnapshot))
+    const snapRooms = new Set(Object.values(weekSnapshot).flatMap(arr => arr.map(e => e.room_id)))
+    if (snapRooms.size > 0) {
+      await supabase.from('assignments').delete().in('date', [...snapDates]).in('room_id', [...snapRooms])
     }
-    // Restaurer les suppressions de session (elles n'ont pas encore été supprimées en DB)
+    const inserts = Object.entries(weekSnapshot).flatMap(([dateStr, entries]) =>
+      entries.map(e => ({ date: dateStr, room_id: e.room_id, user_id: e.user_id, assigned_by: profile?.id }))
+    )
+    if (inserts.length > 0) await supabase.from('assignments').insert(inserts)
     setPendingDeletes(new Map()); setPendingAdds(new Set())
-    // Si snapshot PDF disponible, rétablir complètement l'état d'origine
-    if (weekSnapshot) {
-      const snapDates = new Set(Object.keys(weekSnapshot))
-      const snapRooms = new Set(Object.values(weekSnapshot).flatMap(arr => arr.map(e => e.room_id)))
-      if (snapRooms.size > 0) {
-        await supabase.from('assignments').delete().in('date', [...snapDates]).in('room_id', [...snapRooms])
-      }
-      const inserts = Object.entries(weekSnapshot).flatMap(([dateStr, entries]) =>
-        entries.map(e => ({ date: dateStr, room_id: e.room_id, user_id: e.user_id, assigned_by: profile?.id }))
-      )
-      if (inserts.length > 0) await supabase.from('assignments').insert(inserts)
-    }
+    setWeekValidated(false)
     await fetchData()
   }
 
@@ -1201,12 +1195,12 @@ export default function Dashboard({ unit, sector, onBack }) {
                   }>
                   {weekValidated ? '✓ VU' : 'VU'}
                 </button>
-                {!weekValidated && (pendingDeletes.size > 0 || pendingAdds.size > 0 || weekSnapshot) && (
+                {weekSnapshot && (
                   <button
                     onClick={handleRevertWeek}
                     className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-all hover:opacity-80"
                     style={{ background: T.surface, color: T.textSub, borderColor: T.border }}>
-                    ↩ Annuler
+                    ↺ Actualiser
                   </button>
                 )}
               </div>
