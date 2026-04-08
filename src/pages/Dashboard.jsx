@@ -860,7 +860,6 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [dayClosed, setDayClosed] = useState(false)
   const [weekDayClosures, setWeekDayClosures] = useState([]) // dates fermées de la semaine
   const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
-  const [showImport, setShowImport] = useState(false)
   const [showUnitImport, setShowUnitImport] = useState(false)
   const [showPDFImport, setShowPDFImport] = useState(false)
   const [showEffectif, setShowEffectif] = useState(false)
@@ -1268,12 +1267,6 @@ export default function Dashboard({ unit, sector, onBack }) {
             )}
             {canManage && (
               <>
-                <button onClick={() => setShowImport(true)}
-                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-                  style={{ background: T.surface, color: T.accent }}>
-                  <FileSpreadsheet size={13} />
-                  Import
-                </button>
                 {['duhb', 'unicat', 'amopa', 'sinpi'].includes(unit?.id) && (
                   <button onClick={() => setShowUnitImport(true)}
                     className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
@@ -1706,16 +1699,6 @@ export default function Dashboard({ unit, sector, onBack }) {
 
       {selectedProfile && (
         <ProfileModal profile={selectedProfile} onClose={() => setSelectedProfile(null)} />
-      )}
-
-      {showImport && (
-        <ImportPlanningModal
-          profiles={allProfiles}
-          sector={sector}
-          theme={T}
-          onClose={() => setShowImport(false)}
-          onImported={() => { fetchData(); setShowImport(false) }}
-        />
       )}
 
       {showUnitImport && (
