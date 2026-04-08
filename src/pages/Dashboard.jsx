@@ -899,7 +899,6 @@ export default function Dashboard({ unit, sector, onBack }) {
   }, [weeks, selectedWeekIndex, isFullWeek])
 
   function handleWeekSelect(index) {
-    if (weekValidated) return
     setSelectedWeekIndex(index)
     const days = getWeekDays(weeks[index])
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
@@ -910,7 +909,6 @@ export default function Dashboard({ unit, sector, onBack }) {
   }
 
   function shiftWindow(direction) {
-    if (weekValidated) return
     const newStart = new Date(windowStart)
     newStart.setDate(windowStart.getDate() + direction * 7)
     setWindowStart(newStart)
@@ -1164,8 +1162,7 @@ export default function Dashboard({ unit, sector, onBack }) {
         <div className="max-w-4xl mx-auto space-y-3 w-full">
           <div className="flex items-center gap-2">
             <button onClick={() => shiftWindow(-1)}
-              disabled={weekValidated}
-              className="p-1.5 rounded-lg transition-colors flex-shrink-0 disabled:opacity-25 disabled:cursor-not-allowed"
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0"
               style={{ color: T.textSub }}>
               <ChevronLeft size={18} />
             </button>
@@ -1176,21 +1173,19 @@ export default function Dashboard({ unit, sector, onBack }) {
                 const containsToday = getWeekDays(monday).some(d => formatDateKey(d) === todayStr)
                 return (
                   <button key={i} onClick={() => handleWeekSelect(i)}
-                    disabled={weekValidated}
                     style={isSelected
                       ? { background: T.accentBar, color: '#fff' }
                       : containsToday
                         ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
                         : { background: T.surface, color: T.textSub }}
-                    className="flex-1 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed">
+                    className="flex-1 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80">
                     S{weekNum}
                   </button>
                 )
               })}
             </div>
             <button onClick={() => shiftWindow(1)}
-              disabled={weekValidated}
-              className="p-1.5 rounded-lg transition-colors flex-shrink-0 disabled:opacity-25 disabled:cursor-not-allowed"
+              className="p-1.5 rounded-lg transition-colors flex-shrink-0"
               style={{ color: T.textSub }}>
               <ChevronRight size={18} />
             </button>
