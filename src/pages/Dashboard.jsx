@@ -1285,22 +1285,6 @@ export default function Dashboard({ unit, sector, onBack }) {
                 )}
               </>
             )}
-            {canManage && (
-              dayResetConfirm ? (
-                <button onClick={async () => { await handleResetDay(selectedDate); setDayResetConfirm(false) }}
-                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-bold px-2.5 py-1.5 rounded-lg"
-                  style={{ background: '#FEE2E2', color: '#DC2626' }}>
-                  Confirmer ?
-                </button>
-              ) : (
-                <button onClick={() => setDayResetConfirm(true)}
-                  className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-                  style={{ background: T.surface, color: T.textFaint }}>
-                  <Trash2 size={13} />
-                  Vider le jour
-                </button>
-              )
-            )}
             <button onClick={handleUndo} disabled={undoStack.length === 0}
               title="Annuler"
               className="p-1.5 rounded-lg transition-opacity hover:opacity-70 disabled:opacity-25"
