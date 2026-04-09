@@ -92,6 +92,14 @@ const DU_ROWS = [
   { rowIdx: 21, type: 'day_note',   label: 'Souhait / Remarque',    roomId: null },
 ]
 
+// Split a cell that may contain multiple names (e.g. "DUPONT / MARTIN" or "DUPONT\nMARTIN")
+function splitCellNames(raw) {
+  if (!raw) return []
+  // Split on newline or " / " or "/" (but not slashes inside single tokens like "A/B")
+  const parts = raw.split(/\n|\r\n|\r| \/ |\//).map(s => s.trim()).filter(Boolean)
+  return parts.length > 0 ? parts : [raw]
+}
+
 // Like matchProfile but matches any profession (médecin + ISA)
 function matchProfileAny(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
@@ -160,19 +168,22 @@ function parseSINPISheet(ws, rows, profiles) {
     for (const day of days) {
       const raw = String(rows[rowDef.rowIdx]?.[day.colIdx] ?? '').trim()
       if (!raw) continue
-      const profile = rowDef.matchFn === 'any'
-        ? matchProfileAny(raw, profiles)
-        : matchProfile(raw, profiles)
-      entries.push({
-        date: day.date,
-        dayLabel: day.header,
-        rowLabel: rowDef.label,
-        excelName: raw,
-        profile,
-        type: rowDef.type,
-        roomId: rowDef.roomId,
-        sectorId: rowDef.sectorId,
-      })
+      const names = splitCellNames(raw)
+      for (const namePart of names) {
+        const profile = rowDef.matchFn === 'any'
+          ? matchProfileAny(namePart, profiles)
+          : matchProfile(namePart, profiles)
+        entries.push({
+          date: day.date,
+          dayLabel: day.header,
+          rowLabel: rowDef.label,
+          excelName: namePart,
+          profile,
+          type: rowDef.type,
+          roomId: rowDef.roomId,
+          sectorId: rowDef.sectorId,
+        })
+      }
     }
   }
 
@@ -270,12 +281,14 @@ function parseHBSheet(ws, rows, profiles) {
     for (const { rowIdx, type, label, roomId } of HB_ROWS) {
       const raw = String(rows[rowIdx]?.[day.colIdx] ?? '').trim()
       if (!raw) continue
-      entries.push({
-        date: day.date, dayLabel: day.header,
-        rowLabel: label, excelName: raw,
-        profile: matchProfile(raw, profiles),
-        type, roomId,
-      })
+      for (const namePart of splitCellNames(raw)) {
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: label, excelName: namePart,
+          profile: matchProfile(namePart, profiles),
+          type, roomId,
+        })
+      }
     }
   }
   return { entries, weekLabel: String(headerRow[0] ?? '') }
@@ -347,12 +360,14 @@ function parseDUSheet(ws, rows, profiles) {
           type: 'day_note', roomId: null, profile: null, noteText: raw,
         })
       } else {
-        entries.push({
-          date: day.date, dayLabel: day.header,
-          rowLabel: label, excelName: raw,
-          profile: matchProfile(raw, profiles),
-          type, roomId,
-        })
+        for (const namePart of splitCellNames(raw)) {
+          entries.push({
+            date: day.date, dayLabel: day.header,
+            rowLabel: label, excelName: namePart,
+            profile: matchProfile(namePart, profiles),
+            type, roomId,
+          })
+        }
       }
     }
   }
@@ -466,12 +481,14 @@ function parseBOUSheet(wb, feuil1Rows, profiles, sectorId = 'bou') {
       const raw = String(feuil1Rows[rowIdx]?.[day.colIdx] ?? '')
         .trim().replace(/\s*\(.*?\)\s*/g, '').trim() // strip (AM) (PM)
       if (!raw) continue
-      entries.push({
-        date: day.date, dayLabel: day.header,
-        rowLabel: label, excelName: raw,
-        profile: matchProfile(raw, profiles),
-        type, roomId, sectorId,
-      })
+      for (const namePart of splitCellNames(raw)) {
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: label, excelName: namePart,
+          profile: matchProfile(namePart, profiles),
+          type, roomId, sectorId,
+        })
+      }
     }
   }
 
@@ -520,12 +537,15 @@ function parseAMOPASheet(ws, rows, profiles) {
     for (const { rowIdx, type, label, roomId, sectorId } of ALL_AMOPA_ROWS) {
       const raw = String(rows[rowIdx]?.[day.colIdx] ?? '').trim()
       if (!raw || raw === '?') continue
-      entries.push({
-        date: day.date, dayLabel: day.header,
-        rowLabel: label, excelName: raw,
-        profile: matchProfile(raw, profiles),
-        type, roomId, sectorId,
-      })
+      for (const namePart of splitCellNames(raw)) {
+        if (!namePart || namePart === '?') continue
+        entries.push({
+          date: day.date, dayLabel: day.header,
+          rowLabel: label, excelName: namePart,
+          profile: matchProfile(namePart, profiles),
+          type, roomId, sectorId,
+        })
+      }
     }
   }
 
