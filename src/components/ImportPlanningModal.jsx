@@ -103,10 +103,10 @@ function splitCellNames(raw) {
 // Like matchProfile but matches any profession (médecin + ISA)
 function matchProfileAny(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
-  const name = excelName.trim().toUpperCase().replace(/\s+/g, ' ')
+  const name = normalizeName(excelName)
   if (!name) return null
   return profiles.find(p => {
-    const up = p.full_name.toUpperCase()
+    const up = normalizeName(p.full_name)
     const parts = up.split(' ')
     if (parts[parts.length - 1] === name) return true
     if (parts.length >= 2 && parts.slice(-2).join(' ') === name) return true
@@ -190,13 +190,20 @@ function parseSINPISheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
+// Normalise un nom pour la comparaison : majuscules, espaces multiples, espaces autour des tirets
+function normalizeName(str) {
+  return str.trim().toUpperCase()
+    .replace(/\s*-\s*/g, '-')  // "DARAN - STEFANI" → "DARAN-STEFANI"
+    .replace(/\s+/g, ' ')
+}
+
 function matchProfile(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
-  const name = excelName.trim().toUpperCase().replace(/\s+/g, ' ')
+  const name = normalizeName(excelName)
   if (!name) return null
   return profiles.find(p => {
     if (p.profession !== 'medecin') return false
-    const up = p.full_name.toUpperCase()
+    const up = normalizeName(p.full_name)
     const parts = up.split(' ')
     if (parts[parts.length - 1] === name) return true
     if (parts.length >= 2 && parts.slice(-2).join(' ') === name) return true
