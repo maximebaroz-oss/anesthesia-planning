@@ -190,9 +190,10 @@ function parseSINPISheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
-// Normalise un nom pour la comparaison : majuscules, espaces multiples, espaces autour des tirets
+// Normalise un nom pour la comparaison : majuscules, accents, tirets, espaces
 function normalizeName(str) {
   return str.trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // "È" → "E", "Ç" → "C", etc.
     .replace(/\s*-\s*/g, '-')  // "DARAN - STEFANI" → "DARAN-STEFANI"
     .replace(/\s+/g, ' ')
 }
