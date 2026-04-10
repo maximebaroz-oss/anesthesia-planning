@@ -62,9 +62,9 @@ function GlobalImportModal({ onClose }) {
         <div className="px-5 py-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Secteurs</p>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Unités</p>
               <div className="flex flex-col gap-2">
-                {IMPORT_SECTORS.map(t => (
+                {IMPORT_UNITS.map(t => (
                   <button key={t.id} onClick={() => setActive(t)}
                     style={{ background: t.bg, borderColor: t.color + '55' }}
                     className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
@@ -77,9 +77,9 @@ function GlobalImportModal({ onClose }) {
               </div>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Unités</p>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Secteurs</p>
               <div className="flex flex-col gap-2">
-                {IMPORT_UNITS.map(t => (
+                {IMPORT_SECTORS.map(t => (
                   <button key={t.id} onClick={() => setActive(t)}
                     style={{ background: t.bg, borderColor: t.color + '55' }}
                     className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
