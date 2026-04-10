@@ -64,7 +64,7 @@ export const ROOM_NAMES = {
   55: 'Antalgie chronique box 8',
   56: 'Antalgie chronique box 3/BOCHA 4',
   // Gynéco (Maternité)
-  57: 'MG1',
+  57: 'Sup/MG1',
   58: 'MG2 Interne',
   59: 'MG2 CDC',
   60: 'MG3 Tardif',

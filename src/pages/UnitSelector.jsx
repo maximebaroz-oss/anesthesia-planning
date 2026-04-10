@@ -9,12 +9,14 @@ import ImportPlanningModal from '../components/ImportPlanningModal'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
 
-const IMPORT_TARGETS = [
+const IMPORT_SECTORS = [
   { label: 'Hors-Bloc',     type: 'sector', id: 'hors-bloc',    color: '#3B82F6', bg: '#EFF6FF' },
   { label: 'Julliard',      type: 'sector', id: 'julliard',      color: '#0EA5E9', bg: '#F0F9FF' },
   { label: 'BOU',           type: 'sector', id: 'bou',           color: '#F59E0B', bg: '#FFFBEB' },
   { label: 'Traumato',      type: 'sector', id: 'traumatologie', color: '#6B7280', bg: '#F9FAFB' },
   { label: 'Prévost',       type: 'sector', id: 'prevost',       color: '#EC4899', bg: '#FDF2F8' },
+]
+const IMPORT_UNITS = [
   { label: 'DU HB',         type: 'unit',   id: 'duhb',          color: '#3B82F6', bg: '#EFF6FF' },
   { label: 'UNICAT',        type: 'unit',   id: 'unicat',        color: '#F97316', bg: '#FFF7ED' },
   { label: 'AMOPA',         type: 'unit',   id: 'amopa',         color: '#A855F7', bg: '#FAF5FF' },
@@ -58,20 +60,37 @@ function GlobalImportModal({ onClose }) {
           </button>
         </div>
         <div className="px-5 py-5">
-          <p className="text-xs mb-4" style={{ color: WARM.textSub }}>
-            Choisissez l'unité ou le secteur à importer
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            {IMPORT_TARGETS.map(t => (
-              <button key={t.id} onClick={() => setActive(t)}
-                style={{ background: t.bg, borderColor: t.color + '55' }}
-                className="border rounded-xl px-3 py-3 text-left hover:opacity-80 transition-opacity active:scale-95">
-                <div className="flex items-center gap-2">
-                  <FileSpreadsheet size={13} style={{ color: t.color }} />
-                  <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
-                </div>
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Secteurs</p>
+              <div className="flex flex-col gap-2">
+                {IMPORT_SECTORS.map(t => (
+                  <button key={t.id} onClick={() => setActive(t)}
+                    style={{ background: t.bg, borderColor: t.color + '55' }}
+                    className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet size={12} style={{ color: t.color }} />
+                      <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Unités</p>
+              <div className="flex flex-col gap-2">
+                {IMPORT_UNITS.map(t => (
+                  <button key={t.id} onClick={() => setActive(t)}
+                    style={{ background: t.bg, borderColor: t.color + '55' }}
+                    className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet size={12} style={{ color: t.color }} />
+                      <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

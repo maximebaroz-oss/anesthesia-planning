@@ -817,10 +817,15 @@ export default function Dashboard({ unit, sector, onBack }) {
   // SINPI : salles différentes selon le jour de la semaine
   const SINPI_WEEKDAY_ROOMS = [76, 77, 78, 79, 80, 81]
   const SINPI_WEEKEND_ROOMS = [82, 83, 84]
+  // Obstétrique : GARDE WE seulement le week-end, exclues en semaine
+  const OBSTETRIQUE_WEEKDAY_ROOMS = [64, 65, 66, 67, 70, 71, 72]
+  const OBSTETRIQUE_WEEKEND_ROOMS = [68, 69]
   function getRoomsForDate(dateStr) {
-    if (sector?.id !== 'sinpi') return ROOMS
     const dow = new Date(dateStr + 'T12:00:00').getDay() // 0=Dim, 6=Sam
-    return (dow === 0 || dow === 6) ? SINPI_WEEKEND_ROOMS : SINPI_WEEKDAY_ROOMS
+    const isWeekend = dow === 0 || dow === 6
+    if (sector?.id === 'sinpi') return isWeekend ? SINPI_WEEKEND_ROOMS : SINPI_WEEKDAY_ROOMS
+    if (sector?.id === 'obstetrique') return isWeekend ? OBSTETRIQUE_WEEKEND_ROOMS : OBSTETRIQUE_WEEKDAY_ROOMS
+    return ROOMS
   }
 
   // SINPI : ordre de priorité des grades
@@ -1358,13 +1363,13 @@ export default function Dashboard({ unit, sector, onBack }) {
                           : null}
                   </div>
                   {/* Superviseur + séparateur — cliquable pour aller en vue jour */}
-                  {!isDayClosed && (
+                  {!isDayClosed && !['gyneco', 'obstetrique'].includes(sector?.id) && (
                     <div className="cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
                       {(() => {
                         const sup = weekSupervisors[dateStr]
                         return (
                           <div className="mt-1 grid text-xs leading-tight" style={{ gridTemplateColumns: '100px 1fr' }}>
-                            <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>Superviseur</span>
+                            <span className="font-medium pr-1 break-words" style={{ color: T.textFaint }}>Superviseur</span>
                             <span className="font-semibold" style={{ color: sup ? T.text : T.textFaint }}>
                               {sup ? getLastName(sup.full_name) : '—'}
                             </span>
@@ -1381,9 +1386,6 @@ export default function Dashboard({ unit, sector, onBack }) {
                         const topLbl = top === 0 ? 'Adj' : top === 1 ? 'CDC' : 'Int'
                         return (
                           <div className="my-1">
-                            <div className="flex justify-end mb-0.5">
-                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>Sup</span>
-                            </div>
                             <div className="border-t-2" style={{ borderColor: T.accentBar }} />
                             <div className="flex justify-end mt-0.5">
                               <span className="text-xs font-bold" style={{ color: T.accentBar }}>{topLbl}</span>
@@ -1429,7 +1431,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                                   </div>
                                 )}
                                 <div className="grid text-xs leading-tight mb-0.5" style={{ gridTemplateColumns: '100px 1fr' }}>
-                                  <span className="font-medium truncate pr-1" style={{ color: T.textFaint }}>
+                                  <span className="font-medium pr-1 break-words" style={{ color: T.textFaint }}>
                                     {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                                   </span>
                                   <div className="flex flex-wrap gap-x-1.5">
