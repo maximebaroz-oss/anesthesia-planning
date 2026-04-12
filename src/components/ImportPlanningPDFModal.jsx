@@ -27,9 +27,23 @@ const PDF_ROWS = [
   { re: /^OPHTALMOLOGIE/i,                            roomId: 73, sectorId: 'ophtalmo' },
 ]
 
-// All day keys including weekend
+// Clés canoniques des jours (formes longues)
 const ALL_DAY_KEYS = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE']
 const WORKDAY_KEYS  = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
+// Alias abréviés → clé canonique (le PDF peut utiliser SAM/DIM ou SAMEDI/DIMANCHE)
+const DAY_ALIASES = { 'SAM': 'SAMEDI', 'DIM': 'DIMANCHE' }
+
+// Retourne la clé canonique si le texte correspond à un jour (forme longue ou abrégée)
+function matchDayKey(text) {
+  const u = text.trim().toUpperCase()
+  for (const key of ALL_DAY_KEYS) {
+    if (u === key || u.startsWith(key + ' ')) return key
+  }
+  for (const [alias, canonical] of Object.entries(DAY_ALIASES)) {
+    if (u === alias || u.startsWith(alias + ' ')) return canonical
+  }
+  return null
+}
 
 const FR_MONTHS = {
   JANVIER:1, FEVRIER:2, MARS:3, AVRIL:4, MAI:5, JUIN:6,
@@ -177,19 +191,15 @@ async function parsePDF(file, profiles) {
   const colDates   = {}  // dayKey → dateStr
 
   for (const key of ALL_DAY_KEYS) {
-    // Find items whose text starts with this day key (e.g. "LUNDI 6 AVRIL" starts with "LUNDI")
-    const matches = items.filter(it => {
-      const u = it.str.toUpperCase().trim()
-      return u === key || u.startsWith(key + ' ')
-    })
-
+    // Cherche tous les items correspondant à ce jour (forme longue ou abrégée)
+    const matches = items.filter(it => matchDayKey(it.str) === key)
     if (matches.length === 0) continue
 
-    // Take the topmost occurrence (highest y in PDF coord)
+    // Prendre l'occurrence la plus haute (y max = haut de page en coord PDF)
     const topmost = matches.reduce((a, b) => a.y > b.y ? a : b)
     colCenters[key] = topmost.x
 
-    // Extract date from same item text
+    // Extraire la date depuis le texte de l'item
     const text = topmost.str.toUpperCase()
     const m = text.match(/(\d{1,2})\s+([A-ZÉÈÊÀÛÔÙÎ]+)/)
     if (m) {
@@ -197,7 +207,7 @@ async function parsePDF(file, profiles) {
       if (dateStr) { colDates[key] = dateStr; continue }
     }
 
-    // Fallback: look for nearby items with digit + month (same y ±5)
+    // Fallback : chercher date dans les items proches (même y ±5)
     const nearby = items.filter(it =>
       Math.abs(it.y - topmost.y) <= 5 &&
       Math.abs(it.x - topmost.x) < 60
