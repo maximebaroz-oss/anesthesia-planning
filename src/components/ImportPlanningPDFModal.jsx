@@ -211,9 +211,9 @@ async function parsePDF(file, profiles) {
     }
   }
 
-  const foundDays = WORKDAY_KEYS.filter(k => colCenters[k] != null)
+  const foundDays = ALL_DAY_KEYS.filter(k => colCenters[k] != null)
   if (foundDays.length === 0) {
-    return { error: 'Impossible de détecter les colonnes (LUNDI/MARDI…). Vérifiez que le fichier est bien le planning Maternité.' }
+    return { error: 'Impossible de détecter les colonnes (LUNDI/SAM…). Vérifiez que le fichier est bien le planning Maternité.' }
   }
 
   // Sort found days by x
