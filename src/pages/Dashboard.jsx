@@ -1266,20 +1266,19 @@ export default function Dashboard({ unit, sector, onBack }) {
             )}
             {canManage && (
               <>
-                {['duhb', 'unicat', 'amopa', 'sinpi'].includes(unit?.id) && (
-                  <button onClick={() => setShowUnitImport(true)}
-                    className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-                    style={{ background: T.accentBar, color: '#fff' }}>
-                    <FileSpreadsheet size={13} />
-                    Import {unit?.name}
-                  </button>
-                )}
-                {['gyneco', 'obstetrique', 'ophtalmo'].includes(sector?.id) && (
+                {['gyneco', 'obstetrique', 'ophtalmo'].includes(sector?.id) ? (
                   <button onClick={() => setShowPDFImport(true)}
                     className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
                     style={{ background: T.accentBar, color: '#fff' }}>
                     <FileText size={13} />
                     Import PDF
+                  </button>
+                ) : (
+                  <button onClick={() => setShowUnitImport(true)}
+                    className="flex items-center gap-1.5 transition-opacity hover:opacity-70 text-xs font-medium px-2.5 py-1.5 rounded-lg"
+                    style={{ background: T.accentBar, color: '#fff' }}>
+                    <FileSpreadsheet size={13} />
+                    Import {sector?.name ?? unit?.name}
                   </button>
                 )}
               </>
