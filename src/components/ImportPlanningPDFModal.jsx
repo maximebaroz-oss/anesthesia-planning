@@ -27,8 +27,8 @@ const PDF_ROWS = [
   { re: /^OPHTALMOLOGIE/i,                            roomId: 73, sectorId: 'ophtalmo' },
 ]
 
-// All day keys including weekend (we only import LUN-VEN)
-const ALL_DAY_KEYS = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAM', 'DIM']
+// All day keys including weekend
+const ALL_DAY_KEYS = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE']
 const WORKDAY_KEYS  = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
 
 const FR_MONTHS = {
@@ -110,7 +110,7 @@ const SKIP_WORDS = new Set([
   'TÉLEC', 'TELEC', 'ONCOSENO', 'ONCOSÉNO', 'INFO', 'PÉRI', 'PERI',
   'TARDIF', 'SENIOR', 'HEURE', 'DA', 'VINCI', 'PAS', 'DE', 'FERME', 'FERMÉ',
   'PIQUET', 'GARDE', 'SOIR', 'JOUR', 'NUIT', 'ISA', 'CDC', 'CHU',
-  'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAM', 'DIM',
+  'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAM', 'DIM', 'SAMEDI', 'DIMANCHE',
 ])
 
 function shouldSkip(str) {
