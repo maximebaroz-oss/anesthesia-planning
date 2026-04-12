@@ -28,7 +28,7 @@ const SECTOR_STYLES = {
 }
 
 // Unités supportant l'import Excel global
-const UNIT_IMPORTS = new Set(['duhb', 'unicat', 'amopa', 'sinpi'])
+const UNIT_IMPORTS = new Set(['duhb', 'unicat', 'amopa', 'sinpi', 'extop'])
 // Unités supportant l'import PDF
 const UNIT_PDF_IMPORTS = new Set(['maternite'])
 

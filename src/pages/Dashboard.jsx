@@ -859,7 +859,7 @@ export default function Dashboard({ unit, sector, onBack }) {
           : sector?.id === 'gyneco'           ? SOFTGREEN_THEME
           : sector?.id === 'obstetrique'      ? MAUVE_THEME
           : sector?.id === 'ophtalmo'         ? GRAY_THEME
-          : sector?.id === 'extop'            ? SKY_THEME
+          : sector?.id === 'extop'            ? GRAY_THEME
           : unit?.id    === 'sinpi'           ? SALMON_THEME
           : unit?.id    === 'pediatrie'       ? YELLOW_THEME
           : WARM_THEME
