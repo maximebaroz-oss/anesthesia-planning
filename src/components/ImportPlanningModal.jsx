@@ -7,6 +7,19 @@ import { useAuth } from '../contexts/AuthContext'
 import { WARM, SKY } from '../config/theme'
 import { formatDateKey } from '../config/constants'
 
+// EXTOP row index (0-based) → { roomId, label, type }
+// ⚠️ Ajuster rowIdx selon la structure réelle du fichier Excel EXTOP
+const EXTOP_ROWS = [
+  { rowIdx: 1, type: 'supervisor', label: 'Superviseur EXTOP', roomId: null },
+  { rowIdx: 2, type: 'assignment', label: 'Salle 1',           roomId: 86 },
+  { rowIdx: 3, type: 'assignment', label: 'Salle 2',           roomId: 87 },
+  { rowIdx: 4, type: 'assignment', label: 'Salle 3',           roomId: 88 },
+  { rowIdx: 5, type: 'assignment', label: 'Salle 4',           roomId: 89 },
+  { rowIdx: 6, type: 'assignment', label: 'Tardif Cadre',      roomId: 90 },
+  { rowIdx: 7, type: 'assignment', label: 'Consult BOX 2 OCL', roomId: 91 },
+  { rowIdx: 8, type: 'assignment', label: 'Consult BOX 3 OCL', roomId: 92 },
+]
+
 // HB row index (0-based) → { roomId, label }
 const HB_ROWS = [
   { rowIdx: 1, type: 'supervisor', label: 'Superviseur HB', roomId: null },
@@ -265,7 +278,8 @@ function parseDUCell(text) {
   return { activity: activityNorm, closingTime }
 }
 
-function parseHBSheet(ws, rows, profiles) {
+// Parser générique pour les feuilles au format HB (jours en colonnes 1-5, salles en lignes)
+function parseRowBasedSheet(ws, rows, profiles, rowDefs, sectorId) {
   const headerRow = rows[0] ?? []
   const year = new Date().getFullYear()
   const days = [1, 2, 3, 4, 5].map(colIdx => ({
@@ -277,16 +291,15 @@ function parseHBSheet(ws, rows, profiles) {
 
   const entries = []
   for (const day of days) {
-    // Colonne grisée = jour férié
     if (isColumnGrayed(ws, day.colIdx)) {
       entries.push({
         date: day.date, dayLabel: day.header,
         rowLabel: 'Journée', excelName: '🔴 Jour férié',
-        type: 'day_closure', roomId: null, profile: null,
+        type: 'day_closure', roomId: null, profile: null, sectorId,
       })
       continue
     }
-    for (const { rowIdx, type, label, roomId } of HB_ROWS) {
+    for (const { rowIdx, type, label, roomId } of rowDefs) {
       const raw = String(rows[rowIdx]?.[day.colIdx] ?? '').trim()
       if (!raw) continue
       for (const namePart of splitCellNames(raw)) {
@@ -294,12 +307,16 @@ function parseHBSheet(ws, rows, profiles) {
           date: day.date, dayLabel: day.header,
           rowLabel: label, excelName: namePart,
           profile: matchProfile(namePart, profiles),
-          type, roomId,
+          type, roomId, sectorId,
         })
       }
     }
   }
   return { entries, weekLabel: String(headerRow[0] ?? '') }
+}
+
+function parseHBSheet(ws, rows, profiles) {
+  return parseRowBasedSheet(ws, rows, profiles, HB_ROWS, 'hors-bloc')
 }
 
 // Vérifie si une colonne est grisée (= jour férié dans le fichier Excel)
@@ -574,6 +591,7 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
   const isUnitImport  = unit?.id === 'unicat'
   const isAmopaImport = unit?.id === 'amopa'
   const isSinpiImport = unit?.id === 'sinpi' || sector?.id === 'sinpi'
+  const isExtopImport = sector?.id === 'extop' || unit?.id === 'extop'
   const isAmopaSector = ['bocha-amopa', 'orl-maxfa-plastie', 'antalgie'].includes(sector?.id)
   const isAmopaAny    = isAmopaImport || isAmopaSector
   const isJulliard    = sector?.id === 'julliard'
@@ -585,11 +603,13 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
                       : isJulliard    ? 'Julliard'
                       : isAmopaSector ? (sector?.name ?? 'AMOPA')
                       : isFeuil1      ? (sector?.name ?? 'BOU')
+                      : isExtopImport ? 'EXTOP'
                       : 'HB'
   const sheetName     = isSinpiImport ? 'HEBDO_REMPLI'
                       : isAmopaAny    ? 'semaine'
                       : isJulliard    ? 'DU'
                       : isFeuil1      ? 'Feuil1'
+                      : isExtopImport ? 'HB'   // à ajuster selon le vrai nom d'onglet EXTOP
                       : 'HB'
 
   async function handleFile(e) {
@@ -662,6 +682,8 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
         }
       } else if (isFeuil1) {
         result = parseBOUSheet(wb, rows, profiles, sector?.id)
+      } else if (isExtopImport) {
+        result = parseRowBasedSheet(ws, rows, profiles, EXTOP_ROWS, 'extop')
       } else {
         result = parseHBSheet(ws, rows, profiles)
       }

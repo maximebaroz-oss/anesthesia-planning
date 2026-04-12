@@ -96,6 +96,14 @@ export const ROOM_NAMES = {
   83: 'WE S2 07h-17h',
   84: 'WE Nuit 19h-07h30',
   85: 'Piquet Adjoint',
+  // EXTOP
+  86: 'Salle 1',
+  87: 'Salle 2',
+  88: 'Salle 3',
+  89: 'Salle 4',
+  90: 'Tardif Cadre',
+  91: 'Consult BOX 2 OCL',
+  92: 'Consult BOX 3 OCL',
 }
 
 // Abréviations (listes, badges)

@@ -269,7 +269,9 @@ function PiquetCard({ date, assignments, allProfiles, canManage, theme, onRefres
 // Salles sans ISA
 const NO_ISA_ROOMS = new Set([9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
   // SINPI
-  74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85])
+  74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
+  // EXTOP
+  86, 87, 88, 89, 90, 91, 92])
 
 const SECTOR_ROOMS = {
   'hors-bloc':         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -287,6 +289,8 @@ const SECTOR_ROOMS = {
   'bocha-amopa':       [38, 39, 40, 41, 42],
   'orl-maxfa-plastie': [43, 44, 45, 46, 47, 48, 49],
   'antalgie':          [50, 51, 52, 53, 54, 55, 56],
+  // EXTOP
+  'extop':             [86, 87, 88, 89, 90, 91, 92],
 }
 
 
@@ -855,6 +859,7 @@ export default function Dashboard({ unit, sector, onBack }) {
           : sector?.id === 'gyneco'           ? SOFTGREEN_THEME
           : sector?.id === 'obstetrique'      ? MAUVE_THEME
           : sector?.id === 'ophtalmo'         ? GRAY_THEME
+          : sector?.id === 'extop'            ? SKY_THEME
           : unit?.id    === 'sinpi'           ? SALMON_THEME
           : unit?.id    === 'pediatrie'       ? YELLOW_THEME
           : WARM_THEME

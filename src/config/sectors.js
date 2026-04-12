@@ -12,7 +12,9 @@ export const UNITS = [
     id: 'extop',
     name: 'EXTOP',
     color: 'violet',
-    sectors: [],
+    sectors: [
+      { id: 'extop', name: 'EXTOP' },
+    ],
   },
   {
     id: 'unicat',
