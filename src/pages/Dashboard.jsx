@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import RoomCard from '../components/RoomCard'
 import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME, SOFTGREEN as SOFTGREEN_THEME, GRAY as GRAY_THEME } from '../config/theme'
-import { ROOM_NAMES, DAY_NAMES, DAY_NAMES_7, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getFullWeekDays, getISOWeek, formatDateKey, formatLastFirst, getLastName } from '../config/constants'
+import { ROOM_NAMES, DAY_NAMES, DAY_NAMES_7, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getFullWeekDays, getISOWeek, formatDateKey, formatLastFirst, getLastName, isNightOrWE } from '../config/constants'
 import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
@@ -1429,7 +1429,11 @@ export default function Dashboard({ unit, sector, onBack }) {
                                     </div>
                                   </div>
                                 )}
-                                <div className="grid text-xs leading-tight mb-0.5" style={{ gridTemplateColumns: '100px 1fr' }}>
+                                <div className="grid text-xs leading-tight mb-0.5 rounded px-0.5"
+                                  style={{
+                                    gridTemplateColumns: '100px 1fr',
+                                    background: isNightOrWE(ROOM_NAMES[Number(roomId)]) ? T.accentBar + '20' : 'transparent',
+                                  }}>
                                   <span className="font-medium pr-1 break-words" style={{ color: T.textFaint }}>
                                     {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                                   </span>

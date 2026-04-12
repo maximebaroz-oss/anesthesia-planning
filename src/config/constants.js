@@ -116,6 +116,19 @@ export const GRADE_LABELS_FULL = {
   iade:         'ISA',
 }
 
+// Retourne true si la salle est un horaire de nuit ou de week-end
+export function isNightOrWE(roomName) {
+  if (!roomName) return false
+  const n = roomName.toLowerCase()
+  return n.includes('nuit') ||
+         n.includes('garde n') ||
+         n.includes('garde we') ||
+         n.startsWith('we ') ||
+         n.includes(' we ') ||
+         n.includes('soir') ||
+         n.includes('tardif')
+}
+
 export const DAY_NAMES   = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 export const DAY_NAMES_7 = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 

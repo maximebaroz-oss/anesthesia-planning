@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { UserPlus, X, Lock, Unlock, Phone, Clock, LogOut, CheckCircle, ChevronDown } from 'lucide-react'
-import { getCurrentTime, formatLastFirst } from '../config/constants'
+import { getCurrentTime, formatLastFirst, isNightOrWE } from '../config/constants'
 import { WARM, SKY } from '../config/theme'
 
 function isLate(timeStr) {
@@ -311,7 +311,7 @@ export default function RoomCard({
       }} className="rounded-2xl border overflow-hidden flex flex-col">
 
         {/* En-tête */}
-        <div style={{ background: T.cardHead, borderColor: T.border }}
+        <div style={{ background: isNightOrWE(roomName) ? T.accentBar + '28' : T.cardHead, borderColor: T.border }}
           className="px-3 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b cursor-pointer select-none"
           onClick={() => setCollapsed(v => !v)}>
           <div className="flex items-center gap-2 min-w-0">
