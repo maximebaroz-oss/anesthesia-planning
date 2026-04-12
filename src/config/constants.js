@@ -102,8 +102,8 @@ export const ROOM_NAMES = {
   88: 'Salle 3',
   89: 'Salle 4',
   90: 'Tardif Cadre',
-  91: 'Consult BOX 2 OCL',
-  92: 'Consult BOX 3 OCL',
+  91: 'Consult BOX 2 0CL',
+  92: 'Consult BOX 3 0CL',
 }
 
 // Abréviations (listes, badges)
