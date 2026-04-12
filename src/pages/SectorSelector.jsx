@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ArrowLeft, ChevronRight, FileSpreadsheet, Menu } from 'lucide-react'
+import { ArrowLeft, ChevronRight, FileSpreadsheet, FileText, Menu } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ImportPlanningModal from '../components/ImportPlanningModal'
+import ImportPlanningPDFModal from '../components/ImportPlanningPDFModal'
 import Sidebar from '../components/Sidebar'
 import { WARM } from '../config/theme'
 
@@ -26,22 +27,33 @@ const SECTOR_STYLES = {
   'antalgie':          { bg: '#FAF0F0', border: '#E0B8C0', dot: '#C87888', text: '#88404C' },
 }
 
-// Unités supportant l'import global de tous leurs secteurs
-const UNIT_IMPORTS = new Set(['duhb', 'unicat', 'amopa'])
+// Unités supportant l'import Excel global
+const UNIT_IMPORTS = new Set(['duhb', 'unicat', 'amopa', 'sinpi'])
+// Unités supportant l'import PDF
+const UNIT_PDF_IMPORTS = new Set(['maternite'])
 
 export default function SectorSelector({ unit, onSelect, onBack }) {
   const s = UNIT_STYLES[unit.id] ?? UNIT_STYLES.unicat
   const [showImport, setShowImport] = useState(false)
+  const [showPDFImport, setShowPDFImport] = useState(false)
   const [profiles, setProfiles] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const todayKey = new Date().toISOString().slice(0, 10)
 
   async function openUnitImport() {
     if (profiles.length === 0) {
-      const { data } = await supabase.from('profiles').select('*').eq('profession', 'medecin')
+      const { data } = await supabase.from('profiles').select('*')
       setProfiles(data ?? [])
     }
     setShowImport(true)
+  }
+
+  async function openPDFImport() {
+    if (profiles.length === 0) {
+      const { data } = await supabase.from('profiles').select('*')
+      setProfiles(data ?? [])
+    }
+    setShowPDFImport(true)
   }
 
   return (
@@ -71,6 +83,14 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
                 style={{ background: s.dot }}>
                 <FileSpreadsheet size={14} />
                 Import {unit.name}
+              </button>
+            )}
+            {UNIT_PDF_IMPORTS.has(unit.id) && (
+              <button onClick={openPDFImport}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white transition-opacity hover:opacity-80 touch-manipulation"
+                style={{ background: s.dot }}>
+                <FileText size={14} />
+                Import PDF
               </button>
             )}
             <button onClick={() => setSidebarOpen(true)}
@@ -115,6 +135,14 @@ export default function SectorSelector({ unit, onSelect, onBack }) {
           unit={unit}
           onClose={() => setShowImport(false)}
           onImported={() => setShowImport(false)}
+        />
+      )}
+
+      {showPDFImport && (
+        <ImportPlanningPDFModal
+          profiles={profiles}
+          onClose={() => setShowPDFImport(false)}
+          onImported={() => setShowPDFImport(false)}
         />
       )}
     </div>
