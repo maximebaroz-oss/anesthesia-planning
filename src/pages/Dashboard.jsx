@@ -1338,10 +1338,11 @@ export default function Dashboard({ unit, sector, onBack }) {
               }).filter(([, g]) => g.unchanged.length + g.added.length + g.removed.length > 0)
               const totalPeople = new Set(dayAsgn.map(a => a.user_id)).size
               const dayLabel = `${DAY_LABELS[i]} ${day.getDate()}`
+              const isWeekend = day.getDay() === 0 || day.getDay() === 6
               return (
                 <div key={i}
                   style={{
-                    background: T.cardBg,
+                    background: isWeekend ? T.surface : T.cardBg,
                     borderColor: isToday ? T.accentBar : T.border,
                     boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
                   }}
