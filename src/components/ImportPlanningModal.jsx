@@ -16,8 +16,8 @@ const EXTOP_ROWS = [
   { rowIdx: 4, type: 'assignment', label: 'Salle 3',           roomId: 88 },
   { rowIdx: 5, type: 'assignment', label: 'Salle 4',           roomId: 89 },
   { rowIdx: 6, type: 'assignment', label: 'Tardif Cadre',      roomId: 90 },
-  { rowIdx: 7, type: 'assignment', label: 'Consult BOX 2 OCL', roomId: 91 },
-  { rowIdx: 8, type: 'assignment', label: 'Consult BOX 3 OCL', roomId: 92 },
+  { rowIdx: 7, type: 'assignment', label: 'Consult BOX 2 0CL', roomId: 91 },
+  { rowIdx: 8, type: 'assignment', label: 'Consult BOX 3 0CL', roomId: 92 },
 ]
 
 // HB row index (0-based) → { roomId, label }
