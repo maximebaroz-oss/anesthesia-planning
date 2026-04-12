@@ -811,7 +811,7 @@ export default function Dashboard({ unit, sector, onBack }) {
   const canManage = profile?.is_admin || profile?.grade === 'adjoint' || profile?.grade === 'chef_clinique'
   const ROOMS = SECTOR_ROOMS[sector?.id] ?? SECTOR_ROOMS['hors-bloc']
   // Secteurs avec gardes le week-end → vue 7 jours
-  const isFullWeek = ['sinpi', 'obstetrique', 'gyneco', 'ophtalmo'].includes(sector?.id)
+  const isFullWeek = ['sinpi', 'obstetrique'].includes(sector?.id)
   const DAY_LABELS = isFullWeek ? DAY_NAMES_7 : DAY_NAMES
 
   // SINPI : salles différentes selon le jour de la semaine
