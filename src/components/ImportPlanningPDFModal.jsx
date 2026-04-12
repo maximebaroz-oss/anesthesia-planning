@@ -79,7 +79,6 @@ function matchProfile(rawName, profiles) {
   if (!name || name.length < 2) return null
 
   return profiles.find(p => {
-    if (p.profession !== 'medecin') return false
     const up    = p.full_name.toUpperCase()
     const upDA  = deAccent(up)
     const parts   = up.split(' ')
