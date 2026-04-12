@@ -817,9 +817,9 @@ export default function Dashboard({ unit, sector, onBack }) {
   // SINPI : salles différentes selon le jour de la semaine
   const SINPI_WEEKDAY_ROOMS = [76, 77, 78, 79, 80, 81]
   const SINPI_WEEKEND_ROOMS = [82, 83, 84]
-  // Obstétrique : GARDE WE seulement le week-end, exclues en semaine
+  // Obstétrique : GARDE WE + Garde N le week-end, exclues en semaine
   const OBSTETRIQUE_WEEKDAY_ROOMS = [64, 65, 66, 67, 70, 71, 72]
-  const OBSTETRIQUE_WEEKEND_ROOMS = [68, 69]
+  const OBSTETRIQUE_WEEKEND_ROOMS = [68, 69, 70, 71]
   function getRoomsForDate(dateStr) {
     const dow = new Date(dateStr + 'T12:00:00').getDay() // 0=Dim, 6=Sam
     const isWeekend = dow === 0 || dow === 6

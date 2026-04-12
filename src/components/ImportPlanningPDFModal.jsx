@@ -225,6 +225,30 @@ async function parsePDF(file, profiles) {
     return { error: 'Impossible de détecter les colonnes (LUNDI/SAM…). Vérifiez que le fichier est bien le planning Maternité.' }
   }
 
+  // Fallback : calculer les dates SAM/DIM depuis VENDREDI ou JEUDI si non extraites du texte
+  // (le PDF peut afficher "SAM 11" sans mois, ce qui empêche l'extraction directe)
+  const weekdayOrder = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
+  const offsets = { LUNDI: 0, MARDI: 1, MERCREDI: 2, JEUDI: 3, VENDREDI: 4, SAMEDI: 5, DIMANCHE: 6 }
+  // Trouver une date de référence (n'importe quel jour de semaine détecté avec date)
+  let refMonday = null
+  for (const key of weekdayOrder) {
+    if (colDates[key]) {
+      const d = new Date(colDates[key] + 'T12:00:00')
+      d.setDate(d.getDate() - offsets[key]) // revenir au lundi
+      refMonday = d
+      break
+    }
+  }
+  if (refMonday) {
+    for (const key of ['SAMEDI', 'DIMANCHE']) {
+      if (colCenters[key] && !colDates[key]) {
+        const d = new Date(refMonday)
+        d.setDate(refMonday.getDate() + offsets[key])
+        colDates[key] = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      }
+    }
+  }
+
   // Sort found days by x
   const sortedDays = foundDays.slice().sort((a, b) => colCenters[a] - colCenters[b])
   const firstColX   = colCenters[sortedDays[0]]
