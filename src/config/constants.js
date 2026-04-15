@@ -140,21 +140,33 @@ export function isNightOrWE(roomName) {
 export const DAY_NAMES   = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 export const DAY_NAMES_7 = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
-// Formate "Prénom Nom" → "NOM Prénom" (last word = last name, uppercase)
+// Particules nobiliaires françaises (appartiennent au nom de famille)
+const PARTICLES = new Set(['de', 'du', 'des', 'le', 'la', 'les', "d'"])
+
+// Trouve l'index où commence le nom de famille (première particule ou dernier mot)
+function lastNameStart(parts) {
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (PARTICLES.has(parts[i].toLowerCase())) return i
+  }
+  return parts.length - 1
+}
+
+// Formate "Prénom [Particule] Nom" → "NOM Prénom" (uppercase)
 export function formatLastFirst(fullName) {
   if (!fullName) return ''
   const parts = fullName.trim().split(' ')
   if (parts.length === 1) return parts[0].toUpperCase()
-  const last  = parts[parts.length - 1].toUpperCase()
-  const first = parts.slice(0, -1).join(' ')
+  const idx   = lastNameStart(parts)
+  const last  = parts.slice(idx).join(' ').toUpperCase()
+  const first = parts.slice(0, idx).join(' ')
   return `${last} ${first}`
 }
 
-// Extrait uniquement le nom de famille (dernier mot, uppercase) pour le tri
+// Extrait le nom de famille (avec particule, uppercase) pour le tri
 export function getLastName(fullName) {
   if (!fullName) return ''
   const parts = fullName.trim().split(' ')
-  return parts[parts.length - 1].toUpperCase()
+  return parts.slice(lastNameStart(parts)).join(' ').toUpperCase()
 }
 
 export function getCurrentTime() {
