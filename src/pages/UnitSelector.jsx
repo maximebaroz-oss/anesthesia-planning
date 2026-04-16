@@ -25,6 +25,7 @@ const IMPORT_UNITS = [
   { label: 'UNICAT',     type: 'unit', mode: 'excel', id: 'unicat',     color: '#F97316', bg: '#FFF7ED' },
   { label: 'SINPI',      type: 'unit', mode: 'excel', id: 'sinpi',      color: '#D08888', bg: '#FAF0EF' },
   { label: 'Maternité',  type: 'unit', mode: 'pdf',   id: 'maternite',  color: '#22C55E', bg: '#F0FFF4' },
+  { label: 'Pédiatrie',  type: 'unit', mode: 'excel', id: 'pediatrie',  color: '#CA8A04', bg: '#FEFCE8' },
   { label: 'AMOPA',      type: 'unit', mode: 'excel', id: 'amopa',      color: '#A855F7', bg: '#FAF5FF' },
 ]
 
