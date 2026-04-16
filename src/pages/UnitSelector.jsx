@@ -83,51 +83,77 @@ function detectFromWorkbook(wb) {
 }
 
 function GlobalImportModal({ onClose }) {
-  const [profiles,   setProfiles]   = useState([])
-  const [detected,   setDetected]   = useState(null)   // { mode, unitId?, sectorId?, file }
-  const [detecting,  setDetecting]  = useState(false)
-  const [noDetect,   setNoDetect]   = useState(false)
-  const [showGSM,    setShowGSM]    = useState(false)
+  const [profiles,  setProfiles]  = useState([])
+  const [queue,     setQueue]     = useState([])   // fichiers détectés à traiter
+  const [queueIdx,  setQueueIdx]  = useState(0)
+  const [detecting, setDetecting] = useState(false)
+  const [failed,    setFailed]    = useState([])   // noms de fichiers non détectés
+  const [showGSM,   setShowGSM]   = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
     supabase.from('profiles').select('*').then(({ data }) => setProfiles(data ?? []))
   }, [])
 
-  async function handleFile(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // PDF → toujours Maternité
-    if (file.name.toLowerCase().endsWith('.pdf')) {
-      setDetected({ mode: 'pdf', file })
-      return
-    }
+  async function handleFiles(e) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    // Reset l'input pour permettre de re-sélectionner les mêmes fichiers
+    e.target.value = ''
 
     setDetecting(true)
-    try {
-      const buf = await file.arrayBuffer()
-      const wb  = XLSX.read(buf, { type: 'array' })
-      const res = detectFromWorkbook(wb)
-      if (res) setDetected({ mode: 'excel', ...res, file })
-      else     setNoDetect(true)
-    } catch { setNoDetect(true) }
+    const detected = []
+    const bad      = []
+
+    for (const file of files) {
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        detected.push({ mode: 'pdf', file })
+        continue
+      }
+      try {
+        const buf = await file.arrayBuffer()
+        const wb  = XLSX.read(buf, { type: 'array' })
+        const res = detectFromWorkbook(wb)
+        if (res) detected.push({ mode: 'excel', ...res, file })
+        else     bad.push(file.name)
+      } catch { bad.push(file.name) }
+    }
+
     setDetecting(false)
+    setFailed(bad)
+    if (detected.length) { setQueue(detected); setQueueIdx(0) }
+  }
+
+  // Passe au fichier suivant, ou ferme si c'était le dernier
+  function next() {
+    const nextIdx = queueIdx + 1
+    if (nextIdx < queue.length) setQueueIdx(nextIdx)
+    else onClose()
   }
 
   if (showGSM)
     return <ImportGSMModal onClose={() => setShowGSM(false)} />
 
-  if (detected?.mode === 'pdf')
-    return <ImportPlanningPDFModal profiles={profiles} preloadedFile={detected.file}
-             theme={WARM} onClose={() => setDetected(null)} onImported={onClose} />
+  // Traitement en cours d'un fichier de la file
+  const current = queue[queueIdx]
+  if (current) {
+    const total  = queue.length
+    const label  = total > 1 ? `${queueIdx + 1} / ${total}` : null
 
-  if (detected?.mode === 'excel') {
-    const unit   = detected.unitId   ? { id: detected.unitId,   name: UNIT_NAMES[detected.unitId]     } : undefined
-    const sector = detected.sectorId ? { id: detected.sectorId, name: SECTOR_NAMES[detected.sectorId] } : undefined
-    return <ImportPlanningModal profiles={profiles} unit={unit} sector={sector}
-             preloadedFile={detected.file} theme={WARM}
-             onClose={() => setDetected(null)} onImported={onClose} />
+    if (current.mode === 'pdf')
+      return <>
+        {label && <QueueBadge label={label} />}
+        <ImportPlanningPDFModal profiles={profiles} preloadedFile={current.file}
+          theme={WARM} onClose={next} onImported={next} />
+      </>
+
+    const unit   = current.unitId   ? { id: current.unitId,   name: UNIT_NAMES[current.unitId]     } : undefined
+    const sector = current.sectorId ? { id: current.sectorId, name: SECTOR_NAMES[current.sectorId] } : undefined
+    return <>
+      {label && <QueueBadge label={label} />}
+      <ImportPlanningModal profiles={profiles} unit={unit} sector={sector}
+        preloadedFile={current.file} theme={WARM} onClose={next} onImported={next} />
+    </>
   }
 
   return (
@@ -163,7 +189,7 @@ function GlobalImportModal({ onClose }) {
             </div>
           </button>
 
-          {/* Import Planning — détection automatique */}
+          {/* Import Planning — multi-fichiers */}
           <button onClick={() => fileRef.current?.click()} disabled={detecting}
             style={{ background: WARM.surface, borderColor: WARM.border }}
             className="border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 hover:opacity-80 transition-opacity active:scale-95 disabled:opacity-50">
@@ -174,20 +200,33 @@ function GlobalImportModal({ onClose }) {
               {detecting ? 'Détection en cours…' : 'Import planning'}
             </p>
             <p className="text-xs text-center" style={{ color: WARM.textFaint }}>
-              Excel ou PDF · secteur détecté automatiquement
+              Excel ou PDF · un ou plusieurs fichiers · secteur auto-détecté
             </p>
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.pdf"
-            className="hidden" onChange={handleFile} />
+            multiple className="hidden" onChange={handleFiles} />
 
-          {/* Erreur de détection */}
-          {noDetect && (
-            <p className="text-xs text-center px-2 py-2 rounded-lg"
-              style={{ background: '#FEF3C7', color: '#92400E' }}>
-              Fichier non reconnu — vérifier que c'est un planning SINPI, DUHB, UNICAT, AMOPA, EXTOP ou Maternité.
-            </p>
+          {/* Fichiers non reconnus */}
+          {failed.length > 0 && (
+            <div className="text-xs px-3 py-2 rounded-lg" style={{ background: '#FEF3C7', color: '#92400E' }}>
+              <p className="font-semibold mb-1">Non reconnu{failed.length > 1 ? 's' : ''} :</p>
+              {failed.map(n => <p key={n}>· {n}</p>)}
+            </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Badge flottant en haut pendant le traitement d'une file de fichiers
+function QueueBadge({ label }) {
+  return (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-lg text-xs font-semibold text-white"
+        style={{ background: '#1E293B' }}>
+        <FileSpreadsheet size={12} />
+        Fichier {label}
       </div>
     </div>
   )

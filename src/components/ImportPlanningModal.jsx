@@ -150,9 +150,28 @@ function parseSINPISheet(ws, rows, profiles) {
   const headerRow = rows[0] ?? []
   const year = new Date().getFullYear()
 
-  // Only column D (index 3) has a full date like "Lundi 6 avril"
-  // Columns E-J only have the day number like "Mardi 7" — derive from Monday
-  const mondayDate = parseDateFromHeader(String(headerRow[3] ?? ''), year)
+  // Colonne D (index 3) : "Lundi 30 Mars" ou juste "Lundi 20" (sans mois)
+  // Colonne A (index 0) : "Semaine du 20 au 26 avril 2026" — contient mois + année
+  let mondayDate = parseDateFromHeader(String(headerRow[3] ?? ''), year)
+
+  // Fallback : extraire mois/année depuis la cellule A et le numéro de jour depuis D
+  if (!mondayDate) {
+    const weekLabel = normalizeName(String(headerRow[0] ?? '')) // accents supprimés, majuscules
+    let month = null, refYear = year
+    for (const [key, val] of Object.entries(FR_MONTHS)) {
+      if (weekLabel.includes(key)) { month = val; break }
+    }
+    const yearMatch = weekLabel.match(/(\d{4})/)
+    if (yearMatch) refYear = parseInt(yearMatch[1])
+    if (month) {
+      const dayMatch = String(headerRow[3] ?? '').match(/(\d{1,2})/)
+      if (dayMatch) {
+        const d = new Date(refYear, month - 1, parseInt(dayMatch[1]))
+        mondayDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      }
+    }
+  }
+
   if (!mondayDate) return null
 
   const monday = new Date(mondayDate + 'T12:00:00')
@@ -220,9 +239,10 @@ function matchProfile(excelName, profiles) {
   }) ?? null
 }
 
+// Toutes les formes sans accents (normalizeName supprime les diacritiques)
 const FR_MONTHS = {
-  JANVIER:1, FEVRIER:2, 'FÉVRIER':2, MARS:3, AVRIL:4, MAI:5, JUIN:6,
-  JUILLET:7, 'AOÛT':8, AOUT:8, SEPTEMBRE:9, OCTOBRE:10, NOVEMBRE:11, DECEMBRE:12, 'DÉCEMBRE':12,
+  JANVIER:1, FEVRIER:2, MARS:3, AVRIL:4, MAI:5, JUIN:6,
+  JUILLET:7, AOUT:8, SEPTEMBRE:9, OCTOBRE:10, NOVEMBRE:11, DECEMBRE:12,
 }
 
 function parseDateFromHeader(header, year) {
