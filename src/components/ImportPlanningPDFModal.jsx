@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, Check, AlertTriangle, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -399,7 +399,7 @@ async function parsePDF(file, profiles) {
   return { assignments: deduped, unmatched, weekLabel, colDates, foundDays }
 }
 
-export default function ImportPlanningPDFModal({ profiles, theme, onClose, onImported }) {
+export default function ImportPlanningPDFModal({ profiles, theme, onClose, onImported, preloadedFile }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const fileRef = useRef(null)
@@ -408,9 +408,15 @@ export default function ImportPlanningPDFModal({ profiles, theme, onClose, onImp
   const [result,    setResult]    = useState(null)
   const [error,     setError]     = useState(null)
 
+  useEffect(() => { if (preloadedFile) processFile(preloadedFile) }, []) // eslint-disable-line
+
   async function handleFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
+    processFile(file)
+  }
+
+  async function processFile(file) {
     setParsing(true)
     setResult(null)
     setError(null)

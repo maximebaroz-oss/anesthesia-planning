@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Menu, Flame, FileSpreadsheet, FileText, X, LogOut, Phone } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Menu, Flame, FileSpreadsheet, X, LogOut, Phone, Upload, Loader } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
@@ -11,124 +12,181 @@ import ImportGSMModal from '../components/ImportGSMModal'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
 
-// excel = import Excel, pdf = import PDF
-const IMPORT_SECTORS = [
-  { label: 'Hors-Bloc',  type: 'sector', mode: 'excel', id: 'hors-bloc',    color: '#3B82F6', bg: '#EFF6FF' },
-  { label: 'Julliard',   type: 'sector', mode: 'excel', id: 'julliard',      color: '#0EA5E9', bg: '#F0F9FF' },
-  { label: 'BOU',        type: 'sector', mode: 'excel', id: 'bou',           color: '#F59E0B', bg: '#FFFBEB' },
-  { label: 'Traumato',   type: 'sector', mode: 'excel', id: 'traumatologie', color: '#6B7280', bg: '#F9FAFB' },
-  { label: 'Prévost',    type: 'sector', mode: 'excel', id: 'prevost',       color: '#EC4899', bg: '#FDF2F8' },
-]
-const IMPORT_UNITS = [
-  { label: 'DU HB',      type: 'unit', mode: 'excel', id: 'duhb',       color: '#3B82F6', bg: '#EFF6FF' },
-  { label: 'EXTOP',      type: 'unit', mode: 'excel', id: 'extop',      color: '#64748B', bg: '#F8FAFC' },
-  { label: 'UNICAT',     type: 'unit', mode: 'excel', id: 'unicat',     color: '#F97316', bg: '#FFF7ED' },
-  { label: 'SINPI',      type: 'unit', mode: 'excel', id: 'sinpi',      color: '#D08888', bg: '#FAF0EF' },
-  { label: 'Maternité',  type: 'unit', mode: 'pdf',   id: 'maternite',  color: '#22C55E', bg: '#F0FFF4' },
-  { label: 'Pédiatrie',  type: 'unit', mode: 'excel', id: 'pediatrie',  color: '#CA8A04', bg: '#FEFCE8' },
-  { label: 'AMOPA',      type: 'unit', mode: 'excel', id: 'amopa',      color: '#A855F7', bg: '#FAF5FF' },
-]
+// Noms lisibles pour l'affichage après détection
+const UNIT_NAMES   = { duhb:'DUHB', extop:'EXTOP', unicat:'UNICAT', sinpi:'SINPI', maternite:'Maternité', pediatrie:'Pédiatrie', amopa:'AMOPA' }
+const SECTOR_NAMES = { 'hors-bloc':'Hors Bloc', 'julliard':'Julliard', 'bou':'BOU', 'traumatologie':'Traumatologie', 'prevost':'Prévost', 'sinpi':'SINPI', 'extop':'EXTOP', 'bocha-amopa':'BOCHA', 'orl-maxfa-plastie':'ORL/MAX-FA/Plastie', 'antalgie':'Antalgie' }
+
+// Extrait tout le texte brut de toutes les feuilles du classeur
+function allSheetText(wb) {
+  return wb.SheetNames.map(name => {
+    const ws = wb.Sheets[name]
+    if (!ws) return ''
+    return Object.entries(ws)
+      .filter(([k]) => !k.startsWith('!'))
+      .map(([, c]) => String(c?.v ?? ''))
+      .join(' ')
+  }).join(' ').toLowerCase()
+}
+
+// Détecte automatiquement l'unité/secteur depuis le classeur Excel
+function detectFromWorkbook(wb) {
+  const sheets = wb.SheetNames.map(n => n.toUpperCase().trim())
+  const text   = allSheetText(wb)
+
+  // SINPI : onglet HEBDO_REMPLI
+  if (sheets.some(n => n.includes('HEBDO')))
+    return { unitId: 'sinpi', sectorId: 'sinpi' }
+
+  // AMOPA : onglet "semaine"
+  if (sheets.some(n => n.includes('SEMAINE'))) {
+    if (text.includes('antalgie'))           return { unitId: 'amopa', sectorId: 'antalgie' }
+    if (text.includes('belle-id') || text.includes('belle id') || text.includes('orl'))
+                                             return { unitId: 'amopa', sectorId: 'orl-maxfa-plastie' }
+    if (text.includes('bocha'))              return { unitId: 'amopa', sectorId: 'bocha-amopa' }
+    return { unitId: 'amopa', sectorId: null }
+  }
+
+  // DUHB : onglets HB + DU (ou juste DU)
+  const hasHB = sheets.some(n => n === 'HB')
+  const hasDU = sheets.some(n => n === 'DU')
+  if (hasHB && hasDU)  return { unitId: 'duhb',  sectorId: null }
+  if (hasDU)           return { unitId: 'duhb',  sectorId: 'julliard' }
+
+  // UNICAT : onglet Feuil1
+  if (sheets.some(n => n.startsWith('FEUIL'))) {
+    if (text.includes('nch') || text.includes('cvt') || text.includes('gibor'))
+                         return { unitId: 'unicat', sectorId: 'prevost' }
+    if (text.includes('traumato'))
+                         return { unitId: 'unicat', sectorId: 'traumatologie' }
+    if (text.includes('bou 1') || text.includes('bou 2') || text.includes('poly b'))
+                         return { unitId: 'unicat', sectorId: 'bou' }
+    return { unitId: 'unicat', sectorId: null }
+  }
+
+  // Onglet HB seul : Hors-Bloc ou EXTOP
+  if (hasHB) {
+    if (text.includes('extop') || text.includes('consult box') || text.includes('tardif cadre'))
+                         return { unitId: 'extop',  sectorId: 'extop' }
+    if (text.includes('gastro') || text.includes('broncho'))
+                         return { unitId: 'duhb',   sectorId: 'hors-bloc' }
+  }
+
+  // Détection par contenu brut (fallback)
+  if (text.includes('sinpi') || text.includes('sspi'))      return { unitId: 'sinpi',  sectorId: 'sinpi' }
+  if (text.includes('antalgie'))                            return { unitId: 'amopa',  sectorId: 'antalgie' }
+  if (text.includes('belle-id') || text.includes('belle id')) return { unitId: 'amopa', sectorId: 'orl-maxfa-plastie' }
+  if (text.includes('bocha'))                               return { unitId: 'amopa',  sectorId: 'bocha-amopa' }
+  if (text.includes('gastro') || text.includes('broncho'))  return { unitId: 'duhb',   sectorId: 'hors-bloc' }
+  if (text.includes('extop') || text.includes('consult box')) return { unitId: 'extop', sectorId: 'extop' }
+
+  return null // non détecté
+}
 
 function GlobalImportModal({ onClose }) {
-  const [profiles, setProfiles] = useState([])
-  const [active, setActive] = useState(null)
-  const [showGSM, setShowGSM] = useState(false)
+  const [profiles,   setProfiles]   = useState([])
+  const [detected,   setDetected]   = useState(null)   // { mode, unitId?, sectorId?, file }
+  const [detecting,  setDetecting]  = useState(false)
+  const [noDetect,   setNoDetect]   = useState(false)
+  const [showGSM,    setShowGSM]    = useState(false)
+  const fileRef = useRef(null)
 
   useEffect(() => {
     supabase.from('profiles').select('*').then(({ data }) => setProfiles(data ?? []))
   }, [])
 
-  if (showGSM) return <ImportGSMModal onClose={() => setShowGSM(false)} />
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-  if (active?.mode === 'pdf') {
-    return (
-      <ImportPlanningPDFModal
-        profiles={profiles}
-        onClose={() => setActive(null)}
-        onImported={() => setActive(null)}
-      />
-    )
+    // PDF → toujours Maternité
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      setDetected({ mode: 'pdf', file })
+      return
+    }
+
+    setDetecting(true)
+    try {
+      const buf = await file.arrayBuffer()
+      const wb  = XLSX.read(buf, { type: 'array' })
+      const res = detectFromWorkbook(wb)
+      if (res) setDetected({ mode: 'excel', ...res, file })
+      else     setNoDetect(true)
+    } catch { setNoDetect(true) }
+    setDetecting(false)
   }
 
-  if (active) {
-    return (
-      <ImportPlanningModal
-        profiles={profiles}
-        sector={active.type === 'sector' ? { id: active.id, name: active.label } : undefined}
-        unit={active.type === 'unit'   ? { id: active.id, name: active.label } : undefined}
-        theme={WARM}
-        onClose={() => setActive(null)}
-        onImported={() => setActive(null)}
-      />
-    )
+  if (showGSM)
+    return <ImportGSMModal onClose={() => setShowGSM(false)} />
+
+  if (detected?.mode === 'pdf')
+    return <ImportPlanningPDFModal profiles={profiles} preloadedFile={detected.file}
+             theme={WARM} onClose={() => setDetected(null)} onImported={onClose} />
+
+  if (detected?.mode === 'excel') {
+    const unit   = detected.unitId   ? { id: detected.unitId,   name: UNIT_NAMES[detected.unitId]     } : undefined
+    const sector = detected.sectorId ? { id: detected.sectorId, name: SECTOR_NAMES[detected.sectorId] } : undefined
+    return <ImportPlanningModal profiles={profiles} unit={unit} sector={sector}
+             preloadedFile={detected.file} theme={WARM}
+             onClose={() => setDetected(null)} onImported={onClose} />
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
       <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
-        className="border rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+        className="border rounded-2xl shadow-xl w-full max-w-xs overflow-hidden">
+
+        {/* Header */}
         <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
           className="px-5 py-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileSpreadsheet size={17} style={{ color: WARM.accentBar }} />
-            <h2 className="font-bold text-base" style={{ color: WARM.text }}>Import global</h2>
+            <h2 className="font-bold text-base" style={{ color: WARM.text }}>Import</h2>
           </div>
           <button onClick={onClose} style={{ color: WARM.textFaint }}
             className="p-1.5 hover:opacity-70 transition-opacity">
             <X size={18} />
           </button>
         </div>
-        <div className="px-5 py-5 flex flex-col gap-4">
 
-          {/* Bouton GSM — pleine largeur */}
+        <div className="px-5 py-5 flex flex-col gap-3">
+
+          {/* Import GSM */}
           <button onClick={() => setShowGSM(true)}
             style={{ background: '#F0FFF4', borderColor: '#6EE7B7' }}
-            className="border rounded-xl px-4 py-3 text-left hover:opacity-80 transition-opacity active:scale-95 flex items-center gap-3">
+            className="border rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity active:scale-95">
             <div style={{ background: '#D1FAE5' }} className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
               <Phone size={15} style={{ color: '#059669' }} />
             </div>
-            <div>
+            <div className="text-left">
               <p className="text-sm font-bold" style={{ color: '#065F46' }}>Import GSM</p>
-              <p className="text-xs" style={{ color: '#6EE7B7' === '#6EE7B7' ? '#047857' : '#047857' }}>
-                Mettre à jour les numéros depuis un fichier Excel
-              </p>
+              <p className="text-xs" style={{ color: '#047857' }}>Mettre à jour les numéros</p>
             </div>
           </button>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Unités</p>
-              <div className="flex flex-col gap-2">
-                {IMPORT_UNITS.map(t => (
-                  <button key={t.id} onClick={() => setActive(t)}
-                    style={{ background: t.bg, borderColor: t.color + '55' }}
-                    className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
-                    <div className="flex items-center gap-2">
-                      {t.mode === 'pdf'
-                        ? <FileText size={12} style={{ color: t.color }} />
-                        : <FileSpreadsheet size={12} style={{ color: t.color }} />}
-                      <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Secteurs</p>
-              <div className="flex flex-col gap-2">
-                {IMPORT_SECTORS.map(t => (
-                  <button key={t.id} onClick={() => setActive(t)}
-                    style={{ background: t.bg, borderColor: t.color + '55' }}
-                    className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
-                    <div className="flex items-center gap-2">
-                      <FileSpreadsheet size={12} style={{ color: t.color }} />
-                      <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* Import Planning — détection automatique */}
+          <button onClick={() => fileRef.current?.click()} disabled={detecting}
+            style={{ background: WARM.surface, borderColor: WARM.border }}
+            className="border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 hover:opacity-80 transition-opacity active:scale-95 disabled:opacity-50">
+            {detecting
+              ? <Loader size={22} style={{ color: WARM.accentBar }} className="animate-spin" />
+              : <Upload size={22} style={{ color: WARM.accentBar }} />}
+            <p className="text-sm font-semibold" style={{ color: WARM.text }}>
+              {detecting ? 'Détection en cours…' : 'Import planning'}
+            </p>
+            <p className="text-xs text-center" style={{ color: WARM.textFaint }}>
+              Excel ou PDF · secteur détecté automatiquement
+            </p>
+          </button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.pdf"
+            className="hidden" onChange={handleFile} />
+
+          {/* Erreur de détection */}
+          {noDetect && (
+            <p className="text-xs text-center px-2 py-2 rounded-lg"
+              style={{ background: '#FEF3C7', color: '#92400E' }}>
+              Fichier non reconnu — vérifier que c'est un planning SINPI, DUHB, UNICAT, AMOPA, EXTOP ou Maternité.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, Check, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -570,7 +570,7 @@ function parseAMOPASheet(ws, rows, profiles) {
   return { entries, weekLabel: `Semaine ${weekNum}` }
 }
 
-export default function ImportPlanningModal({ profiles, sector, unit, theme, onClose, onImported }) {
+export default function ImportPlanningModal({ profiles, sector, unit, theme, onClose, onImported, preloadedFile }) {
   const T = theme ?? WARM
   const { profile: currentProfile } = useAuth()
   const [step, setStep] = useState('upload')
@@ -605,9 +605,16 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
                       : isExtopImport ? 'HB'   // à ajuster selon le vrai nom d'onglet EXTOP
                       : 'HB'
 
+  // Lance le traitement automatiquement si un fichier est pré-chargé
+  useEffect(() => { if (preloadedFile) processFile(preloadedFile) }, []) // eslint-disable-line
+
   async function handleFile(e) {
     const file = e.target.files[0]
     if (!file) return
+    processFile(file)
+  }
+
+  async function processFile(file) {
     setError(null)
 
     try {
