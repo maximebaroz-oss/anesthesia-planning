@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 import { WARM, SKY } from '../config/theme'
-import { formatDateKey } from '../config/constants'
+import { formatDateKey, normalizeName } from '../config/constants'
 
 // EXTOP row index (0-based) → { roomId, label, type }
 // ⚠️ Ajuster rowIdx selon la structure réelle du fichier Excel EXTOP
@@ -203,13 +203,6 @@ function parseSINPISheet(ws, rows, profiles) {
   return { entries, weekLabel: String(headerRow[0] ?? '') }
 }
 
-// Normalise un nom pour la comparaison : majuscules, accents, tirets, espaces
-function normalizeName(str) {
-  return str.trim().toUpperCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // "È" → "E", "Ç" → "C", etc.
-    .replace(/\s*-\s*/g, '-')  // "DARAN - STEFANI" → "DARAN-STEFANI"
-    .replace(/\s+/g, ' ')
-}
 
 function matchProfile(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null

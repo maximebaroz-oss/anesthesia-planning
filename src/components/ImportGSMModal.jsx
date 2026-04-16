@@ -3,16 +3,7 @@ import { X, Upload, Phone, Check, AlertTriangle, ChevronDown } from 'lucide-reac
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
-import { formatLastFirst } from '../config/constants'
-
-// ─── normalisation identique à ImportPlanningModal ──────────────────────────
-function normalizeName(str) {
-  if (!str) return ''
-  return str.trim().toUpperCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s*-\s*/g, '-')
-    .replace(/\s+/g, ' ')
-}
+import { formatLastFirst, normalizeName } from '../config/constants'
 
 function normalizePhone(raw) {
   if (!raw) return ''

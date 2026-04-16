@@ -140,6 +140,38 @@ export function isNightOrWE(roomName) {
 export const DAY_NAMES   = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 export const DAY_NAMES_7 = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
+/**
+ * Normalise un nom pour la comparaison : supprime TOUS les accents/diacritiques,
+ * normalise tirets et espaces. Source unique de vérité pour tous les imports.
+ *
+ * Couvre :
+ *  - NFD + plage \u0300-\u036f  → é,è,ê,ë,à,â,ä,ù,û,ü,î,ï,ô,ö,ç,ñ,ő,ū…
+ *  - Ligatures non-décomposables : Œ→OE, Æ→AE, œ→OE, æ→AE
+ *  - Caractères scandinaves     : Ø/ø→O, Å/å→A, Ð/ð→D, Þ/þ→TH
+ *  - ß→SS (allemand, rare)
+ *  - Tirets entourés d'espaces  : "DARAN - STEFANI" → "DARAN-STEFANI"
+ *  - Espaces multiples          → espace simple
+ */
+export function normalizeName(str) {
+  if (!str) return ''
+  return str.trim().toUpperCase()
+    // 1. Décompose les caractères précomposés (é → e + ́)
+    .normalize('NFD')
+    // 2. Supprime tous les diacritiques combinants (accents, cédilles, trémas…)
+    .replace(/[\u0300-\u036f]/g, '')
+    // 3. Ligatures non-décomposables par NFD
+    .replace(/[Œœ]/g, 'OE')
+    .replace(/[Ææ]/g, 'AE')
+    // 4. Caractères spéciaux restants
+    .replace(/[Øø]/g, 'O')
+    .replace(/[Åå]/g, 'A')
+    .replace(/ß/g,    'SS')
+    // 5. Normalise les tirets et espaces
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 // Particules nobiliaires françaises (appartiennent au nom de famille)
 const PARTICLES = new Set(['de', 'du', 'des', 'le', 'la', 'les', "d'"])
 

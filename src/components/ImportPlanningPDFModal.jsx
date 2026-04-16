@@ -3,7 +3,7 @@ import { X, Upload, Check, AlertTriangle, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { WARM } from '../config/theme'
-import { getMonday, formatDateKey } from '../config/constants'
+import { getMonday, formatDateKey, normalizeName } from '../config/constants'
 
 // Row definitions — label regex → roomId + sectorId
 // mcConsult = special multi-line handling
@@ -63,10 +63,8 @@ function buildDate(dayNum, monthStr, refYear) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-// Remove all diacritics: é→E, è→E, ü→U, etc.
-function deAccent(str) {
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-}
+// Alias local pour lisibilité (normalizeName est importé depuis constants.js)
+const deAccent = normalizeName
 
 // Simple Levenshtein distance (capped at maxDist for performance)
 function levenshtein(a, b, maxDist = 3) {
