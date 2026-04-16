@@ -1,27 +1,31 @@
 import { useState, useEffect } from 'react'
-import { Menu, Flame, FileSpreadsheet, X, LogOut, Phone } from 'lucide-react'
+import { Menu, Flame, FileSpreadsheet, FileText, X, LogOut, Phone } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
 import Sidebar from '../components/Sidebar'
 import DocumentsModal from '../components/DocumentsModal'
 import ImportPlanningModal from '../components/ImportPlanningModal'
+import ImportPlanningPDFModal from '../components/ImportPlanningPDFModal'
 import ImportGSMModal from '../components/ImportGSMModal'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
 
+// excel = import Excel, pdf = import PDF
 const IMPORT_SECTORS = [
-  { label: 'Hors-Bloc',     type: 'sector', id: 'hors-bloc',    color: '#3B82F6', bg: '#EFF6FF' },
-  { label: 'Julliard',      type: 'sector', id: 'julliard',      color: '#0EA5E9', bg: '#F0F9FF' },
-  { label: 'BOU',           type: 'sector', id: 'bou',           color: '#F59E0B', bg: '#FFFBEB' },
-  { label: 'Traumato',      type: 'sector', id: 'traumatologie', color: '#6B7280', bg: '#F9FAFB' },
-  { label: 'Prévost',       type: 'sector', id: 'prevost',       color: '#EC4899', bg: '#FDF2F8' },
+  { label: 'Hors-Bloc',  type: 'sector', mode: 'excel', id: 'hors-bloc',    color: '#3B82F6', bg: '#EFF6FF' },
+  { label: 'Julliard',   type: 'sector', mode: 'excel', id: 'julliard',      color: '#0EA5E9', bg: '#F0F9FF' },
+  { label: 'BOU',        type: 'sector', mode: 'excel', id: 'bou',           color: '#F59E0B', bg: '#FFFBEB' },
+  { label: 'Traumato',   type: 'sector', mode: 'excel', id: 'traumatologie', color: '#6B7280', bg: '#F9FAFB' },
+  { label: 'Prévost',    type: 'sector', mode: 'excel', id: 'prevost',       color: '#EC4899', bg: '#FDF2F8' },
 ]
 const IMPORT_UNITS = [
-  { label: 'DU HB',         type: 'unit',   id: 'duhb',          color: '#3B82F6', bg: '#EFF6FF' },
-  { label: 'UNICAT',        type: 'unit',   id: 'unicat',        color: '#F97316', bg: '#FFF7ED' },
-  { label: 'AMOPA',         type: 'unit',   id: 'amopa',         color: '#A855F7', bg: '#FAF5FF' },
-  { label: 'SINPI',         type: 'unit',   id: 'sinpi',         color: '#D08888', bg: '#FAF0EF' },
+  { label: 'DU HB',      type: 'unit', mode: 'excel', id: 'duhb',       color: '#3B82F6', bg: '#EFF6FF' },
+  { label: 'EXTOP',      type: 'unit', mode: 'excel', id: 'extop',      color: '#64748B', bg: '#F8FAFC' },
+  { label: 'UNICAT',     type: 'unit', mode: 'excel', id: 'unicat',     color: '#F97316', bg: '#FFF7ED' },
+  { label: 'SINPI',      type: 'unit', mode: 'excel', id: 'sinpi',      color: '#D08888', bg: '#FAF0EF' },
+  { label: 'Maternité',  type: 'unit', mode: 'pdf',   id: 'maternite',  color: '#22C55E', bg: '#F0FFF4' },
+  { label: 'AMOPA',      type: 'unit', mode: 'excel', id: 'amopa',      color: '#A855F7', bg: '#FAF5FF' },
 ]
 
 function GlobalImportModal({ onClose }) {
@@ -34,6 +38,16 @@ function GlobalImportModal({ onClose }) {
   }, [])
 
   if (showGSM) return <ImportGSMModal onClose={() => setShowGSM(false)} />
+
+  if (active?.mode === 'pdf') {
+    return (
+      <ImportPlanningPDFModal
+        profiles={profiles}
+        onClose={() => setActive(null)}
+        onImported={() => setActive(null)}
+      />
+    )
+  }
 
   if (active) {
     return (
@@ -89,7 +103,9 @@ function GlobalImportModal({ onClose }) {
                     style={{ background: t.bg, borderColor: t.color + '55' }}
                     className="border rounded-xl px-3 py-2.5 text-left hover:opacity-80 transition-opacity active:scale-95">
                     <div className="flex items-center gap-2">
-                      <FileSpreadsheet size={12} style={{ color: t.color }} />
+                      {t.mode === 'pdf'
+                        ? <FileText size={12} style={{ color: t.color }} />
+                        : <FileSpreadsheet size={12} style={{ color: t.color }} />}
                       <span className="text-sm font-semibold" style={{ color: t.color }}>{t.label}</span>
                     </div>
                   </button>
