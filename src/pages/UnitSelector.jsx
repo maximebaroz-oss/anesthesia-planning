@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Menu, Flame, FileSpreadsheet, X, LogOut } from 'lucide-react'
+import { Menu, Flame, FileSpreadsheet, X, LogOut, Phone } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
 import { GRADE_LABELS } from '../config/constants'
 import Sidebar from '../components/Sidebar'
 import DocumentsModal from '../components/DocumentsModal'
 import ImportPlanningModal from '../components/ImportPlanningModal'
+import ImportGSMModal from '../components/ImportGSMModal'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
 
@@ -26,10 +27,13 @@ const IMPORT_UNITS = [
 function GlobalImportModal({ onClose }) {
   const [profiles, setProfiles] = useState([])
   const [active, setActive] = useState(null)
+  const [showGSM, setShowGSM] = useState(false)
 
   useEffect(() => {
     supabase.from('profiles').select('*').then(({ data }) => setProfiles(data ?? []))
   }, [])
+
+  if (showGSM) return <ImportGSMModal onClose={() => setShowGSM(false)} />
 
   if (active) {
     return (
@@ -59,7 +63,23 @@ function GlobalImportModal({ onClose }) {
             <X size={18} />
           </button>
         </div>
-        <div className="px-5 py-5">
+        <div className="px-5 py-5 flex flex-col gap-4">
+
+          {/* Bouton GSM — pleine largeur */}
+          <button onClick={() => setShowGSM(true)}
+            style={{ background: '#F0FFF4', borderColor: '#6EE7B7' }}
+            className="border rounded-xl px-4 py-3 text-left hover:opacity-80 transition-opacity active:scale-95 flex items-center gap-3">
+            <div style={{ background: '#D1FAE5' }} className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Phone size={15} style={{ color: '#059669' }} />
+            </div>
+            <div>
+              <p className="text-sm font-bold" style={{ color: '#065F46' }}>Import GSM</p>
+              <p className="text-xs" style={{ color: '#6EE7B7' === '#6EE7B7' ? '#047857' : '#047857' }}>
+                Mettre à jour les numéros depuis un fichier Excel
+              </p>
+            </div>
+          </button>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: WARM.textSub }}>Unités</p>
