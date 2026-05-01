@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, Flame, FileSpreadsheet, X, LogOut, Phone, Upload, Loader } from 'lucide-react'
+import { Menu, Flame, FileSpreadsheet, X, LogOut, Phone, Upload, Loader, Users } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
@@ -9,6 +9,7 @@ import DocumentsModal from '../components/DocumentsModal'
 import ImportPlanningModal from '../components/ImportPlanningModal'
 import ImportPlanningPDFModal from '../components/ImportPlanningPDFModal'
 import ImportGSMModal from '../components/ImportGSMModal'
+import ImportProfilesModal from '../components/ImportProfilesModal'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
 
@@ -88,7 +89,8 @@ function GlobalImportModal({ onClose }) {
   const [queueIdx,  setQueueIdx]  = useState(0)
   const [detecting, setDetecting] = useState(false)
   const [failed,    setFailed]    = useState([])   // noms de fichiers non détectés
-  const [showGSM,   setShowGSM]   = useState(false)
+  const [showGSM,      setShowGSM]      = useState(false)
+  const [showProfiles, setShowProfiles] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -134,6 +136,9 @@ function GlobalImportModal({ onClose }) {
   if (showGSM)
     return <ImportGSMModal onClose={() => setShowGSM(false)} />
 
+  if (showProfiles)
+    return <ImportProfilesModal onClose={() => setShowProfiles(false)} />
+
   // Traitement en cours d'un fichier de la file
   const current = queue[queueIdx]
   if (current) {
@@ -175,6 +180,19 @@ function GlobalImportModal({ onClose }) {
         </div>
 
         <div className="px-5 py-5 flex flex-col gap-3">
+
+          {/* Import Profils */}
+          <button onClick={() => setShowProfiles(true)}
+            style={{ background: '#EFF6FF', borderColor: '#93C5FD' }}
+            className="border rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity active:scale-95">
+            <div style={{ background: '#DBEAFE' }} className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Users size={15} style={{ color: '#2563EB' }} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold" style={{ color: '#1E40AF' }}>Import personnel</p>
+              <p className="text-xs" style={{ color: '#3B82F6' }}>Ajouter / mettre à jour la liste</p>
+            </div>
+          </button>
 
           {/* Import GSM */}
           <button onClick={() => setShowGSM(true)}
