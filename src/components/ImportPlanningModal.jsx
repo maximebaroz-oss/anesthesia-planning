@@ -105,18 +105,45 @@ const DU_ROWS = [
   { rowIdx: 21, type: 'day_note',   label: 'Souhait / Remarque',    roomId: null },
 ]
 
-// Split a cell that may contain multiple names (e.g. "DUPONT / MARTIN" or "DUPONT\nMARTIN")
+/**
+ * Nettoie un nom brut extrait d'une cellule Excel :
+ * supprime AM/PM, horaires (8h, 08h30, 8:00-16:00…) et parenthèses.
+ * Ex: "DUPONT AM"     → "DUPONT"
+ *     "MARTIN (PM)"   → "MARTIN"
+ *     "VALENCE 8h30"  → "VALENCE"
+ *     "DUPONT 8h-16h" → "DUPONT"
+ */
+function cleanExcelName(raw) {
+  if (!raw) return ''
+  return raw
+    // Parenthèses et leur contenu : (AM), (8h-16h), (matin)…
+    .replace(/\([^)]*\)/g, '')
+    // Plages horaires : "8h-16h", "08:00-16:00", "7h30-15h30"
+    .replace(/\b\d{1,2}[h:]\d{0,2}\s*[-–]\s*\d{1,2}[h:]\d{0,2}\b/gi, '')
+    // Horaire seul : "8h", "08h30", "8:00", "7h30"
+    .replace(/\b\d{1,2}[h:]\d{0,2}\b/gi, '')
+    // AM / PM comme mot isolé (avec ou sans point)
+    .replace(/\b(AM|PM)\.?\b/gi, '')
+    // Nettoyage des espaces multiples et tirets/virgules isolés en fin
+    .replace(/[-,;]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Découpe une cellule contenant plusieurs noms (ex: "DUPONT / MARTIN" ou "DUPONT\nMARTIN")
+// et nettoie chaque partie (AM, PM, horaires…)
 function splitCellNames(raw) {
   if (!raw) return []
-  // Split on newline or " / " or "/" (but not slashes inside single tokens like "A/B")
-  const parts = raw.split(/\n|\r\n|\r| \/ |\//).map(s => s.trim()).filter(Boolean)
-  return parts.length > 0 ? parts : [raw]
+  const parts = raw.split(/\n|\r\n|\r| \/ |\//)
+    .map(s => cleanExcelName(s.trim()))
+    .filter(s => s.length > 0)
+  return parts.length > 0 ? parts : [cleanExcelName(raw)]
 }
 
 // Like matchProfile but matches any profession (médecin + ISA)
 function matchProfileAny(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
-  const name = normalizeName(excelName)
+  const name = normalizeName(cleanExcelName(excelName))
   if (!name) return null
   return profiles.find(p => {
     const up = normalizeName(p.full_name)
@@ -225,7 +252,7 @@ function parseSINPISheet(ws, rows, profiles) {
 
 function matchProfile(excelName, profiles) {
   if (!excelName || typeof excelName !== 'string') return null
-  const name = normalizeName(excelName)
+  const name = normalizeName(cleanExcelName(excelName))
   if (!name) return null
   return profiles.find(p => {
     if (p.profession !== 'medecin') return false

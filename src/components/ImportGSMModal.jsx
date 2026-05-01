@@ -5,6 +5,18 @@ import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
 import { formatLastFirst, normalizeName } from '../config/constants'
 
+function cleanExcelName(raw) {
+  if (!raw) return ''
+  return raw
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\b\d{1,2}[h:]\d{0,2}\s*[-–]\s*\d{1,2}[h:]\d{0,2}\b/gi, '')
+    .replace(/\b\d{1,2}[h:]\d{0,2}\b/gi, '')
+    .replace(/\b(AM|PM)\.?\b/gi, '')
+    .replace(/[-,;]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function normalizePhone(raw) {
   if (!raw) return ''
   // Garde chiffres, +, espaces, tirets, parenthèses → puis compacte
@@ -70,7 +82,7 @@ function parseGSMSheet(ws) {
 
     results.push({
       rawName:  nameStr,
-      normName: normalizeName(nameStr),
+      normName: normalizeName(cleanExcelName(nameStr)),
       rawPhone: String(rawPhone).trim(),
       phone:    normalizePhone(rawPhone),
     })

@@ -66,6 +66,19 @@ function buildDate(dayNum, monthStr, refYear) {
 // Alias local pour lisibilité (normalizeName est importé depuis constants.js)
 const deAccent = normalizeName
 
+// Nettoie AM/PM, horaires et parenthèses d'un nom brut (identique à ImportPlanningModal)
+function cleanExcelName(raw) {
+  if (!raw) return ''
+  return raw
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\b\d{1,2}[h:]\d{0,2}\s*[-–]\s*\d{1,2}[h:]\d{0,2}\b/gi, '')
+    .replace(/\b\d{1,2}[h:]\d{0,2}\b/gi, '')
+    .replace(/\b(AM|PM)\.?\b/gi, '')
+    .replace(/[-,;]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 // Simple Levenshtein distance (capped at maxDist for performance)
 function levenshtein(a, b, maxDist = 3) {
   if (Math.abs(a.length - b.length) > maxDist) return maxDist + 1
@@ -86,8 +99,8 @@ function levenshtein(a, b, maxDist = 3) {
 
 function matchProfile(rawName, profiles) {
   if (!rawName || typeof rawName !== 'string') return null
-  const name    = rawName.trim().toUpperCase().replace(/\s+/g, ' ')
-  const nameDA  = deAccent(name)
+  const name    = deAccent(cleanExcelName(rawName))
+  const nameDA  = name
   if (!name || name.length < 2) return null
 
   return profiles.find(p => {
