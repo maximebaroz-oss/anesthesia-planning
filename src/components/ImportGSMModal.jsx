@@ -120,11 +120,15 @@ export default function ImportGSMModal({ onClose }) {
   const fileRef = useRef(null)
   const [step, setStep] = useState('upload') // upload | preview | done
   const [profiles, setProfiles] = useState([])
-  const [matches, setMatches] = useState([])   // { profile, phone, rawName }
-  const [unmatched, setUnmatched] = useState([])
+  const [toUpdate, setToUpdate]   = useState([])  // { profile, phone, oldPhone, rawName }
+  const [alreadyOk, setAlreadyOk] = useState([])  // matched but phone unchanged
+  const [unmatched, setUnmatched] = useState([])  // name not found in DB
+  const [noPhone, setNoPhone]     = useState([])  // matched but no phone in file
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(0)
   const [showUnmatched, setShowUnmatched] = useState(false)
+  const [showAlreadyOk, setShowAlreadyOk] = useState(false)
+  const [showNoPhone, setShowNoPhone] = useState(false)
 
   async function handleFile(e) {
     const file = e.target.files?.[0]
@@ -143,29 +147,40 @@ export default function ImportGSMModal({ onClose }) {
       setProfiles(profs)
     }
 
-    const matched   = []
-    const noMatch   = []
+    const update   = []
+    const ok       = []
+    const noMatch  = []
+    const noPh     = []
 
     for (const entry of entries) {
-      if (!entry.rawPhone && !entry.phone) { noMatch.push(entry); continue }
       const p = matchProfile(entry.normName, profs)
-      if (p) {
-        matched.push({ profile: p, phone: entry.phone || entry.rawPhone, rawName: entry.rawName })
-      } else {
+      if (!p) {
         noMatch.push(entry)
+        continue
+      }
+      if (!entry.phone) {
+        noPh.push({ ...entry, profile: p })
+        continue
+      }
+      const oldPhone = p.phone ?? ''
+      if (normalizePhone(oldPhone) === entry.phone) {
+        ok.push({ profile: p, phone: entry.phone, rawName: entry.rawName })
+      } else {
+        update.push({ profile: p, phone: entry.phone, oldPhone: p.phone || '—', rawName: entry.rawName })
       }
     }
 
-    setMatches(matched)
+    setToUpdate(update)
+    setAlreadyOk(ok)
     setUnmatched(noMatch)
+    setNoPhone(noPh)
     setStep('preview')
   }
 
   async function handleSave() {
     setSaving(true)
     let count = 0
-    for (const m of matches) {
-      if (!m.phone) continue
+    for (const m of toUpdate) {
       await supabase.from('profiles').update({ phone: m.phone }).eq('id', m.profile.id)
       count++
     }
@@ -214,29 +229,94 @@ export default function ImportGSMModal({ onClose }) {
         {/* Prévisualisation */}
         {step === 'preview' && (
           <div className="px-5 py-4 flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
-            <p className="text-sm font-semibold" style={{ color: T.text }}>
-              {matches.length} numéro{matches.length > 1 ? 's' : ''} à importer
-            </p>
 
-            {/* Liste des correspondances */}
-            <div className="flex flex-col gap-1.5">
-              {matches.map((m, i) => (
-                <div key={i}
-                  style={{ background: T.surface, borderColor: T.border }}
-                  className="border rounded-xl px-3 py-2.5 flex items-center justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: T.text }}>
-                      {formatLastFirst(m.profile.full_name)}
-                    </p>
-                    <p className="text-xs" style={{ color: T.textFaint }}>{m.rawName}</p>
+            {/* Résumé */}
+            {toUpdate.length === 0 && alreadyOk.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: '#D1FAE5', color: '#065F46' }}>
+                <Check size={15} />
+                Tout est déjà à jour ({alreadyOk.length} numéro{alreadyOk.length > 1 ? 's' : ''} inchangé{alreadyOk.length > 1 ? 's' : ''})
+              </div>
+            )}
+            {toUpdate.length > 0 && (
+              <p className="text-sm font-semibold" style={{ color: T.text }}>
+                {toUpdate.length} numéro{toUpdate.length > 1 ? 's' : ''} à mettre à jour
+              </p>
+            )}
+
+            {/* Liste des mises à jour */}
+            {toUpdate.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {toUpdate.map((m, i) => (
+                  <div key={i}
+                    style={{ background: T.surface, borderColor: T.border }}
+                    className="border rounded-xl px-3 py-2.5 flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: T.text }}>
+                        {formatLastFirst(m.profile.full_name)}
+                      </p>
+                      <p className="text-xs line-through" style={{ color: T.textFaint }}>{m.oldPhone}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Phone size={12} style={{ color: T.accentBar }} />
+                      <span className="text-sm font-mono font-semibold" style={{ color: T.accentBar }}>{m.phone}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <Phone size={12} style={{ color: T.accentBar }} />
-                    <span className="text-sm font-mono" style={{ color: T.text }}>{m.phone}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Déjà à jour (collapse) */}
+            {alreadyOk.length > 0 && toUpdate.length > 0 && (
+              <div>
+                <button
+                  className="flex items-center gap-1.5 text-xs font-semibold mb-1.5 hover:opacity-70 transition-opacity"
+                  style={{ color: '#059669' }}
+                  onClick={() => setShowAlreadyOk(v => !v)}>
+                  <Check size={12} />
+                  {alreadyOk.length} déjà à jour
+                  <ChevronDown size={12}
+                    style={{ transform: showAlreadyOk ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+                </button>
+                {showAlreadyOk && (
+                  <div className="flex flex-col gap-1">
+                    {alreadyOk.map((u, i) => (
+                      <div key={i} className="text-xs px-2 py-1 rounded-lg flex items-center justify-between gap-2"
+                        style={{ background: '#D1FAE5', color: '#065F46' }}>
+                        <span>{formatLastFirst(u.profile.full_name)}</span>
+                        <span className="font-mono">{u.phone}</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
+
+            {/* Sans numéro dans le fichier */}
+            {noPhone.length > 0 && (
+              <div>
+                <button
+                  className="flex items-center gap-1.5 text-xs font-semibold mb-1.5 hover:opacity-70 transition-opacity"
+                  style={{ color: '#6B7280' }}
+                  onClick={() => setShowNoPhone(v => !v)}>
+                  <Phone size={12} />
+                  {noPhone.length} sans numéro dans le fichier
+                  <ChevronDown size={12}
+                    style={{ transform: showNoPhone ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+                </button>
+                {showNoPhone && (
+                  <div className="flex flex-col gap-1">
+                    {noPhone.map((u, i) => (
+                      <div key={i} className="text-xs px-2 py-1 rounded-lg"
+                        style={{ background: '#F3F4F6', color: '#374151' }}>
+                        {formatLastFirst(u.profile.full_name)}
+                        <span className="ml-1" style={{ color: '#9CA3AF' }}>({u.rawName})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Non reconnus */}
             {unmatched.length > 0 && (
@@ -270,10 +350,10 @@ export default function ImportGSMModal({ onClose }) {
                 className="flex-1 border rounded-xl py-2.5 text-sm font-semibold hover:opacity-70 transition-opacity">
                 Annuler
               </button>
-              <button onClick={handleSave} disabled={saving || matches.length === 0}
+              <button onClick={handleSave} disabled={saving || toUpdate.length === 0}
                 style={{ background: T.accentBar }}
                 className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition-opacity">
-                {saving ? 'Enregistrement…' : `Enregistrer ${matches.length}`}
+                {saving ? 'Enregistrement…' : toUpdate.length === 0 ? 'Rien à modifier' : `Mettre à jour ${toUpdate.length}`}
               </button>
             </div>
           </div>
@@ -289,6 +369,11 @@ export default function ImportGSMModal({ onClose }) {
             <p className="text-base font-bold" style={{ color: T.text }}>
               {saved} numéro{saved > 1 ? 's' : ''} mis à jour
             </p>
+            {alreadyOk.length > 0 && (
+              <p className="text-xs text-center" style={{ color: T.textFaint }}>
+                {alreadyOk.length} numéro{alreadyOk.length > 1 ? 's' : ''} déjà identique{alreadyOk.length > 1 ? 's' : ''}
+              </p>
+            )}
             {unmatched.length > 0 && (
               <p className="text-xs text-center" style={{ color: T.textFaint }}>
                 {unmatched.length} entrée{unmatched.length > 1 ? 's' : ''} non reconnue{unmatched.length > 1 ? 's' : ''}

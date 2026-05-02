@@ -89,9 +89,21 @@ function parseProfileSheet(ws) {
   return results
 }
 
-// ─── Matching ─────────────────────────────────────────────────────────────────
+// ─── Matching (même logique que ImportGSMModal) ───────────────────────────────
 function matchExisting(normName, profiles) {
-  return profiles.find(p => normalizeName(p.full_name) === normName) ?? null
+  // Exact
+  let p = profiles.find(p => normalizeName(p.full_name) === normName)
+  if (p) return p
+  // Tous les mots présents (ordre libre)
+  const parts = normName.split(' ').filter(w => w.length > 1)
+  if (parts.length >= 2) {
+    p = profiles.find(p => {
+      const pn = normalizeName(p.full_name)
+      return parts.every(w => pn.includes(w))
+    })
+    if (p) return p
+  }
+  return null
 }
 
 // ─── Composant ────────────────────────────────────────────────────────────────
@@ -100,12 +112,15 @@ export default function ImportProfilesModal({ onClose }) {
   const fileRef = useRef(null)
   const [step, setStep]           = useState('upload')
   const [profiles, setProfiles]   = useState([])
-  const [toCreate, setToCreate]   = useState([])   // { rawName, grade, profession, phone }
-  const [toUpdate, setToUpdate]   = useState([])   // { profile, grade, profession, phone, changed }
-  const [noGrade,  setNoGrade]    = useState([])   // noms sans grade détecté
-  const [saving,   setSaving]     = useState(false)
-  const [done,     setDone]       = useState({ created: 0, updated: 0 })
-  const [showNoGrade, setShowNoGrade] = useState(false)
+  const [toCreate,      setToCreate]      = useState([])
+  const [toUpdate,      setToUpdate]      = useState([])
+  const [alreadyOk,     setAlreadyOk]     = useState([])  // reconnus mais déjà à jour
+  const [unmatched,     setUnmatched]     = useState([])  // noms non trouvés en DB
+  const [noGradeCol,    setNoGradeCol]    = useState(false) // colonne grade absente du fichier
+  const [saving,        setSaving]        = useState(false)
+  const [done,          setDone]          = useState({ created: 0, updated: 0 })
+  const [showUnmatched, setShowUnmatched] = useState(false)
+  const [showOk,        setShowOk]        = useState(false)
 
   async function handleFile(e) {
     const file = e.target.files?.[0]
@@ -114,32 +129,51 @@ export default function ImportProfilesModal({ onClose }) {
     const buf = await file.arrayBuffer()
     const wb  = XLSX.read(buf, { type: 'array' })
     const ws  = wb.Sheets[wb.SheetNames[0]]
+
+    // Détecter si colonne grade présente
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+    const hi = rows.findIndex((r, i) => i < 5 && r.filter(Boolean).length > 1) || 0
+    const { gradeCol } = detectCols(rows[hi]?.map(String) ?? [])
+    setNoGradeCol(gradeCol === -1)
+
     const entries = parseProfileSheet(ws)
 
-    // Charge les profils existants
     const { data } = await supabase.from('profiles').select('*')
     const existing = data ?? []
     setProfiles(existing)
 
-    const creates = [], updates = [], noG = []
+    const creates = [], updates = [], ok = [], nomatch = []
 
     for (const entry of entries) {
       const found = matchExisting(entry.normName, existing)
-      if (!entry.rawGrade) { noG.push(entry.rawName); continue }
 
       if (found) {
-        const changed = found.grade !== entry.grade ||
-                        found.profession !== entry.profession ||
-                        (entry.phone && found.phone !== entry.phone)
-        updates.push({ profile: found, grade: entry.grade, profession: entry.profession, phone: entry.phone, rawName: entry.rawName, changed })
+        // Détermine ce qui a changé
+        const phoneChanged  = entry.phone && found.phone !== entry.phone
+        const gradeChanged  = gradeCol !== -1 && found.grade !== entry.grade
+        if (phoneChanged || gradeChanged) {
+          updates.push({
+            profile: found,
+            grade:   gradeCol !== -1 ? entry.grade : found.grade,
+            profession: gradeCol !== -1 ? entry.profession : found.profession,
+            phone:   entry.phone || found.phone,
+            rawName: entry.rawName,
+            phoneChanged, gradeChanged,
+            oldGrade: found.grade, newGrade: entry.grade,
+          })
+        } else {
+          ok.push(entry.rawName)
+        }
       } else {
+        // Nouveau : créer seulement si grade détecté OU grade column absente (on crée avec défaut)
         creates.push({ rawName: entry.rawName, grade: entry.grade, profession: entry.profession, phone: entry.phone })
       }
     }
 
     setToCreate(creates)
-    setToUpdate(updates.filter(u => u.changed))
-    setNoGrade(noG)
+    setToUpdate(updates)
+    setAlreadyOk(ok)
+    setUnmatched(nomatch)
     setStep('preview')
   }
 
@@ -210,7 +244,16 @@ export default function ImportProfilesModal({ onClose }) {
 
         {/* Prévisualisation */}
         {step === 'preview' && (
-          <div className="px-5 py-4 flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
+          <div className="px-5 py-4 flex flex-col gap-3 max-h-[75vh] overflow-y-auto">
+
+            {/* Avertissement : pas de colonne grade */}
+            {noGradeCol && (
+              <div className="text-xs px-3 py-2 rounded-lg flex items-start gap-2"
+                style={{ background: '#FEF9C3', color: '#854D0E' }}>
+                <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+                <span>Colonne "grade" non détectée — les nouvelles personnes seront ajoutées comme <strong>Adjoint</strong> par défaut.</span>
+              </div>
+            )}
 
             {/* Nouvelles personnes */}
             {toCreate.length > 0 && (
@@ -246,19 +289,21 @@ export default function ImportProfilesModal({ onClose }) {
                 <div className="flex flex-col gap-1.5">
                   {toUpdate.map((u, i) => (
                     <div key={i} style={{ background: T.surface, borderColor: T.border }}
-                      className="border rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold truncate" style={{ color: T.text }}>
+                      className="border rounded-xl px-3 py-2 flex flex-col gap-1">
+                      <p className="text-sm font-semibold" style={{ color: T.text }}>
                         {formatLastFirst(u.profile.full_name)}
                       </p>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="text-xs line-through" style={{ color: T.textFaint }}>
-                          {GRADE_LABELS[u.profile.grade] ?? u.profile.grade}
-                        </span>
-                        <span className="text-xs">→</span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{ background: T.surface, color: T.accentBar, border: `1px solid ${T.accentBar}40` }}>
-                          {GRADE_LABELS[u.grade]}
-                        </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {u.gradeChanged && (
+                          <span className="text-xs" style={{ color: T.textFaint }}>
+                            Grade : <span className="line-through">{GRADE_LABELS[u.oldGrade]}</span> → <strong>{GRADE_LABELS[u.newGrade]}</strong>
+                          </span>
+                        )}
+                        {u.phoneChanged && (
+                          <span className="text-xs" style={{ color: T.textFaint }}>
+                            GSM : <strong>{u.phone}</strong>
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -266,32 +311,30 @@ export default function ImportProfilesModal({ onClose }) {
               </div>
             )}
 
-            {/* Sans grade */}
-            {noGrade.length > 0 && (
-              <div>
-                <button className="flex items-center gap-1.5 text-xs font-semibold mb-1.5"
-                  style={{ color: '#B45309' }}
-                  onClick={() => setShowNoGrade(v => !v)}>
-                  <AlertTriangle size={12} />
-                  {noGrade.length} sans grade détecté
-                  <ChevronDown size={12} style={{ transform: showNoGrade ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
-                </button>
-                {showNoGrade && (
-                  <div className="flex flex-col gap-1">
-                    {noGrade.map((n, i) => (
-                      <div key={i} className="text-xs px-2 py-1 rounded-lg"
-                        style={{ background: '#FEF3C7', color: '#92400E' }}>
-                        {n}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Déjà à jour */}
+            {alreadyOk.length > 0 && (
+              <button className="flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: T.textFaint }}
+                onClick={() => setShowOk(v => !v)}>
+                <Check size={12} />
+                {alreadyOk.length} déjà à jour
+                <ChevronDown size={12} style={{ transform: showOk ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+              </button>
+            )}
+            {showOk && (
+              <div className="flex flex-col gap-1 -mt-1">
+                {alreadyOk.map((n, i) => (
+                  <div key={i} className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: T.surface, color: T.textFaint }}>{n}</div>
+                ))}
               </div>
             )}
 
-            {totalChanges === 0 && (
+            {toCreate.length === 0 && toUpdate.length === 0 && (
               <p className="text-sm text-center py-4" style={{ color: T.textFaint }}>
-                Aucune modification détectée — la liste est déjà à jour.
+                {alreadyOk.length > 0
+                  ? `Tout est déjà à jour (${alreadyOk.length} personne${alreadyOk.length > 1 ? 's' : ''} reconnue${alreadyOk.length > 1 ? 's' : ''}).`
+                  : 'Aucun nom reconnu — vérifier le format du fichier.'}
               </p>
             )}
 
@@ -301,10 +344,10 @@ export default function ImportProfilesModal({ onClose }) {
                 className="flex-1 border rounded-xl py-2.5 text-sm font-semibold hover:opacity-70 transition-opacity">
                 Annuler
               </button>
-              <button onClick={handleSave} disabled={saving || totalChanges === 0}
+              <button onClick={handleSave} disabled={saving || (toCreate.length + toUpdate.length) === 0}
                 style={{ background: T.accentBar }}
                 className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition-opacity">
-                {saving ? 'Enregistrement…' : `Appliquer (${totalChanges})`}
+                {saving ? 'Enregistrement…' : `Appliquer (${toCreate.length + toUpdate.length})`}
               </button>
             </div>
           </div>
