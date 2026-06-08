@@ -54,7 +54,13 @@ function detectFromWorkbook(wb) {
   if (hasDU)           return { unitId: 'duhb',  sectorId: 'julliard' }
 
   // UNICAT : onglet Feuil1
+  // ⚠ Vérifie D'ABORD que ce n'est pas une liste GSM/personnel (même onglet "Feuil1")
   if (sheets.some(n => n.startsWith('FEUIL'))) {
+    // Fichier liste GSM/personnel : contient "med-chef" ou ("adjoints" + "internes")
+    if (text.includes('med-chef') ||
+        (text.includes('adjoint') && text.includes('interne') && text.includes('administratif'))) {
+      return { type: 'gsm' }
+    }
     if (text.includes('nch') || text.includes('cvt') || text.includes('gibor'))
                          return { unitId: 'unicat', sectorId: 'prevost' }
     if (text.includes('traumato'))
@@ -116,8 +122,9 @@ function GlobalImportModal({ onClose }) {
         const buf = await file.arrayBuffer()
         const wb  = XLSX.read(buf, { type: 'array' })
         const res = detectFromWorkbook(wb)
-        if (res) detected.push({ mode: 'excel', ...res, file })
-        else     bad.push(file.name)
+        if (res?.type === 'gsm') detected.push({ mode: 'gsm', file })
+        else if (res)            detected.push({ mode: 'excel', ...res, file })
+        else                     bad.push(file.name)
       } catch { bad.push(file.name) }
     }
 
@@ -150,6 +157,12 @@ function GlobalImportModal({ onClose }) {
         {label && <QueueBadge label={label} />}
         <ImportPlanningPDFModal profiles={profiles} preloadedFile={current.file}
           theme={WARM} onClose={next} onImported={next} />
+      </>
+
+    if (current.mode === 'gsm')
+      return <>
+        {label && <QueueBadge label={label} />}
+        <ImportGSMModal preloadedFile={current.file} onClose={next} />
       </>
 
     const unit   = current.unitId   ? { id: current.unitId,   name: UNIT_NAMES[current.unitId]     } : undefined
