@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, Flame, FileSpreadsheet, X, LogOut, Phone, Upload, Loader, Users } from 'lucide-react'
+import { Menu, Flame, FileSpreadsheet, FileText, X, LogOut, Phone, Upload, Loader, Users, AlertTriangle, Check } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { UNITS } from '../config/sectors'
@@ -89,161 +89,329 @@ function detectFromWorkbook(wb) {
   return null // non détecté
 }
 
+// ─── Groupes de slots pour l'import (un slot = une case à remplir) ─────────────
+const IMPORT_GROUPS = [
+  {
+    id: 'sinpi', label: 'SINPI',
+    style: { bg: '#FAF0EF', border: '#DDA0A0', dot: '#B06060', text: '#804040', active: '#C07070' },
+    slots: [{ id: 'sinpi', label: 'SINPI', unitId: 'sinpi', sectorId: 'sinpi' }],
+  },
+  {
+    id: 'duhb', label: 'DUHB',
+    style: { bg: '#EFF6FF', border: '#93C5FD', dot: '#3B82F6', text: '#1D4ED8', active: '#60A5FA' },
+    slots: [
+      { id: 'duhb-julliard', label: 'Julliard',  unitId: 'duhb', sectorId: 'julliard'  },
+      { id: 'duhb-horsboc',  label: 'Hors-Bloc', unitId: 'duhb', sectorId: 'hors-bloc' },
+    ],
+  },
+  {
+    id: 'extop', label: 'EXTOP',
+    style: { bg: '#F8FAFC', border: '#CBD5E1', dot: '#64748B', text: '#334155', active: '#94A3B8' },
+    slots: [{ id: 'extop', label: 'EXTOP', unitId: 'extop', sectorId: 'extop' }],
+  },
+  {
+    id: 'unicat', label: 'UNICAT',
+    style: { bg: '#FFF7ED', border: '#FDBA74', dot: '#F97316', text: '#9A3412', active: '#FB923C' },
+    slots: [
+      { id: 'unicat-bou',    label: 'BOU',       unitId: 'unicat', sectorId: 'bou'           },
+      { id: 'unicat-trauma', label: 'Traumato',  unitId: 'unicat', sectorId: 'traumatologie' },
+      { id: 'unicat-prev',   label: 'Prévost',   unitId: 'unicat', sectorId: 'prevost'       },
+    ],
+  },
+  {
+    id: 'maternite', label: 'Maternité',
+    style: { bg: '#F0FFF4', border: '#6EE7B7', dot: '#059669', text: '#065F46', active: '#34D399' },
+    slots: [{ id: 'maternite', label: 'Maternité', unitId: 'maternite', sectorId: null }],
+  },
+  {
+    id: 'pediatrie', label: 'Pédiatrie',
+    style: { bg: '#FEFCE8', border: '#FDE047', dot: '#CA8A04', text: '#713F12', active: '#FACC15' },
+    slots: [{ id: 'pediatrie', label: 'Pédiatrie', unitId: 'pediatrie', sectorId: null }],
+  },
+  {
+    id: 'amopa', label: 'AMOPA',
+    style: { bg: '#FDF4FF', border: '#E879F9', dot: '#A21CAF', text: '#701A75', active: '#D946EF' },
+    slots: [
+      { id: 'amopa-bocha',    label: 'BOCHA',       unitId: 'amopa', sectorId: 'bocha-amopa'       },
+      { id: 'amopa-orl',      label: 'ORL/MAX-FA',  unitId: 'amopa', sectorId: 'orl-maxfa-plastie' },
+      { id: 'amopa-antalgie', label: 'Antalgie',    unitId: 'amopa', sectorId: 'antalgie'          },
+    ],
+  },
+  {
+    id: '_data', label: 'Données',
+    style: { bg: '#EFF6FF', border: '#93C5FD', dot: '#2563EB', text: '#1E40AF', active: '#3B82F6' },
+    slots: [
+      { id: 'gsm',       label: 'GSM',       type: 'gsm',       unitId: null, sectorId: null },
+      { id: 'personnel', label: 'Personnel', type: 'personnel', unitId: null, sectorId: null },
+    ],
+  },
+]
+
+// ─── Carte de slot (drop zone individuelle) ─────────────────────────────────────
+function SlotCard({ slot, style, assigned, detecting, onFile, onRemove }) {
+  const [dragOver, setDragOver] = useState(false)
+  const inputRef = useRef(null)
+
+  async function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) await onFile(slot, file)
+  }
+
+  const isPdf    = assigned?.mode === 'pdf'
+  const hasWarn  = !!assigned?.warning
+
+  return (
+    <div
+      onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false) }}
+      onDrop={handleDrop}
+      onClick={() => !assigned && !detecting && inputRef.current?.click()}
+      style={{
+        background:   assigned || dragOver ? style.bg   : '#FAFAFA',
+        borderColor:  dragOver             ? style.active
+                      : assigned           ? style.border
+                      : '#E5E7EB',
+        borderWidth:  '1.5px',
+        borderStyle:  assigned ? 'solid' : 'dashed',
+        minHeight:    '56px',
+      }}
+      className="rounded-xl flex items-center p-2.5 gap-2 transition-all cursor-pointer hover:opacity-80 active:scale-95 select-none">
+
+      {detecting ? (
+        <div className="w-full flex items-center justify-center gap-1.5 py-0.5">
+          <Loader size={12} style={{ color: style.dot }} className="animate-spin" />
+          <span className="text-xs font-medium" style={{ color: style.dot }}>…</span>
+        </div>
+      ) : assigned ? (
+        <>
+          <div className="flex-shrink-0" style={{ color: hasWarn ? '#D97706' : style.dot }}>
+            {isPdf ? <FileText size={14} /> : <FileSpreadsheet size={14} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold truncate leading-tight"
+               style={{ color: hasWarn ? '#92400E' : style.text }}>
+              {assigned.file.name.replace(/\.(xlsx?|xls|pdf|csv)$/i, '')}
+            </p>
+            {hasWarn && (
+              <p className="text-xs truncate leading-tight" style={{ color: '#D97706' }}>
+                ⚠ {assigned.warning}
+              </p>
+            )}
+          </div>
+          <button onClick={e => { e.stopPropagation(); onRemove(slot.id) }}
+            className="flex-shrink-0 rounded-full p-0.5 hover:opacity-60 transition-opacity"
+            style={{ color: style.dot }}>
+            <X size={11} />
+          </button>
+        </>
+      ) : (
+        <div className="w-full flex flex-col items-center justify-center gap-0.5 py-0.5">
+          <span className="text-xs font-semibold" style={{ color: '#9CA3AF' }}>{slot.label}</span>
+          <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Excel · PDF</span>
+        </div>
+      )}
+
+      <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv,.pdf"
+        className="hidden" onChange={async e => {
+          const file = e.target.files?.[0]
+          if (file) await onFile(slot, file)
+          e.target.value = ''
+        }} />
+    </div>
+  )
+}
+
+// ─── Modal principal ─────────────────────────────────────────────────────────────
 function GlobalImportModal({ onClose }) {
+  const T = WARM
   const [profiles,  setProfiles]  = useState([])
-  const [queue,     setQueue]     = useState([])   // fichiers détectés à traiter
+
+  // Étape 1 : staging (grille de slots)
+  const [slots,     setSlots]     = useState({})    // slotId → { file, mode, warning }
+  const [detecting, setDetecting] = useState(null)  // slotId en cours d'analyse
+
+  // Étape 2 : traitement en file
+  const [step,      setStep]      = useState('stage')
+  const [queue,     setQueue]     = useState([])
   const [queueIdx,  setQueueIdx]  = useState(0)
-  const [detecting, setDetecting] = useState(false)
-  const [failed,    setFailed]    = useState([])   // noms de fichiers non détectés
-  const [showGSM,      setShowGSM]      = useState(false)
-  const [showProfiles, setShowProfiles] = useState(false)
-  const fileRef = useRef(null)
 
   useEffect(() => {
     supabase.from('profiles').select('*').then(({ data }) => setProfiles(data ?? []))
   }, [])
 
-  async function handleFiles(e) {
-    const files = Array.from(e.target.files ?? [])
-    if (!files.length) return
-    // Reset l'input pour permettre de re-sélectionner les mêmes fichiers
-    e.target.value = ''
+  // ── Assigner un fichier à un slot ──────────────────────────────────────────
+  async function handleFileDrop(slot, file) {
+    setDetecting(slot.id)
+    const isPdf = file.name.toLowerCase().endsWith('.pdf')
+    let mode    = isPdf ? 'pdf' : 'excel'
+    let warning = null
 
-    setDetecting(true)
-    const detected = []
-    const bad      = []
-
-    for (const file of files) {
-      if (file.name.toLowerCase().endsWith('.pdf')) {
-        detected.push({ mode: 'pdf', file })
-        continue
-      }
+    // Vérifie que le fichier Excel correspond bien au secteur attendu
+    if (!isPdf && slot.unitId) {
       try {
-        const buf = await file.arrayBuffer()
-        const wb  = XLSX.read(buf, { type: 'array' })
-        const res = detectFromWorkbook(wb)
-        if (res?.type === 'gsm') detected.push({ mode: 'gsm', file })
-        else if (res)            detected.push({ mode: 'excel', ...res, file })
-        else                     bad.push(file.name)
-      } catch { bad.push(file.name) }
+        const buf      = await file.arrayBuffer()
+        const wb       = XLSX.read(buf, { type: 'array' })
+        const detected = detectFromWorkbook(wb)
+        if (detected?.type === 'gsm') {
+          warning = 'Semble être une liste GSM'
+        } else if (detected?.unitId && detected.unitId !== slot.unitId) {
+          warning = `Semble être ${UNIT_NAMES[detected.unitId] ?? detected.unitId}`
+        }
+      } catch { /* silencieux */ }
     }
 
-    setDetecting(false)
-    setFailed(bad)
-    if (detected.length) { setQueue(detected); setQueueIdx(0) }
+    setSlots(prev => ({ ...prev, [slot.id]: { file, mode, warning } }))
+    setDetecting(null)
   }
 
-  // Passe au fichier suivant, ou ferme si c'était le dernier
+  function removeSlot(slotId) {
+    setSlots(prev => { const n = { ...prev }; delete n[slotId]; return n })
+  }
+
+  // ── Valider → construire la file et passer en mode traitement ──────────────
+  function handleValidate() {
+    const allSlots = IMPORT_GROUPS.flatMap(g => g.slots)
+    const q = []
+    for (const slot of allSlots) {
+      const a = slots[slot.id]
+      if (!a) continue
+      if (slot.type === 'gsm')       q.push({ mode: 'gsm',       file: a.file })
+      else if (slot.type === 'personnel') q.push({ mode: 'personnel', file: a.file })
+      else q.push({ mode: a.mode, unitId: slot.unitId, sectorId: slot.sectorId, file: a.file })
+    }
+    setQueue(q)
+    setQueueIdx(0)
+    setStep('process')
+  }
+
   function next() {
-    const nextIdx = queueIdx + 1
-    if (nextIdx < queue.length) setQueueIdx(nextIdx)
+    const ni = queueIdx + 1
+    if (ni < queue.length) setQueueIdx(ni)
     else onClose()
   }
 
-  if (showGSM)
-    return <ImportGSMModal onClose={() => setShowGSM(false)} />
+  // ── Traitement de la file (étape 2) ────────────────────────────────────────
+  if (step === 'process' && queue[queueIdx]) {
+    const cur   = queue[queueIdx]
+    const total = queue.length
+    const label = total > 1 ? `${queueIdx + 1} / ${total}` : null
 
-  if (showProfiles)
-    return <ImportProfilesModal onClose={() => setShowProfiles(false)} />
+    if (cur.mode === 'pdf')
+      return <>{label && <QueueBadge label={label} />}
+        <ImportPlanningPDFModal profiles={profiles} preloadedFile={cur.file}
+          theme={T} onClose={next} onImported={next} /></>
 
-  // Traitement en cours d'un fichier de la file
-  const current = queue[queueIdx]
-  if (current) {
-    const total  = queue.length
-    const label  = total > 1 ? `${queueIdx + 1} / ${total}` : null
+    if (cur.mode === 'gsm')
+      return <>{label && <QueueBadge label={label} />}
+        <ImportGSMModal preloadedFile={cur.file} onClose={next} /></>
 
-    if (current.mode === 'pdf')
-      return <>
-        {label && <QueueBadge label={label} />}
-        <ImportPlanningPDFModal profiles={profiles} preloadedFile={current.file}
-          theme={WARM} onClose={next} onImported={next} />
-      </>
+    if (cur.mode === 'personnel')
+      return <>{label && <QueueBadge label={label} />}
+        <ImportProfilesModal preloadedFile={cur.file} onClose={next} /></>
 
-    if (current.mode === 'gsm')
-      return <>
-        {label && <QueueBadge label={label} />}
-        <ImportGSMModal preloadedFile={current.file} onClose={next} />
-      </>
-
-    const unit   = current.unitId   ? { id: current.unitId,   name: UNIT_NAMES[current.unitId]     } : undefined
-    const sector = current.sectorId ? { id: current.sectorId, name: SECTOR_NAMES[current.sectorId] } : undefined
-    return <>
-      {label && <QueueBadge label={label} />}
+    const unit   = cur.unitId   ? { id: cur.unitId,   name: UNIT_NAMES[cur.unitId]     } : undefined
+    const sector = cur.sectorId ? { id: cur.sectorId, name: SECTOR_NAMES[cur.sectorId] } : undefined
+    return <>{label && <QueueBadge label={label} />}
       <ImportPlanningModal profiles={profiles} unit={unit} sector={sector}
-        preloadedFile={current.file} theme={WARM} onClose={next} onImported={next} />
-    </>
+        preloadedFile={cur.file} theme={T} onClose={next} onImported={next} /></>
   }
 
+  const assignedCount = Object.keys(slots).length
+  const warnCount     = Object.values(slots).filter(s => s.warning).length
+
+  // ── Rendu étape staging (grille de slots) ──────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div style={{ background: WARM.cardBg, borderColor: WARM.border }}
-        className="border rounded-2xl shadow-xl w-full max-w-xs overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-3">
+      <div style={{ background: T.cardBg, borderColor: T.border, maxHeight: '90vh' }}
+        className="border rounded-2xl shadow-xl w-full max-w-lg flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div style={{ background: WARM.cardHead, borderColor: WARM.border }}
-          className="px-5 py-4 border-b flex items-center justify-between">
+        <div style={{ background: T.cardHead, borderColor: T.border }}
+          className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet size={17} style={{ color: WARM.accentBar }} />
-            <h2 className="font-bold text-base" style={{ color: WARM.text }}>Import</h2>
+            <FileSpreadsheet size={17} style={{ color: T.accentBar }} />
+            <h2 className="font-bold text-base" style={{ color: T.text }}>Import</h2>
           </div>
-          <button onClick={onClose} style={{ color: WARM.textFaint }}
+          <button onClick={onClose} style={{ color: T.textFaint }}
             className="p-1.5 hover:opacity-70 transition-opacity">
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-5 py-5 flex flex-col gap-3">
+        {/* Grille de slots — scrollable */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"
+          style={{ overflowY: 'auto' }}>
+          {IMPORT_GROUPS.map(group => (
+            <div key={group.id}>
+              {/* En-tête de groupe */}
+              <div className="flex items-center gap-1.5 mb-2">
+                <div style={{ background: group.style.dot }}
+                  className="w-2 h-2 rounded-full flex-shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider"
+                  style={{ color: group.style.text }}>
+                  {group.label}
+                </span>
+                {group.id === '_data' && (
+                  <span className="text-xs" style={{ color: T.textFaint }}>· GSM, listes de personnel</span>
+                )}
+              </div>
 
-          {/* Import Profils */}
-          <button onClick={() => setShowProfiles(true)}
-            style={{ background: '#EFF6FF', borderColor: '#93C5FD' }}
-            className="border rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity active:scale-95">
-            <div style={{ background: '#DBEAFE' }} className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Users size={15} style={{ color: '#2563EB' }} />
+              {/* Grille de slots */}
+              <div className={`grid gap-2 ${
+                group.slots.length === 1 ? 'grid-cols-1' :
+                group.slots.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+              }`}>
+                {group.slots.map(slot => (
+                  <SlotCard
+                    key={slot.id}
+                    slot={slot}
+                    style={group.style}
+                    assigned={slots[slot.id]}
+                    detecting={detecting === slot.id}
+                    onFile={handleFileDrop}
+                    onRemove={removeSlot}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="text-left">
-              <p className="text-sm font-bold" style={{ color: '#1E40AF' }}>Import personnel</p>
-              <p className="text-xs" style={{ color: '#3B82F6' }}>Ajouter / mettre à jour la liste</p>
-            </div>
+          ))}
+
+          {/* Padding bas */}
+          <div className="h-2" />
+        </div>
+
+        {/* Footer — validation */}
+        <div style={{ borderColor: T.border, background: T.cardHead }}
+          className="border-t px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            {assignedCount === 0 ? (
+              <p className="text-xs" style={{ color: T.textFaint }}>
+                Glissez ou cliquez sur une case pour assigner un fichier
+              </p>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold" style={{ color: T.text }}>
+                  {assignedCount} fichier{assignedCount > 1 ? 's' : ''} prêt{assignedCount > 1 ? 's' : ''}
+                </span>
+                {warnCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs" style={{ color: '#D97706' }}>
+                    <AlertTriangle size={11} />
+                    {warnCount} avertissement{warnCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleValidate}
+            disabled={assignedCount === 0}
+            style={{ background: T.accentBar }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40 hover:opacity-90 transition-opacity flex-shrink-0">
+            <Check size={14} />
+            Valider{assignedCount > 0 ? ` (${assignedCount})` : ''}
           </button>
-
-          {/* Import GSM */}
-          <button onClick={() => setShowGSM(true)}
-            style={{ background: '#F0FFF4', borderColor: '#6EE7B7' }}
-            className="border rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity active:scale-95">
-            <div style={{ background: '#D1FAE5' }} className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Phone size={15} style={{ color: '#059669' }} />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-bold" style={{ color: '#065F46' }}>Import GSM</p>
-              <p className="text-xs" style={{ color: '#047857' }}>Mettre à jour les numéros</p>
-            </div>
-          </button>
-
-          {/* Import Planning — multi-fichiers */}
-          <button onClick={() => fileRef.current?.click()} disabled={detecting}
-            style={{ background: WARM.surface, borderColor: WARM.border }}
-            className="border-2 border-dashed rounded-xl px-4 py-4 flex flex-col items-center gap-2 hover:opacity-80 transition-opacity active:scale-95 disabled:opacity-50">
-            {detecting
-              ? <Loader size={22} style={{ color: WARM.accentBar }} className="animate-spin" />
-              : <Upload size={22} style={{ color: WARM.accentBar }} />}
-            <p className="text-sm font-semibold" style={{ color: WARM.text }}>
-              {detecting ? 'Détection en cours…' : 'Import planning'}
-            </p>
-            <p className="text-xs text-center" style={{ color: WARM.textFaint }}>
-              Excel ou PDF · un ou plusieurs fichiers · secteur auto-détecté
-            </p>
-          </button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.pdf"
-            multiple className="hidden" onChange={handleFiles} />
-
-          {/* Fichiers non reconnus */}
-          {failed.length > 0 && (
-            <div className="text-xs px-3 py-2 rounded-lg" style={{ background: '#FEF3C7', color: '#92400E' }}>
-              <p className="font-semibold mb-1">Non reconnu{failed.length > 1 ? 's' : ''} :</p>
-              {failed.map(n => <p key={n}>· {n}</p>)}
-            </div>
-          )}
         </div>
       </div>
     </div>

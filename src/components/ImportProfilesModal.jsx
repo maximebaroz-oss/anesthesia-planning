@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, Users, Check, AlertTriangle, ChevronDown, Plus, RefreshCw, Loader2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -151,7 +151,7 @@ function CollapsibleSection({ color, icon: Icon, label, items, renderItem, defau
 }
 
 // ─── Composant principal ───────────────────────────────────────────────────────
-export default function ImportProfilesModal({ onClose }) {
+export default function ImportProfilesModal({ onClose, preloadedFile }) {
   const T = WARM
   const fileRef = useRef(null)
   const [step, setStep]         = useState('upload')
@@ -165,11 +165,18 @@ export default function ImportProfilesModal({ onClose }) {
   const [saveResult, setSaveResult] = useState(null) // { created, updated, errors }
   const [showOk, setShowOk]     = useState(false)
 
+  useEffect(() => {
+    if (preloadedFile) processFile(preloadedFile)
+  }, [])
+
   async function handleFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setLoading(true)
+    await processFile(file)
+  }
 
+  async function processFile(file) {
+    setLoading(true)
     try {
       const buf = await file.arrayBuffer()
       const wb  = XLSX.read(buf, { type: 'array' })
