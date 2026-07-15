@@ -61,12 +61,6 @@ function detectFromWorkbook(wb) {
         (text.includes('adjoint') && text.includes('interne') && text.includes('administratif'))) {
       return { type: 'gsm' }
     }
-    if (text.includes('nch') || text.includes('cvt') || text.includes('gibor'))
-                         return { unitId: 'unicat', sectorId: 'prevost' }
-    if (text.includes('traumato'))
-                         return { unitId: 'unicat', sectorId: 'traumatologie' }
-    if (text.includes('bou 1') || text.includes('bou 2') || text.includes('poly b'))
-                         return { unitId: 'unicat', sectorId: 'bou' }
     return { unitId: 'unicat', sectorId: null }
   }
 
@@ -113,9 +107,7 @@ const IMPORT_GROUPS = [
     id: 'unicat', label: 'UNICAT',
     style: { bg: '#FFF7ED', border: '#FDBA74', dot: '#F97316', text: '#9A3412', active: '#FB923C' },
     slots: [
-      { id: 'unicat-bou',    label: 'BOU',       unitId: 'unicat', sectorId: 'bou'           },
-      { id: 'unicat-trauma', label: 'Traumato',  unitId: 'unicat', sectorId: 'traumatologie' },
-      { id: 'unicat-prev',   label: 'Prévost',   unitId: 'unicat', sectorId: 'prevost'       },
+      { id: 'unicat', label: 'UNICAT', unitId: 'unicat', sectorId: null },
     ],
   },
   {
