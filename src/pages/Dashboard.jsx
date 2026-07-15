@@ -5,10 +5,8 @@ import DocumentsModal from '../components/DocumentsModal'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
-import RoomCard from '../components/RoomCard'
 import { WARM as WARM_THEME, SKY as SKY_THEME, AMBER as AMBER_THEME, SLATE as SLATE_THEME, BLUSH as BLUSH_THEME, FUCHSIA as FUCHSIA_THEME, PURPLE as PURPLE_THEME, HOTPINK as HOTPINK_THEME, ROSEWOOD as ROSEWOOD_THEME, SALMON as SALMON_THEME, YELLOW as YELLOW_THEME, LIME as LIME_THEME, MAUVE as MAUVE_THEME, SOFTGREEN as SOFTGREEN_THEME, GRAY as GRAY_THEME } from '../config/theme'
 import { ROOM_NAMES, DAY_NAMES, DAY_NAMES_7, GRADE_LABELS, getCurrentTime, getMonday, getWeekDays, getFullWeekDays, getISOWeek, formatDateKey, formatLastFirst, getLastName, isNightOrWE } from '../config/constants'
-import AssignModal from '../components/AssignModal'
 import ProfileModal from '../components/ProfileModal'
 import Sidebar from '../components/Sidebar'
 import ImportPlanningPDFModal from '../components/ImportPlanningPDFModal'
@@ -864,12 +862,9 @@ export default function Dashboard({ unit, sector, onBack }) {
           : unit?.id    === 'pediatrie'       ? YELLOW_THEME
           : WARM_THEME
   const [assignments, setAssignments] = useState([])
-  const [closures, setClosures] = useState([])
-  const [roomSchedules, setRoomSchedules] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
   const [dayClosed, setDayClosed] = useState(false)
   const [weekDayClosures, setWeekDayClosures] = useState([]) // dates fermées de la semaine
-  const [assignModal, setAssignModal] = useState(null) // { roomId, profession }
   const [showUnitImport, setShowUnitImport] = useState(false)
   const [showPDFImport, setShowPDFImport] = useState(false)
   const [showEffectif, setShowEffectif] = useState(false)
@@ -877,11 +872,9 @@ export default function Dashboard({ unit, sector, onBack }) {
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('week') // 'week' | 'day'
   const [weekAssignments, setWeekAssignments] = useState([])
   const [quickAssign, setQuickAssign] = useState(null) // { date, dateLabel }
   const [resetConfirm, setResetConfirm] = useState(null) // dateStr en attente de confirmation (vue semaine)
-  const [dayResetConfirm, setDayResetConfirm] = useState(false) // confirmation reset jour actif
   const [undoStack, setUndoStack] = useState([]) // snapshots avant chaque action
   const [redoStack, setRedoStack] = useState([]) // snapshots pour redo
   const [weekSnapshot, setWeekSnapshot]   = useState(null)        // snapshot PDF origin { [dateStr]: [...] }
@@ -913,7 +906,6 @@ export default function Dashboard({ unit, sector, onBack }) {
     const days = getWeekDays(weeks[index])
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
-    setViewMode('week')
     setPendingDeletes(new Map()); setPendingAdds(new Set())
     setWeekValidated(false)
   }
@@ -926,7 +918,6 @@ export default function Dashboard({ unit, sector, onBack }) {
     const days = getWeekDays(newStart)
     const todayInWeek = days.find(d => formatDateKey(d) === todayStr)
     setSelectedDate(todayInWeek ? todayStr : formatDateKey(days[0]))
-    setViewMode('week')
     setPendingDeletes(new Map()); setPendingAdds(new Set())
     setWeekValidated(false)
   }
@@ -936,11 +927,9 @@ export default function Dashboard({ unit, sector, onBack }) {
     const sectorId = sector?.id ?? 'hors-bloc'
     const weekDates = selectedWeekDays.map(d => formatDateKey(d))
     const weekMonday = formatDateKey(selectedWeekDays[0])
-    const [{ data: asgn }, { data: cls }, { data: profs }, { data: scheds }, { data: dayCls }, { data: weekCls }, { data: weekAsgn }, { data: weekSups }, { data: snapRow }] = await Promise.all([
+    const [{ data: asgn }, { data: profs }, { data: dayCls }, { data: weekCls }, { data: weekAsgn }, { data: weekSups }, { data: snapRow }] = await Promise.all([
       supabase.from('assignments').select('id, user_id, room_id, date, assigned_by, start_time, end_time, profiles!assignments_user_id_fkey(*)').eq('date', selectedDate),
-      supabase.from('room_closures').select('*').eq('date', selectedDate),
       supabase.from('profiles').select('*').order('full_name'),
-      supabase.from('room_schedules').select('*').eq('date', selectedDate),
       supabase.from('day_closures').select('*').eq('date', selectedDate).eq('unit_id', sectorId).maybeSingle(),
       supabase.from('day_closures').select('date').eq('unit_id', sectorId).in('date', weekDates),
       supabase.from('assignments').select('id, user_id, date, room_id, start_time, end_time, profiles!assignments_user_id_fkey(full_name, profession, grade)').in('date', weekDates),
@@ -948,9 +937,7 @@ export default function Dashboard({ unit, sector, onBack }) {
       supabase.from('planning_snapshots').select('snapshot').eq('week_date', weekMonday).eq('unit_id', sectorId).maybeSingle(),
     ])
     setAssignments(asgn ?? [])
-    setClosures(cls ?? [])
     setAllProfiles(profs ?? [])
-    setRoomSchedules(scheds ?? [])
     setDayClosed(!!dayCls)
     setWeekDayClosures((weekCls ?? []).map(r => r.date))
     setWeekAssignments((weekAsgn ?? []).filter(a => ROOMS.includes(a.room_id)))
@@ -966,8 +953,6 @@ export default function Dashboard({ unit, sector, onBack }) {
     const channel = supabase
       .channel('dashboard-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_closures' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_schedules' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'day_closures' }, () => fetchData())
       .subscribe()
     return () => supabase.removeChannel(channel)
@@ -975,30 +960,6 @@ export default function Dashboard({ unit, sector, onBack }) {
 
   // Vider les stacks undo/redo si on change de semaine ou de secteur
   useEffect(() => { setUndoStack([]); setRedoStack([]) }, [selectedWeekIndex, sector?.id])
-
-  async function handleJoin(roomId, startTime) {
-    if (!profile) return
-    const { data: existing } = await supabase
-      .from('assignments').select('id')
-      .eq('user_id', profile.id).eq('room_id', roomId).eq('date', selectedDate)
-      .maybeSingle()
-    if (!existing) {
-      await supabase.from('assignments').insert({
-        user_id: profile.id,
-        room_id: roomId,
-        date: selectedDate,
-        assigned_by: profile.id,
-        start_time: startTime ?? getCurrentTime(),
-      })
-    }
-    await fetchData()
-  }
-
-  async function handleLeave(roomId, userId) {
-    await supabase.from('assignments').delete()
-      .eq('user_id', userId).eq('room_id', roomId).eq('date', selectedDate)
-    await fetchData()
-  }
 
   async function handleCloseDay() {
     if (!profile?.is_admin && profile?.grade !== 'chef_clinique') return
@@ -1013,54 +974,6 @@ export default function Dashboard({ unit, sector, onBack }) {
     if (!profile?.is_admin && profile?.grade !== 'chef_clinique') return
     await supabase.from('day_closures').delete()
       .eq('date', selectedDate).eq('unit_id', sector?.id ?? 'hors-bloc')
-    await fetchData()
-  }
-
-  async function handleClose(roomId) {
-    if (!profile?.is_admin) return
-    await supabase.from('assignments').delete().eq('room_id', roomId).eq('date', selectedDate)
-    await supabase.from('room_closures').insert({ room_id: roomId, date: selectedDate, closed_by: profile.id })
-    await fetchData()
-  }
-
-  async function handleOpen(roomId) {
-    if (!profile?.is_admin) return
-    await supabase.from('room_closures').delete().eq('room_id', roomId).eq('date', selectedDate)
-    await fetchData()
-  }
-
-  async function handleAssign(userId) {
-    const canManage = profile?.is_admin || profile?.grade === 'chef_clinique'
-    if (!canManage || !assignModal?.roomId) return
-    const { data: existing } = await supabase
-      .from('assignments').select('id')
-      .eq('user_id', userId).eq('room_id', assignModal?.roomId).eq('date', selectedDate)
-      .maybeSingle()
-    if (!existing) {
-      await supabase.from('assignments').insert({
-        user_id: userId,
-        room_id: assignModal?.roomId,
-        date: selectedDate,
-        assigned_by: profile.id,
-        start_time: getCurrentTime(),
-      })
-    }
-    setAssignModal(null)
-    await fetchData()
-  }
-
-  async function handleUpdateAssignmentTime(assignmentId, field, value) {
-    await supabase.from('assignments').update({ [field]: value }).eq('id', assignmentId)
-    setAssignments(prev => prev.map(a => a.id === assignmentId ? { ...a, [field]: value } : a))
-    fetchData()
-  }
-
-  async function handleUpdateRoomSchedule(roomId, field, value) {
-    await supabase.from('room_schedules').upsert({
-      room_id: roomId,
-      date: selectedDate,
-      [field]: value,
-    }, { onConflict: 'room_id,date' })
     await fetchData()
   }
 
@@ -1137,7 +1050,6 @@ export default function Dashboard({ unit, sector, onBack }) {
     pushUndo()
     await supabase.from('assignments').delete().eq('date', dateStr).in('room_id', ROOMS)
     setResetConfirm(null)
-    setDayResetConfirm(false)
     await fetchData()
   }
 
@@ -1194,7 +1106,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               <ChevronRight size={18} />
             </button>
             {/* Boutons VU + Annuler */}
-            {viewMode === 'week' && (pendingDeletes.size > 0 || pendingAdds.size > 0 || weekValidated) && (
+            {(pendingDeletes.size > 0 || pendingAdds.size > 0 || weekValidated) && (
               <div className="flex gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => { if (!weekValidated) handleValidateWeek() }}
@@ -1217,30 +1129,6 @@ export default function Dashboard({ unit, sector, onBack }) {
             )}
           </div>
 
-          <div className="flex gap-1.5">
-            {selectedWeekDays.map((day, i) => {
-              const dateStr = formatDateKey(day)
-              const isSelected = dateStr === selectedDate
-              const isToday = dateStr === todayStr
-              const isPast = dateStr < todayStr
-              const isDayClosed = weekDayClosures.includes(dateStr)
-              return (
-                <button key={i} onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}
-                  style={isSelected
-                    ? { background: T.accentBar, color: '#fff' }
-                    : isToday
-                      ? { background: T.cardHead, color: T.accent, border: `1px solid ${T.border}` }
-                      : { color: isPast ? T.textFaint : T.textSub }}
-                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80 flex flex-col items-center gap-0.5 relative">
-                  <span className="text-xs uppercase tracking-wide">{DAY_LABELS[i]}</span>
-                  <span className="text-sm font-bold">{day.getDate()}</span>
-                  {isDayClosed && (
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-400" />
-                  )}
-                </button>
-              )
-            })}
-          </div>
         </div>
       </div>
 
@@ -1316,7 +1204,7 @@ export default function Dashboard({ unit, sector, onBack }) {
               <p className="text-sm">Chargement...</p>
             </div>
           </div>
-        ) : viewMode === 'week' ? (
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
             {selectedWeekDays.map((day, i) => {
               const dateStr = formatDateKey(day)
@@ -1352,9 +1240,8 @@ export default function Dashboard({ unit, sector, onBack }) {
                     boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
                   }}
                   className="rounded-2xl border p-4 flex flex-col">
-                  {/* Header jour — cliquable pour aller en vue jour */}
-                  <div className="flex items-center justify-between mb-1 cursor-pointer hover:opacity-70 transition-opacity"
-                    onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
+                  {/* Header jour */}
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-bold uppercase tracking-widest" style={{ color: T.textSub }}>{DAY_LABELS[i]}</span>
                       <span className="text-xl font-bold" style={{ color: T.text }}>{day.getDate()}</span>
@@ -1367,9 +1254,9 @@ export default function Dashboard({ unit, sector, onBack }) {
                           ? <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: T.surface, color: T.textSub }}>{totalPeople} pers.</span>
                           : null}
                   </div>
-                  {/* Superviseur + séparateur — cliquable pour aller en vue jour */}
+                  {/* Superviseur + séparateur */}
                   {!isDayClosed && !['gyneco', 'obstetrique'].includes(sector?.id) && (
-                    <div className="cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
+                    <div>
                       {(() => {
                         const sup = weekSupervisors[dateStr]
                         return (
@@ -1401,7 +1288,7 @@ export default function Dashboard({ unit, sector, onBack }) {
                     </div>
                   )}
                   {/* Aperçu salles */}
-                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedDate(dateStr); setViewMode('day'); setDayResetConfirm(false) }}>
+                  <div className="flex-1">
                     {isDayClosed ? (
                       <p className="text-xs italic mt-2" style={{ color: T.textFaint }}>Journée fermée</p>
                     ) : roomEntries.length === 0 ? (
@@ -1517,138 +1404,6 @@ export default function Dashboard({ unit, sector, onBack }) {
               )
             })}
           </div>
-        ) : dayClosed ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: '#FEE2E2' }}>
-              <CalendarOff size={36} className="text-red-400" />
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-lg" style={{ color: T.text }}>Journée fermée</p>
-              <p className="text-sm mt-1" style={{ color: T.textFaint }}>Jour férié — aucune salle active</p>
-            </div>
-            {(profile?.is_admin || profile?.grade === 'chef_clinique') && (
-              <button onClick={handleOpenDay}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{ background: T.surface, color: T.accent }}>
-                <CalendarCheck size={15} /> Réouvrir cette journée
-              </button>
-            )}
-          </div>
-        ) : (
-          <div>
-            <SupervisorCard
-              date={selectedDate}
-              allProfiles={allProfiles}
-              canManage={canManage}
-              sectorId={sector?.id ?? 'hors-bloc'}
-              sectorLabel={sectorLabel}
-              theme={T}
-            />
-            {sector?.id === 'sinpi' && (
-              <PiquetCard
-                date={selectedDate}
-                assignments={assignments}
-                allProfiles={allProfiles}
-                canManage={canManage}
-                theme={T}
-                onRefresh={fetchData}
-              />
-            )}
-            {sector?.id === 'sinpi' ? (() => {
-              const dayRooms = sortSinpiRooms(getRoomsForDate(selectedDate), assignments)
-              // Group rooms by grade group
-              const groups = []
-              for (const roomId of dayRooms) {
-                const grp = getSinpiGradeGroup(roomId, assignments)
-                if (groups.length === 0 || groups[groups.length - 1].grp !== grp) {
-                  groups.push({ grp, rooms: [] })
-                }
-                groups[groups.length - 1].rooms.push(roomId)
-              }
-              return (
-                <div>
-                  {groups.map((g, gi) => (
-                    <Fragment key={g.grp + gi}>
-                      {gi > 0 && (() => {
-                        const lbl = grp => grp === 'adjoint' ? 'Adj' : grp === 'chef_clinique' ? 'CDC' : 'Int'
-                        const prev = groups[gi - 1].grp
-                        return (
-                          <div className="my-3">
-                            <div className="flex justify-end mb-1">
-                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(prev)}</span>
-                            </div>
-                            <div className="border-t-2" style={{ borderColor: T.accentBar }} />
-                            <div className="flex justify-end mt-1">
-                              <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(g.grp)}</span>
-                            </div>
-                          </div>
-                        )
-                      })()}
-                      <div className="sm:columns-2 gap-3">
-                        {g.rooms.map(roomId => (
-                          <div key={roomId} className="break-inside-avoid mb-3">
-                            <RoomCard
-                              roomId={roomId}
-                              roomName={ROOM_NAMES[roomId]}
-                              noISA={NO_ISA_ROOMS.has(roomId)}
-                              assignments={assignments}
-                              closures={closures}
-                              roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
-                              currentProfile={profile}
-                              isToday={selectedDate === todayStr}
-                              onJoin={handleJoin}
-                              onLeave={handleLeave}
-                              onClose={handleClose}
-                              onOpen={handleOpen}
-                              onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
-                              onProfileClick={(p) => setSelectedProfile(p)}
-                              onUpdateTime={handleUpdateAssignmentTime}
-                              onUpdateRoomSchedule={handleUpdateRoomSchedule}
-                              theme={T}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </Fragment>
-                  ))}
-                </div>
-              )
-            })() : (
-              <div className="sm:columns-2 gap-3">
-                {getRoomsForDate(selectedDate).map(roomId => (
-                  <div key={roomId} className="break-inside-avoid mb-3">
-                    <RoomCard
-                      roomId={roomId}
-                      roomName={ROOM_NAMES[roomId]}
-                      noISA={NO_ISA_ROOMS.has(roomId)}
-                      assignments={assignments}
-                      closures={closures}
-                      roomSchedule={roomSchedules.find(s => s.room_id === roomId) ?? DEFAULT_SCHEDULES[roomId] ?? null}
-                      currentProfile={profile}
-                      isToday={selectedDate === todayStr}
-                      onJoin={handleJoin}
-                      onLeave={handleLeave}
-                      onClose={handleClose}
-                      onOpen={handleOpen}
-                      onAssign={(id, profession) => setAssignModal({ roomId: id, profession })}
-                      onProfileClick={(p) => setSelectedProfile(p)}
-                      onUpdateTime={handleUpdateAssignmentTime}
-                      onUpdateRoomSchedule={handleUpdateRoomSchedule}
-                      theme={T}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            {['julliard', 'bou', 'traumatologie', 'prevost', 'bocha-amopa', 'orl-maxfa-plastie', 'antalgie', 'gyneco', 'obstetrique', 'ophtalmo'].includes(sector?.id) && (
-              <SouhaitsCard
-                date={selectedDate}
-                sectorId={sector.id}
-                canEdit={canManage}
-                theme={T}
-              />
-            )}
-          </div>
         )}
       </main>
 
@@ -1717,19 +1472,6 @@ export default function Dashboard({ unit, sector, onBack }) {
         />
       )}
 
-      {assignModal?.roomId && (
-        <AssignModal
-          roomId={assignModal.roomId}
-          roomName={ROOM_NAMES[assignModal.roomId]}
-          profiles={allProfiles}
-          assignments={assignments}
-          today={selectedDate}
-          defaultFilter={assignModal.profession}
-          theme={T}
-          onAssign={handleAssign}
-          onClose={() => setAssignModal(null)}
-        />
-      )}
     </div>
   )
 }
