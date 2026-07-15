@@ -277,6 +277,7 @@ const SECTOR_ROOMS = {
   'bou':               [18, 19, 20, 21, 22],
   'traumatologie':     [23, 36, 37, 24],
   'prevost':           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+  'unicat':            [18, 19, 20, 21, 22, 23, 36, 37, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
   // Maternité
   'gyneco':            [57, 58, 59, 60, 61, 62, 63],
   'obstetrique':       [64, 65, 66, 67, 68, 69, 70, 71, 72],
@@ -847,7 +848,8 @@ export default function Dashboard({ unit, sector, onBack }) {
     return 'none'
   }
   const sectorLabel = sector?.name ?? 'HB'
-  const T = sector?.id === 'julliard'         ? SKY_THEME
+  const T = sector?.id === 'unicat'           ? AMBER_THEME
+          : sector?.id === 'julliard'         ? SKY_THEME
           : sector?.id === 'bou'              ? AMBER_THEME
           : sector?.id === 'traumatologie'    ? SLATE_THEME
           : sector?.id === 'prevost'          ? BLUSH_THEME

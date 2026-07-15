@@ -24,7 +24,12 @@ export default function App() {
   if (!user) return <Login />
 
   if (!selectedUnit) {
-    return <UnitSelector onSelect={(unit) => setSelectedUnit(unit)} />
+    return (
+      <UnitSelector onSelect={(unit) => {
+        setSelectedUnit(unit)
+        if (unit.id === 'unicat') setSelectedSector({ id: 'unicat', name: 'UNICAT' })
+      }} />
+    )
   }
 
   if (!selectedSector) {
@@ -41,7 +46,14 @@ export default function App() {
     <Dashboard
       unit={selectedUnit}
       sector={selectedSector}
-      onBack={() => setSelectedSector(null)}
+      onBack={() => {
+        if (selectedUnit?.id === 'unicat') {
+          setSelectedUnit(null)
+          setSelectedSector(null)
+        } else {
+          setSelectedSector(null)
+        }
+      }}
     />
   )
 }
