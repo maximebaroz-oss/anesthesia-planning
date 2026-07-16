@@ -853,7 +853,7 @@ export default function Dashboard({ unit, sector, onBack }) {
     return 'none'
   }
   const sectorLabel = sector?.name ?? 'HB'
-  const T = sector?.id === 'unicat'           ? AMBER_THEME
+  const T = sector?.id === 'unicat'           ? GRAY_THEME
           : sector?.id === 'julliard'         ? SKY_THEME
           : sector?.id === 'bou'              ? AMBER_THEME
           : sector?.id === 'traumatologie'    ? SLATE_THEME
@@ -1361,15 +1361,15 @@ export default function Dashboard({ unit, sector, onBack }) {
                                               : isTardif ? T.accentBar + '20'
                                               : 'transparent',
                                   }}>
-                                  <span className="pr-1 break-words"
-                                    style={{ color: curSec ? curSec.text : T.textFaint, fontWeight: isTardif ? 700 : 500 }}>
+                                  <span className="font-medium pr-1 break-words"
+                                    style={{ color: isTardif ? (curSec ? curSec.color : T.text) : (curSec ? curSec.text : T.textFaint) }}>
                                     {roomName}
                                   </span>
                                   <div className="flex flex-wrap gap-x-1.5">
                                     {/* Inchangés — normal */}
                                     {group.unchanged.map(a => (
                                       <span key={a.id} className="flex items-center gap-0.5">
-                                        <span style={{ color: curSec ? curSec.text : T.text, fontWeight: isTardif ? 700 : 600 }}>
+                                        <span className="font-semibold" style={{ color: isTardif ? (curSec ? curSec.color : T.text) : (curSec ? curSec.text : T.text) }}>
                                           {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
                                         </span>
                                         {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
