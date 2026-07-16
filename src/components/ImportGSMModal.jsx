@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, Phone, Check, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react'
+import { X, Upload, Phone, Check, AlertTriangle, ChevronDown, Loader2, UserPlus } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { WARM } from '../config/theme'
@@ -48,22 +48,34 @@ function detectColumns(headers) {
   }
 }
 
+// Détecte le grade/profession depuis le titre d'une section GSM
+function sectionTypeFromHeader(headerText) {
+  const h = String(headerText ?? '').toLowerCase()
+  if (h.includes('interne')) return { grade: 'interne', profession: 'medecin' }
+  if (h.includes('adjoint') || h.includes('med-chef') || h.includes('chef') || h.includes('médecin')) {
+    return { grade: 'adjoint', profession: 'medecin' }
+  }
+  return null // section admin/autre → pas de création automatique
+}
+
 // ─── Parser multi-sections ────────────────────────────────────────────────────
 // Format : plusieurs groupes nom+téléphone côte à côte, séparés par des colonnes vides
 // Ex : | Adjoints | | | | | Internes | | | | | Admin | |
 function parseMultiSection(rows, headerRowIdx, sectionStarts) {
   const results = []
-  const rowLen = rows[headerRowIdx].length
+  const headerRow = rows[headerRowIdx]
+  const rowLen = headerRow.length
 
   // Sections : de sectionStarts[i] jusqu'à sectionStarts[i+1]-1 ou fin
   const sections = sectionStarts.map((startCol, idx) => ({
-    nameCol: startCol,
-    endCol:  idx + 1 < sectionStarts.length ? sectionStarts[idx + 1] - 1 : rowLen - 1,
+    nameCol:  startCol,
+    endCol:   idx + 1 < sectionStarts.length ? sectionStarts[idx + 1] - 1 : rowLen - 1,
+    medType:  sectionTypeFromHeader(headerRow[startCol]),
   }))
 
   for (let r = headerRowIdx + 1; r < rows.length; r++) {
     const row = rows[r]
-    for (const { nameCol, endCol } of sections) {
+    for (const { nameCol, endCol, medType } of sections) {
       const rawName = cleanExcelName(String(row[nameCol] ?? '').trim())
       if (!rawName || rawName.length < 2) continue
 
@@ -86,6 +98,7 @@ function parseMultiSection(rows, headerRowIdx, sectionStarts) {
         normName: normalizeName(nameStr),
         rawPhone,
         phone:    normalizePhone(rawPhone),
+        medType,  // { grade, profession } si section médicale, null sinon
       })
     }
   }
@@ -184,10 +197,14 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
   const [loading, setLoading]     = useState(false)
   const [toUpdate, setToUpdate]   = useState([])
   const [alreadyOk, setAlreadyOk] = useState([])
+  const [toCreate, setToCreate]   = useState([])
   const [unmatched, setUnmatched] = useState([])
   const [noPhone, setNoPhone]     = useState([])
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(0)
+  const [created, setCreated]     = useState(0)
+  const [createError, setCreateError] = useState(null)
+  const [showToCreate,  setShowToCreate]  = useState(true)
   const [showUnmatched, setShowUnmatched] = useState(false)
   const [showAlreadyOk, setShowAlreadyOk] = useState(false)
   const [showNoPhone,   setShowNoPhone]   = useState(false)
@@ -216,12 +233,18 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
 
       const update  = []
       const ok      = []
+      const create  = []
       const noMatch = []
       const noPh    = []
 
       for (const entry of entries) {
         const p = matchProfile(entry.normName, profs)
-        if (!p) { noMatch.push(entry); continue }
+        if (!p) {
+          // Entrée médicale (section adjoint/interne) → proposer création
+          if (entry.medType) create.push(entry)
+          else noMatch.push(entry)
+          continue
+        }
         if (!entry.phone) { noPh.push({ ...entry, profile: p }); continue }
         const oldNorm = normalizePhone(p.phone ?? '')
         if (oldNorm === entry.phone) {
@@ -233,6 +256,7 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
 
       setToUpdate(update)
       setAlreadyOk(ok)
+      setToCreate(create)
       setUnmatched(noMatch)
       setNoPhone(noPh)
       setStep('preview')
@@ -245,12 +269,29 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
 
   async function handleSave() {
     setSaving(true)
+    setCreateError(null)
     let count = 0
     for (const m of toUpdate) {
       await supabase.from('profiles').update({ phone: m.phone }).eq('id', m.profile.id)
       count++
     }
+    let newCount = 0
+    for (const e of toCreate) {
+      const { error } = await supabase.from('profiles').insert({
+        full_name:  e.rawName,
+        grade:      e.medType.grade,
+        profession: e.medType.profession,
+        phone:      e.phone || null,
+      })
+      if (!error) {
+        newCount++
+      } else if (error.code === '23503') {
+        setCreateError('Contrainte Supabase active — voir instructions SQL ci-dessous.')
+        break
+      }
+    }
     setSaved(count)
+    setCreated(newCount)
     setSaving(false)
     setStep('done')
   }
@@ -388,14 +429,41 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
               </div>
             )}
 
-            {/* Non reconnus */}
+            {/* Nouveaux profils à créer */}
+            {toCreate.length > 0 && (
+              <div>
+                <button className="flex items-center gap-1.5 text-xs font-semibold mb-1.5 hover:opacity-70 transition-opacity"
+                  style={{ color: '#1D4ED8' }}
+                  onClick={() => setShowToCreate(v => !v)}>
+                  <UserPlus size={12} />
+                  {toCreate.length} nouvelle{toCreate.length > 1 ? 's' : ''} personne{toCreate.length > 1 ? 's' : ''} — création automatique
+                  <ChevronDown size={12} style={{ transform: showToCreate ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+                </button>
+                {showToCreate && (
+                  <div className="flex flex-col gap-1">
+                    {toCreate.map((u, i) => (
+                      <div key={i} className="text-xs px-2 py-1.5 rounded-lg flex items-center justify-between gap-2"
+                        style={{ background: '#EFF6FF', color: '#1E3A8A' }}>
+                        <span className="font-medium">{u.rawName}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="italic opacity-70">{u.medType.grade}</span>
+                          {u.rawPhone && <span className="font-mono">{u.rawPhone}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Non reconnus (admin/autres) */}
             {unmatched.length > 0 && (
               <div>
                 <button className="flex items-center gap-1.5 text-xs font-semibold mb-1.5 hover:opacity-70 transition-opacity"
                   style={{ color: '#B45309' }}
                   onClick={() => setShowUnmatched(v => !v)}>
                   <AlertTriangle size={12} />
-                  {unmatched.length} non reconnu{unmatched.length > 1 ? 's' : ''}
+                  {unmatched.length} non reconnu{unmatched.length > 1 ? 's' : ''} (section admin)
                   <ChevronDown size={12} style={{ transform: showUnmatched ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
                 </button>
                 {showUnmatched && (
@@ -418,12 +486,14 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
                 className="flex-1 border rounded-xl py-2.5 text-sm font-semibold hover:opacity-70 transition-opacity">
                 Annuler
               </button>
-              <button onClick={handleSave} disabled={saving || toUpdate.length === 0}
+              <button onClick={handleSave} disabled={saving || (toUpdate.length === 0 && toCreate.length === 0)}
                 style={{ background: T.accentBar }}
                 className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition-opacity">
                 {saving
                   ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Enregistrement…</span>
-                  : toUpdate.length === 0 ? 'Rien à modifier' : `Mettre à jour ${toUpdate.length}`}
+                  : toUpdate.length === 0 && toCreate.length === 0
+                    ? 'Rien à modifier'
+                    : `Valider (${toUpdate.length + toCreate.length})`}
               </button>
             </div>
           </div>
@@ -431,23 +501,37 @@ export default function ImportGSMModal({ onClose, preloadedFile }) {
 
         {/* ── Succès ── */}
         {step === 'done' && (
-          <div className="px-5 py-10 flex flex-col items-center gap-4">
+          <div className="px-5 py-8 flex flex-col items-center gap-3">
             <div style={{ background: '#D1FAE5' }}
               className="w-14 h-14 rounded-full flex items-center justify-center">
               <Check size={28} style={{ color: '#059669' }} />
             </div>
-            <p className="text-base font-bold" style={{ color: T.text }}>
-              {saved} numéro{saved > 1 ? 's' : ''} mis à jour
-            </p>
+            {saved > 0 && (
+              <p className="text-sm font-semibold" style={{ color: T.text }}>
+                {saved} numéro{saved > 1 ? 's' : ''} mis à jour
+              </p>
+            )}
+            {created > 0 && (
+              <p className="text-sm font-semibold" style={{ color: '#1D4ED8' }}>
+                {created} nouveau{created > 1 ? 'x' : ''} profil{created > 1 ? 's' : ''} créé{created > 1 ? 's' : ''}
+              </p>
+            )}
+            {saved === 0 && created === 0 && (
+              <p className="text-sm font-semibold" style={{ color: T.text }}>Aucune modification</p>
+            )}
             {alreadyOk.length > 0 && (
               <p className="text-xs text-center" style={{ color: T.textFaint }}>
                 {alreadyOk.length} numéro{alreadyOk.length > 1 ? 's' : ''} déjà identique{alreadyOk.length > 1 ? 's' : ''}
               </p>
             )}
-            {unmatched.length > 0 && (
-              <p className="text-xs text-center" style={{ color: T.textFaint }}>
-                {unmatched.length} entrée{unmatched.length > 1 ? 's' : ''} non reconnue{unmatched.length > 1 ? 's' : ''}
-              </p>
+            {createError && (
+              <div className="w-full rounded-xl p-3 text-xs" style={{ background: '#FEF2F2', color: '#991B1B' }}>
+                <p className="font-semibold mb-1">{createError}</p>
+                <p className="font-mono text-[10px] leading-relaxed select-all whitespace-pre-wrap">{
+`ALTER TABLE profiles ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;`
+                }</p>
+              </div>
             )}
             <button onClick={onClose}
               style={{ background: T.accentBar }}
