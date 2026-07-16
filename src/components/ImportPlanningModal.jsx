@@ -134,7 +134,8 @@ function cleanExcelName(raw) {
 // et nettoie chaque partie (AM, PM, horaires…)
 function splitCellNames(raw) {
   if (!raw) return []
-  const parts = raw.split(/\n|\r\n|\r| \/ |\//)
+  // Sépare sur saut de ligne, slash, ou " - " / " – " (deux médecins dans une cellule)
+  const parts = raw.split(/\n|\r\n|\r| \/ |\/| - | – /)
     .map(s => cleanExcelName(s.trim()))
     .filter(s => s.length > 0)
   return parts.length > 0 ? parts : [cleanExcelName(raw)]
