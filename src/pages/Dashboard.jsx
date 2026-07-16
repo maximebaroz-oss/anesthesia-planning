@@ -1242,8 +1242,8 @@ export default function Dashboard({ unit, sector, onBack }) {
               return (
                 <div key={i}
                   style={{
-                    background: isWeekend ? T.surface : T.cardBg,
-                    borderColor: isToday ? T.accentBar : T.border,
+                    background: sector?.id === 'unicat' ? (isWeekend ? '#F3F4F6' : '#FFFFFF') : (isWeekend ? T.surface : T.cardBg),
+                    borderColor: isToday ? T.accentBar : (sector?.id === 'unicat' ? '#D1D5DB' : T.border),
                     boxShadow: '0 2px 12px rgba(180,130,60,0.08)',
                   }}
                   className="rounded-2xl border p-4 flex flex-col">
@@ -1350,21 +1350,26 @@ export default function Dashboard({ unit, sector, onBack }) {
                                     <div className="flex-1 h-px" style={{ background: curSec.color }} />
                                   </div>
                                 )}
+                                {(() => {
+                                  const roomName = ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`
+                                  const isTardif = isNightOrWE(roomName)
+                                  return (
                                 <div className="grid text-xs leading-tight mb-0.5 rounded px-0.5"
                                   style={{
                                     gridTemplateColumns: '100px 1fr',
                                     background: curSec ? curSec.bg
-                                              : isNightOrWE(ROOM_NAMES[Number(roomId)]) ? T.accentBar + '20'
+                                              : isTardif ? T.accentBar + '20'
                                               : 'transparent',
                                   }}>
-                                  <span className="font-medium pr-1 break-words" style={{ color: curSec ? curSec.text : T.textFaint }}>
-                                    {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
+                                  <span className="pr-1 break-words"
+                                    style={{ color: curSec ? curSec.text : T.textFaint, fontWeight: isTardif ? 700 : 500 }}>
+                                    {roomName}
                                   </span>
                                   <div className="flex flex-wrap gap-x-1.5">
                                     {/* Inchangés — normal */}
                                     {group.unchanged.map(a => (
                                       <span key={a.id} className="flex items-center gap-0.5">
-                                        <span className="font-semibold" style={{ color: curSec ? curSec.text : T.text }}>
+                                        <span style={{ color: curSec ? curSec.text : T.text, fontWeight: isTardif ? 700 : 600 }}>
                                           {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
                                         </span>
                                         {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
@@ -1393,6 +1398,8 @@ export default function Dashboard({ unit, sector, onBack }) {
                                     ))}
                                   </div>
                                 </div>
+                                  )
+                                })()}
                               </Fragment>
                             )
                           })}
