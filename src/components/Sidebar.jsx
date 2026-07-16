@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
-import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser, Calendar, ChevronUp } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { X, User, Users, Stethoscope, Phone, Edit2, Check, MapPin, Search, BookUser, Calendar, ChevronUp, Trash2, Plus, UserPlus, FileSpreadsheet } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { ROOM_NAMES, GRADE_LABELS, getISOWeek, getMonday, formatDateKey, formatLastFirst, getLastName } from '../config/constants'
 import { WARM } from '../config/theme'
 import ContactsModal, { findGsmPhone } from './ContactsModal'
+import ImportProfilesModal from './ImportProfilesModal'
 
 const DAY_NAMES_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTH_SHORT  = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'aoû', 'sep', 'oct', 'nov', 'déc']
@@ -233,31 +234,124 @@ function ProfilePanel({ selectedDate, T }) {
   )
 }
 
-function StaffRow({ p, profession, canEdit, isMe, T }) {
+const MED_GRADES = [
+  { value: 'adjoint',      label: 'Adjoint' },
+  { value: 'chef_clinique',label: 'Chef de clinique' },
+  { value: 'interne',      label: 'Interne' },
+  { value: 'consultant',   label: 'Consultant' },
+]
+const ISA_GRADES = [
+  { value: 'iade', label: 'ISA' },
+]
+
+function StaffRow({ p, profession, canEdit, canManage, isMe, T, onRefresh }) {
   const [showPhone, setShowPhone] = useState(false)
-  const [showPlan, setShowPlan] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [phone, setPhone] = useState(p.phone ?? '')
+  const [showPlan,  setShowPlan]  = useState(false)
+  const [editMode,  setEditMode]  = useState(false)   // édition nom+grade
+  const [editingPhone, setEditingPhone] = useState(false)
+
+  // Phone state
+  const [phone, setPhone]   = useState(p.phone ?? '')
+  // Edit state
+  const [name,  setName]    = useState(p.full_name)
+  const [grade, setGrade]   = useState(p.grade ?? '')
   const [saving, setSaving] = useState(false)
+  const [delConfirm, setDelConfirm] = useState(false)
+
   const gsmPhone = !phone ? findGsmPhone(p.full_name) : null
+  const isMed = profession === 'medecin'
+  const dot   = isMed ? 'bg-red-400' : 'bg-blue-400'
+  const myBg     = isMed ? '#FEF2F2' : '#EFF6FF'
+  const myBorder = isMed ? '#FECACA' : '#BFDBFE'
+  const myColor  = isMed ? '#DC2626' : '#2563EB'
+  const gradeOptions = isMed ? MED_GRADES : ISA_GRADES
 
   async function savePhone() {
     setSaving(true)
     await supabase.from('profiles').update({ phone }).eq('id', p.id)
     setSaving(false)
-    setEditing(false)
+    setEditingPhone(false)
   }
 
-  const isMed = profession === 'medecin'
-  const dot = isMed ? 'bg-red-400' : 'bg-blue-400'
-  const myBg = isMed ? '#FEF2F2' : '#EFF6FF'
-  const myBorder = isMed ? '#FECACA' : '#BFDBFE'
-  const myColor = isMed ? '#DC2626' : '#2563EB'
+  async function saveProfile() {
+    if (!name.trim()) return
+    setSaving(true)
+    await supabase.from('profiles').update({ full_name: name.trim(), grade }).eq('id', p.id)
+    setSaving(false)
+    setEditMode(false)
+    onRefresh?.()
+  }
+
+  async function deleteProfile() {
+    setSaving(true)
+    await supabase.from('profiles').delete().eq('id', p.id)
+    setSaving(false)
+    onRefresh?.()
+  }
 
   function togglePlan() {
     setShowPlan(v => !v)
     setShowPhone(false)
-    setEditing(false)
+    setEditMode(false)
+    setDelConfirm(false)
+  }
+
+  if (editMode) {
+    return (
+      <div className="rounded-xl border p-3 mb-1" style={{ background: T.surface, borderColor: T.border }}>
+        <div className="flex flex-col gap-2">
+          <input
+            value={name} onChange={e => setName(e.target.value)}
+            placeholder="Nom complet"
+            style={{ background: T.cardBg, borderColor: T.border, color: T.text }}
+            className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none w-full"
+            autoFocus
+          />
+          <select
+            value={grade} onChange={e => setGrade(e.target.value)}
+            style={{ background: T.cardBg, borderColor: T.border, color: T.text }}
+            className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none w-full">
+            {gradeOptions.map(g => (
+              <option key={g.value} value={g.value}>{g.label}</option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            {delConfirm ? (
+              <>
+                <button onClick={deleteProfile} disabled={saving}
+                  className="flex-1 py-1.5 text-xs font-bold rounded-lg text-white transition-opacity hover:opacity-80"
+                  style={{ background: '#DC2626' }}>
+                  Supprimer définitivement
+                </button>
+                <button onClick={() => setDelConfirm(false)} disabled={saving}
+                  style={{ color: T.textFaint, background: T.cardBg, border: `1px solid ${T.border}` }}
+                  className="px-3 py-1.5 rounded-lg text-xs hover:opacity-70">
+                  Annuler
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={saveProfile} disabled={saving || !name.trim()}
+                  style={{ background: T.accentBar }}
+                  className="flex-1 py-1.5 text-xs font-bold rounded-lg text-white transition-opacity hover:opacity-80 disabled:opacity-40">
+                  {saving ? '…' : 'Enregistrer'}
+                </button>
+                <button onClick={() => { setDelConfirm(true) }} disabled={saving}
+                  style={{ color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA' }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-80 transition-opacity">
+                  <Trash2 size={13} />
+                </button>
+                <button onClick={() => setEditMode(false)} disabled={saving}
+                  style={{ color: T.textFaint, background: T.cardBg, border: `1px solid ${T.border}` }}
+                  className="px-3 py-1.5 rounded-lg text-xs hover:opacity-70">
+                  <X size={13} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -266,9 +360,7 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
         className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors cursor-pointer"
         style={isMe
           ? { background: myBg, border: `1px solid ${myBorder}` }
-          : showPlan
-            ? { background: T.surface }
-            : {}}
+          : showPlan ? { background: T.surface } : {}}
         onMouseEnter={e => { if (!isMe && !showPlan) e.currentTarget.style.background = T.surfaceHov }}
         onMouseLeave={e => { if (!isMe && !showPlan) e.currentTarget.style.background = '' }}
         onClick={togglePlan}
@@ -283,8 +375,17 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
           ? <ChevronUp size={14} className="flex-shrink-0" style={{ color: T.textFaint }} />
           : <Calendar size={14} className="flex-shrink-0" style={{ color: T.textFaint }} />
         }
+        {canManage && (
+          <button
+            onClick={e => { e.stopPropagation(); setEditMode(true); setShowPhone(false); setShowPlan(false) }}
+            className="p-2 rounded-lg transition-colors flex-shrink-0 touch-manipulation"
+            style={{ color: T.textFaint }}
+            title="Modifier">
+            <Edit2 size={13} />
+          </button>
+        )}
         <button
-          onClick={e => { e.stopPropagation(); setShowPhone(v => !v); setShowPlan(false); setEditing(false) }}
+          onClick={e => { e.stopPropagation(); setShowPhone(v => !v); setShowPlan(false) }}
           className="p-2 -mr-1 rounded-lg transition-colors flex-shrink-0 touch-manipulation"
           style={{ color: phone ? T.accentBar : T.textFaint }}
         >
@@ -304,7 +405,7 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
 
       {showPhone && (
         <div className="px-4 pb-1">
-          {editing ? (
+          {editingPhone ? (
             <div className="flex items-center gap-2">
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                 placeholder="06 12 34 56 78" autoFocus
@@ -316,7 +417,7 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
                 className="text-white rounded-lg p-2 transition-colors touch-manipulation flex-shrink-0">
                 <Check size={14} />
               </button>
-              <button onClick={() => setEditing(false)} style={{ color: T.textFaint }}
+              <button onClick={() => setEditingPhone(false)} style={{ color: T.textFaint }}
                 className="rounded-lg p-2 transition-colors touch-manipulation flex-shrink-0">
                 <X size={14} />
               </button>
@@ -331,7 +432,7 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
                 <span className="text-sm italic" style={{ color: T.textFaint }}>Non renseigné</span>
               )}
               {canEdit && (
-                <button onClick={() => setEditing(true)}
+                <button onClick={() => setEditingPhone(true)}
                   className="ml-3 p-1.5 rounded-md touch-manipulation flex-shrink-0"
                   style={{ color: T.textFaint }}>
                   <Edit2 size={14} />
@@ -345,6 +446,73 @@ function StaffRow({ p, profession, canEdit, isMe, T }) {
   )
 }
 
+function AddPersonForm({ profession, T, onDone }) {
+  const gradeOptions = profession === 'medecin' ? MED_GRADES : ISA_GRADES
+  const [name,  setName]  = useState('')
+  const [grade, setGrade] = useState(gradeOptions[0].value)
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState(null)
+
+  async function handleAdd() {
+    if (!name.trim()) return
+    setSaving(true)
+    setError(null)
+    const { error: err } = await supabase.from('profiles').insert({
+      full_name:  name.trim(),
+      grade,
+      profession,
+    })
+    setSaving(false)
+    if (err) {
+      if (err.code === '23502' || err.code === '23503' || err.message?.includes('foreign key')) {
+        setError('Impossible : les profils nécessitent un compte Supabase Auth. Utilisez l\'import Excel.')
+      } else {
+        setError(err.message)
+      }
+    } else {
+      onDone()
+    }
+  }
+
+  return (
+    <div className="rounded-xl border p-3 mb-3" style={{ background: T.surface, borderColor: T.border }}>
+      <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: T.text }}>
+        <UserPlus size={12} style={{ color: T.accentBar }} />
+        Nouveau {profession === 'medecin' ? 'médecin' : 'ISA'}
+      </p>
+      <div className="flex flex-col gap-2">
+        <input
+          value={name} onChange={e => setName(e.target.value)}
+          placeholder="Prénom Nom"
+          style={{ background: T.cardBg, borderColor: T.border, color: T.text }}
+          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none w-full"
+          autoFocus
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+        />
+        <select
+          value={grade} onChange={e => setGrade(e.target.value)}
+          style={{ background: T.cardBg, borderColor: T.border, color: T.text }}
+          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none w-full">
+          {gradeOptions.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+        </select>
+        {error && <p className="text-xs text-red-600 leading-tight">{error}</p>}
+        <div className="flex gap-2">
+          <button onClick={handleAdd} disabled={saving || !name.trim()}
+            style={{ background: T.accentBar }}
+            className="flex-1 py-1.5 text-xs font-bold rounded-lg text-white hover:opacity-80 disabled:opacity-40">
+            {saving ? '…' : 'Ajouter'}
+          </button>
+          <button onClick={() => onDone()} disabled={saving}
+            style={{ color: T.textFaint, border: `1px solid ${T.border}` }}
+            className="px-3 py-1.5 rounded-lg text-xs hover:opacity-70">
+            <X size={13} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const MED_SECTIONS = [
   { label: 'Adjoints',    grade: 'adjoint' },
   { label: 'CDC',         grade: 'chef_clinique' },
@@ -354,11 +522,16 @@ const MED_SECTIONS = [
 
 function StaffList({ profession, T }) {
   const { profile: currentProfile } = useAuth()
-  const [staff, setStaff] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const canManage = currentProfile?.is_admin
+  const [staff,       setStaff]       = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [search,      setSearch]      = useState('')
+  const [showAdd,     setShowAdd]     = useState(false)
+  const [importFile,  setImportFile]  = useState(null)  // fichier Excel → ouvre ImportProfilesModal
+  const importRef = useRef(null)
 
-  useEffect(() => {
+  function load() {
+    setLoading(true)
     supabase.from('profiles').select('*').eq('profession', profession)
       .then(({ data }) => {
         const sorted = (data ?? []).slice().sort((a, b) =>
@@ -367,7 +540,9 @@ function StaffList({ profession, T }) {
         setStaff(sorted)
         setLoading(false)
       })
-  }, [profession])
+  }
+
+  useEffect(() => { load() }, [profession])
 
   const knownGrades = MED_SECTIONS.map(s => s.grade)
   const autres = staff.filter(p => !knownGrades.includes(p.grade))
@@ -377,6 +552,25 @@ function StaffList({ profession, T }) {
   ].filter(s => s.list.length > 0)
 
   if (loading) return <p className="text-sm text-center py-4 italic" style={{ color: T.textFaint }}>Chargement...</p>
+
+  const addBtn = canManage && !showAdd && (
+    <div className="flex gap-2 mb-3">
+      <button
+        onClick={() => setShowAdd(true)}
+        style={{ color: T.accentBar, border: `1px dashed ${T.border}` }}
+        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold hover:opacity-70 transition-opacity">
+        <Plus size={13} /> Ajouter
+      </button>
+      <button
+        onClick={() => importRef.current?.click()}
+        style={{ color: T.accentBar, border: `1px dashed ${T.border}` }}
+        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold hover:opacity-70 transition-opacity">
+        <FileSpreadsheet size={13} /> Import Excel
+      </button>
+      <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) setImportFile(f); e.target.value = '' }} />
+    </div>
+  )
 
   const searchBar = (
     <div className="relative mb-3">
@@ -392,19 +586,33 @@ function StaffList({ profession, T }) {
     </div>
   )
 
+  const importModal = importFile && (
+    <ImportProfilesModal
+      preloadedFile={importFile}
+      onClose={() => { setImportFile(null); load() }}
+    />
+  )
+
   if (profession === 'infirmier') {
     const filtered = search ? staff.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase())) : staff
     return (
-      <div>
-        {searchBar}
-        <div className="space-y-1">
-          {filtered.map(p => (
-            <StaffRow key={p.id} p={p} profession={profession} T={T}
-              isMe={p.id === currentProfile?.id}
-              canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
-          ))}
+      <>
+        {importModal}
+        <div>
+          {showAdd && <AddPersonForm profession={profession} T={T} onDone={() => { setShowAdd(false); load() }} />}
+          {addBtn}
+          {searchBar}
+          <div className="space-y-1">
+            {filtered.map(p => (
+              <StaffRow key={p.id} p={p} profession={profession} T={T}
+                isMe={p.id === currentProfile?.id}
+                canEdit={currentProfile?.is_admin || currentProfile?.id === p.id}
+                canManage={canManage}
+                onRefresh={load} />
+            ))}
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -413,26 +621,33 @@ function StaffList({ profession, T }) {
     : allSections
 
   return (
-    <div>
-      {searchBar}
-      <div className="space-y-4">
-        {sections.map(section => (
-          <div key={section.label}>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: T.accentBar }}>{section.label}</p>
-            <div className="space-y-0.5">
-              {section.list.map(p => (
-                <StaffRow key={p.id} p={p} profession={profession} T={T}
-                  isMe={p.id === currentProfile?.id}
-                  canEdit={currentProfile?.is_admin || currentProfile?.id === p.id} />
-              ))}
+    <>
+      {importModal}
+      <div>
+        {showAdd && <AddPersonForm profession={profession} T={T} onDone={() => { setShowAdd(false); load() }} />}
+        {addBtn}
+        {searchBar}
+        <div className="space-y-4">
+          {sections.map(section => (
+            <div key={section.label}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: T.accentBar }}>{section.label}</p>
+              <div className="space-y-0.5">
+                {sections.length === 0 ? null : section.list.map(p => (
+                  <StaffRow key={p.id} p={p} profession={profession} T={T}
+                    isMe={p.id === currentProfile?.id}
+                    canEdit={currentProfile?.is_admin || currentProfile?.id === p.id}
+                    canManage={canManage}
+                    onRefresh={load} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-        {sections.length === 0 && (
-          <p className="text-xs text-center italic py-2" style={{ color: T.textFaint }}>Aucun résultat</p>
-        )}
+          ))}
+          {sections.length === 0 && (
+            <p className="text-xs text-center italic py-2" style={{ color: T.textFaint }}>Aucun résultat</p>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
