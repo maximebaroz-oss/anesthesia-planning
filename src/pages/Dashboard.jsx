@@ -292,6 +292,11 @@ const SECTOR_ROOMS = {
   'extop':             [86, 87, 88, 89, 90, 91, 92],
 }
 
+const UNICAT_SECTIONS = [
+  { id: 'bou',      label: 'BOU',      rooms: new Set([18, 19, 20, 21, 22]),                           color: '#CA8A04', bg: '#FEF9C3', text: '#713F12' },
+  { id: 'traumato', label: 'Traumato', rooms: new Set([23, 36, 37, 24]),                               color: '#9333EA', bg: '#F3E8FF', text: '#581C87' },
+  { id: 'prevost',  label: 'Prévost',  rooms: new Set([25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]), color: '#E11D48', bg: '#FFF1F2', text: '#9F1239' },
+]
 
 // Horaires par défaut — salle 8 (Tardif) : pas d'ouverture, fermeture 19h
 const DEFAULT_SCHEDULES = {
@@ -1302,15 +1307,26 @@ export default function Dashboard({ unit, sector, onBack }) {
                         return Math.min(...all.map(a => _go[a.profiles?.grade] ?? 99), 99)
                       }
                       const _gk = n => n === 0 ? 'adj' : n === 1 ? 'cdc' : 'other'
-                      const sorted = [...roomEntries].sort((a, b) => _effGrade(a) - _effGrade(b))
+                      const isUnicat = sector?.id === 'unicat'
+                      const getUsec = rid => UNICAT_SECTIONS.find(s => s.rooms.has(rid)) ?? null
+                      const sorted = isUnicat
+                        ? [...roomEntries].sort((a, b) => {
+                            const sa = UNICAT_SECTIONS.findIndex(s => s.rooms.has(a[0]))
+                            const sb = UNICAT_SECTIONS.findIndex(s => s.rooms.has(b[0]))
+                            return sa !== sb ? sa - sb : a[0] - b[0]
+                          })
+                        : [...roomEntries].sort((a, b) => _effGrade(a) - _effGrade(b))
                       return (
                         <div className="mt-2">
-                          {sorted.slice(0, 12).map((entry, idx) => {
+                          {sorted.slice(0, 20).map((entry, idx) => {
                             const [roomId, group] = entry
                             const curGrp = _gk(_effGrade(entry))
                             const prevGrp = idx > 0 ? _gk(_effGrade(sorted[idx - 1])) : null
-                            const showSep = prevGrp !== null && prevGrp !== curGrp
+                            const showSep = !isUnicat && prevGrp !== null && prevGrp !== curGrp
                             const lbl = g => g === 'adj' ? 'Adj' : g === 'cdc' ? 'CDC' : 'Int'
+                            const curSec  = isUnicat ? getUsec(roomId) : null
+                            const prevSec = isUnicat && idx > 0 ? getUsec(sorted[idx - 1][0]) : null
+                            const showSecHeader = isUnicat && curSec && curSec.id !== prevSec?.id
                             return (
                               <Fragment key={roomId}>
                                 {showSep && (
@@ -1322,6 +1338,16 @@ export default function Dashboard({ unit, sector, onBack }) {
                                     <div className="flex justify-end mt-0.5">
                                       <span className="text-xs font-bold" style={{ color: T.accentBar }}>{lbl(curGrp)}</span>
                                     </div>
+                                  </div>
+                                )}
+                                {showSecHeader && (
+                                  <div className="flex items-center gap-1.5 mt-2 mb-0.5">
+                                    <div className="flex-1 h-px" style={{ background: curSec.color }} />
+                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                      style={{ background: curSec.bg, color: curSec.text }}>
+                                      {curSec.label}
+                                    </span>
+                                    <div className="flex-1 h-px" style={{ background: curSec.color }} />
                                   </div>
                                 )}
                                 <div className="grid text-xs leading-tight mb-0.5 rounded px-0.5"
@@ -1368,8 +1394,8 @@ export default function Dashboard({ unit, sector, onBack }) {
                               </Fragment>
                             )
                           })}
-                          {roomEntries.length > 12 && (
-                            <p className="text-xs mt-1" style={{ color: T.textFaint }}>+{roomEntries.length - 12} salles…</p>
+                          {roomEntries.length > 20 && (
+                            <p className="text-xs mt-1" style={{ color: T.textFaint }}>+{roomEntries.length - 20} salles…</p>
                           )}
                         </div>
                       )
