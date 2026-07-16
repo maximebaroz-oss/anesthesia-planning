@@ -1353,16 +1353,18 @@ export default function Dashboard({ unit, sector, onBack }) {
                                 <div className="grid text-xs leading-tight mb-0.5 rounded px-0.5"
                                   style={{
                                     gridTemplateColumns: '100px 1fr',
-                                    background: isNightOrWE(ROOM_NAMES[Number(roomId)]) ? T.accentBar + '20' : 'transparent',
+                                    background: curSec ? curSec.bg
+                                              : isNightOrWE(ROOM_NAMES[Number(roomId)]) ? T.accentBar + '20'
+                                              : 'transparent',
                                   }}>
-                                  <span className="font-medium pr-1 break-words" style={{ color: T.textFaint }}>
+                                  <span className="font-medium pr-1 break-words" style={{ color: curSec ? curSec.text : T.textFaint }}>
                                     {ROOM_NAMES[Number(roomId)] ?? `S.${roomId}`}
                                   </span>
                                   <div className="flex flex-wrap gap-x-1.5">
                                     {/* Inchangés — normal */}
                                     {group.unchanged.map(a => (
                                       <span key={a.id} className="flex items-center gap-0.5">
-                                        <span className="font-semibold" style={{ color: T.text }}>
+                                        <span className="font-semibold" style={{ color: curSec ? curSec.text : T.text }}>
                                           {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
                                         </span>
                                         {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
