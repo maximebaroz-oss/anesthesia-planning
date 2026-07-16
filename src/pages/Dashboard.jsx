@@ -293,9 +293,9 @@ const SECTOR_ROOMS = {
 }
 
 const UNICAT_SECTIONS = [
-  { id: 'bou',      label: 'BOU',      rooms: new Set([18, 19, 20, 21, 22]),                           color: '#CA8A04', bg: '#FEF9C3', text: '#713F12' },
-  { id: 'traumato', label: 'Traumato', rooms: new Set([23, 36, 37, 24]),                               color: '#9333EA', bg: '#F3E8FF', text: '#581C87' },
-  { id: 'prevost',  label: 'Prévost',  rooms: new Set([25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]), color: '#E11D48', bg: '#FFF1F2', text: '#9F1239' },
+  { id: 'bou',      label: 'BOU',      rooms: new Set([18, 19, 20, 21, 22]),                           color: '#CA8A04', bg: '#FEF9C3', tardifBg: '#FDE68A', text: '#713F12' },
+  { id: 'traumato', label: 'Traumato', rooms: new Set([23, 36, 37, 24]),                               color: '#9333EA', bg: '#F3E8FF', tardifBg: '#DDD6FE', text: '#581C87' },
+  { id: 'prevost',  label: 'Prévost',  rooms: new Set([25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]), color: '#E11D48', bg: '#FFF1F2', tardifBg: '#FECDD3', text: '#9F1239' },
 ]
 
 // Horaires par défaut — salle 8 (Tardif) : pas d'ouverture, fermeture 19h
@@ -1357,19 +1357,19 @@ export default function Dashboard({ unit, sector, onBack }) {
                                 <div className="grid text-xs leading-tight mb-0.5 rounded px-0.5"
                                   style={{
                                     gridTemplateColumns: '100px 1fr',
-                                    background: curSec ? curSec.bg
-                                              : isTardif ? T.accentBar + '20'
+                                    background: curSec ? (isTardif ? curSec.tardifBg : curSec.bg)
+                                              : isTardif ? T.accentBar + '40'
                                               : 'transparent',
                                   }}>
                                   <span className="font-medium pr-1 break-words"
-                                    style={{ color: isTardif ? (curSec ? curSec.color : T.text) : (curSec ? curSec.text : T.textFaint) }}>
+                                    style={{ color: curSec ? curSec.text : T.textFaint }}>
                                     {roomName}
                                   </span>
                                   <div className="flex flex-wrap gap-x-1.5">
                                     {/* Inchangés — normal */}
                                     {group.unchanged.map(a => (
                                       <span key={a.id} className="flex items-center gap-0.5">
-                                        <span className="font-semibold" style={{ color: isTardif ? (curSec ? curSec.color : T.text) : (curSec ? curSec.text : T.text) }}>
+                                        <span className="font-semibold" style={{ color: curSec ? curSec.text : T.text }}>
                                           {a.profiles?.profession === 'medecin' ? getLastName(a.profiles?.full_name) : (a.profiles?.full_name?.split(' ')[0] ?? '')}
                                         </span>
                                         {canManage && <button onClick={e => { e.stopPropagation(); handleDeleteWeekAssignment(a) }} className="hover:text-red-500" style={{ color: T.textFaint }}><X size={9} /></button>}
