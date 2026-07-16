@@ -34,9 +34,13 @@ function detectFromWorkbook(wb) {
   const sheets = wb.SheetNames.map(n => n.toUpperCase().trim())
   const text   = allSheetText(wb)
 
-  // SINPI : onglet HEBDO_REMPLI
-  if (sheets.some(n => n.includes('HEBDO')))
+  // Onglet HEBDO_REMPLI : SINPI ou UNICAT (même format de fichier)
+  if (sheets.some(n => n.includes('HEBDO'))) {
+    if (text.includes('traumato') || text.includes('prévost') || text.includes('prevost') ||
+        text.includes('unicat') || text.includes('bou'))
+      return { unitId: 'unicat', sectorId: null }
     return { unitId: 'sinpi', sectorId: 'sinpi' }
+  }
 
   // AMOPA : onglet "semaine"
   if (sheets.some(n => n.includes('SEMAINE'))) {
@@ -73,6 +77,10 @@ function detectFromWorkbook(wb) {
   }
 
   // Détection par contenu brut (fallback)
+  // UNICAT avant SINPI : les fichiers UNICAT contiennent souvent "sspi" mais ont des termes propres
+  if (text.includes('traumato') || text.includes('prévost') || text.includes('prevost') ||
+      (text.includes('bou') && (text.includes('salle') || text.includes('bloc'))))
+    return { unitId: 'unicat', sectorId: null }
   if (text.includes('sinpi') || text.includes('sspi'))      return { unitId: 'sinpi',  sectorId: 'sinpi' }
   if (text.includes('antalgie'))                            return { unitId: 'amopa',  sectorId: 'antalgie' }
   if (text.includes('belle-id') || text.includes('belle id')) return { unitId: 'amopa', sectorId: 'orl-maxfa-plastie' }
