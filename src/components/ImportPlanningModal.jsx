@@ -721,11 +721,14 @@ export default function ImportPlanningModal({ profiles, sector, unit, theme, onC
         const traumaResult  = parseBOUSheet(wb, rows, profiles, 'traumatologie')
         const prevostResult = parseBOUSheet(wb, rows, profiles, 'prevost')
         if (!bouResult) { result = null } else {
+          // Le Dashboard lit superviseurs/présences/fermetures sous unit_id 'unicat'.
+          // Superviseur et jours fériés : une seule fois (BOU-Traumato), celui de Prévost est ignoré.
+          const shared = e => e.type === 'supervisor' || e.type === 'day_closure'
           const allEntries = [
             ...bouResult.entries,
-            ...traumaResult?.entries ?? [],
-            ...prevostResult?.entries ?? [],
-          ]
+            ...(traumaResult?.entries ?? []).filter(e => !shared(e)),
+            ...(prevostResult?.entries ?? []).filter(e => !shared(e)),
+          ].map(e => ({ ...e, sectorId: 'unicat' }))
           result = { entries: allEntries, weekLabel: bouResult.weekLabel }
         }
       } else if (isFeuil1) {
